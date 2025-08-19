@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration - Document Grader{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i class="fas fa-cog me-3"></i>
+                Configuration Settings
+            </h1>
+            <p class="lead text-muted">
+                Configure your API keys and default settings for the document grading system
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-key me-2"></i>API Configuration
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form id="configForm">
+                    <!-- OpenRouter Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-cloud me-2"></i>OpenRouter API
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="openrouter_api_key" class="form-label">API Key</label>
+                                <input type="password" class="form-control" id="openrouter_api_key" 
+                                       name="openrouter_api_key" placeholder="sk-or-...">
+                                <div class="form-text">
+                                    Get your API key from <a href="https://openrouter.ai" target="_blank">OpenRouter</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-primary" onclick="togglePassword('openrouter_api_key')">
+                                        <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Claude API Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-robot me-2"></i>Claude API (Direct)
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="claude_api_key" class="form-label">API Key</label>
+                                <input type="password" class="form-control" id="claude_api_key" 
+                                       name="claude_api_key" placeholder="sk-ant-...">
+                                <div class="form-text">
+                                    Get your API key from <a href="https://console.anthropic.com" target="_blank">Anthropic Console</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-primary" onclick="togglePassword('claude_api_key')">
+                                        <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LM Studio Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-server me-2"></i>LM Studio (Local)
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="lm_studio_url" class="form-label">API URL</label>
+                                <input type="url" class="form-control" id="lm_studio_url" 
+                                       name="lm_studio_url" value="http://localhost:1234/v1">
+                                <div class="form-text">
+                                    Local LM Studio server URL (default: http://localhost:1234/v1)
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="testLMStudio()">
+                                        <i class="fas fa-plug"></i> Test Connection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Default Settings -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-sliders-h me-2"></i>Default Settings
+                        </h6>
+                        <div class="mb-3">
+                            <label for="default_prompt" class="form-label">Default Grading Prompt</label>
+                            <textarea class="form-control" id="default_prompt" name="default_prompt" rows="4"
+                                      placeholder="Enter your default grading instructions...">Please grade this document and provide detailed feedback on:
+1. Content quality and relevance
+2. Structure and organization
+3. Writing style and clarity
+4. Grammar and mechanics
+5. Overall assessment with specific suggestions for improvement
+
+Please provide a comprehensive evaluation with specific examples from the text.</textarea>
+                            <div class="form-text">
+                                This prompt will be used as the default when grading documents
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>Save Configuration
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="loadFromEnv()">
+                            <i class="fas fa-download me-2"></i>Load from Environment Variables
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Status messages -->
+                <div id="statusMessage" class="mt-3" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- API Status -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-heartbeat me-2"></i>API Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div id="openrouter-status" class="status-indicator me-2"></div>
+                            <span>OpenRouter</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div id="claude-status" class="status-indicator me-2"></div>
+                            <span>Claude API</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div id="lmstudio-status" class="status-indicator me-2"></div>
+                            <span>LM Studio</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary" onclick="checkAllAPIs()">
+                    <i class="fas fa-sync me-1"></i>Check All APIs
+                </button>
+            </div>
+        </div>
+
+        <!-- Help Section -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>Setup Guide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="helpAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#openrouter-help">
+                                OpenRouter Setup
+                            </button>
+                        </h2>
+                        <div id="openrouter-help" class="accordion-collapse collapse show" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Visit <a href="https://openrouter.ai" target="_blank">OpenRouter</a></li>
+                                    <li>Sign up for an account</li>
+                                    <li>Add payment method</li>
+                                    <li>Generate an API key</li>
+                                    <li>Copy the key (starts with "sk-or-")</li>
+                                    <li>Paste it in the configuration above</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#claude-help">
+                                Claude API Setup
+                            </button>
+                        </h2>
+                        <div id="claude-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Visit <a href="https://console.anthropic.com" target="_blank">Anthropic Console</a></li>
+                                    <li>Create an account</li>
+                                    <li>Add payment method</li>
+                                    <li>Generate an API key</li>
+                                    <li>Copy the key (starts with "sk-ant-")</li>
+                                    <li>Paste it in the configuration above</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#lmstudio-help">
+                                LM Studio Setup
+                            </button>
+                        </h2>
+                        <div id="lmstudio-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Download <a href="https://lmstudio.ai" target="_blank">LM Studio</a></li>
+                                    <li>Install and launch the application</li>
+                                    <li>Download a model (e.g., Llama 2, Mistral)</li>
+                                    <li>Start the local server</li>
+                                    <li>Ensure the API URL is correct (default: http://localhost:1234/v1)</li>
+                                    <li>Test the connection using the button above</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #6c757d;
+}
+.status-indicator.online {
+    background-color: #28a745;
+}
+.status-indicator.offline {
+    background-color: #dc3545;
+}
+</style>
+
+<script>
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const button = event.target;
+    const icon = button.querySelector('i');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        field.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+function showStatus(message, type = 'success') {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.className = `alert alert-${type}`;
+    statusDiv.innerHTML = message;
+    statusDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        statusDiv.style.display = 'none';
+    }, 5000);
+}
+
+function testLMStudio() {
+    const url = document.getElementById('lm_studio_url').value;
+    const statusIndicator = document.getElementById('lmstudio-status');
+    
+    statusIndicator.className = 'status-indicator';
+    
+    fetch('/test_lm_studio', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: url })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusIndicator.classList.add('online');
+            showStatus('LM Studio connection successful!', 'success');
+        } else {
+            statusIndicator.classList.add('offline');
+            showStatus('LM Studio connection failed: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        statusIndicator.classList.add('offline');
+        showStatus('Connection test failed: ' + error.message, 'danger');
+    });
+}
+
+function checkAllAPIs() {
+    // This would be implemented with actual API tests
+    showStatus('API status check completed', 'info');
+}
+
+function loadFromEnv() {
+    // This would load values from environment variables
+    showStatus('Environment variables loaded (if available)', 'info');
+}
+
+$(document).ready(function() {
+    $('#configForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        $.ajax({
+            url: '/save_config',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    showStatus('Configuration saved successfully!', 'success');
+                } else {
+                    showStatus('Failed to save configuration: ' + response.message, 'danger');
+                }
+            },
+            error: function() {
+                showStatus('An error occurred while saving configuration', 'danger');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

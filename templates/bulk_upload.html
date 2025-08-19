@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Upload{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i class="fas fa-upload me-3"></i>
+                Bulk Document Upload
+            </h1>
+            <p class="lead text-muted">
+                Upload multiple documents and process them in the background
+            </p>
+        </div>
+
+        <!-- Step 1: Job Configuration -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>Step 1: Configure Grading Job
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="jobForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="jobName" class="form-label fw-bold">Job Name</label>
+                            <input type="text" class="form-control" id="jobName" required>
+                            <div class="form-text">Give your job a descriptive name</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="priority" class="form-label fw-bold">Priority</label>
+                            <select class="form-select" id="priority">
+                                <option value="1">Low (1)</option>
+                                <option value="3">Medium-Low (3)</option>
+                                <option value="5" selected>Normal (5)</option>
+                                <option value="7">Medium-High (7)</option>
+                                <option value="10">High (10)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="jobDescription" class="form-label fw-bold">Description (Optional)</label>
+                        <textarea class="form-control" id="jobDescription" rows="2" placeholder="Describe what this job is for..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="provider" class="form-label fw-bold">
+                                <i class="fas fa-robot me-2"></i>AI Provider
+                            </label>
+                            <select class="form-select" id="provider" required>
+                                <option value="openrouter">OpenRouter (Claude/GPT)</option>
+                                <option value="claude">Claude API (Direct)</option>
+                                <option value="lm_studio">LM Studio (Local)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="model" class="form-label fw-bold">Model (Optional)</label>
+                            <input type="text" class="form-control" id="model" placeholder="Leave blank for default">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="prompt" class="form-label fw-bold">
+                            <i class="fas fa-comment me-2"></i>Grading Instructions
+                        </label>
+                        <textarea class="form-control" id="prompt" rows="4" required>Please grade this document and provide detailed feedback on:
+1. Content quality and relevance
+2. Structure and organization
+3. Writing style and clarity
+4. Grammar and mechanics
+5. Overall assessment with specific suggestions for improvement
+
+Please provide a comprehensive evaluation with specific examples from the text.</textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Create Job
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Step 2: File Upload -->
+        <div class="card mb-4" id="uploadSection" style="display: none;">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-upload me-2"></i>Step 2: Upload Documents
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <input type="hidden" id="jobId">
+                    
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Job ID:</strong> <span id="jobIdDisplay">Not set</span>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="files" class="form-label fw-bold">Select Documents</label>
+                        <input type="file" class="form-control" id="files" name="files[]" multiple accept=".docx,.pdf" required>
+                        <div class="form-text">
+                            Select multiple Word (.docx) or PDF files. Maximum 50 files per job.
+                        </div>
+                    </div>
+                    
+                    <div id="fileList" class="mb-3" style="display: none;">
+                        <h6>Selected Files:</h6>
+                        <div id="fileListContent"></div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success" id="uploadBtn">
+                            <i class="fas fa-upload me-2"></i>Upload and Start Processing
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Job Status -->
+        <div class="card" id="jobStatus" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Job Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="statusContent"></div>
+                <div class="mt-3">
+                    <a href="/jobs" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>View All Jobs
+                    </a>
+                    <a href="/bulk_upload" class="btn btn-outline-secondary" onclick="resetForm()">
+                        <i class="fas fa-plus me-2"></i>Create Another Job
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentJobId = null;
+
+function resetForm() {
+    document.getElementById('jobForm').reset();
+    document.getElementById('uploadForm').reset();
+    document.getElementById('uploadSection').style.display = 'none';
+    document.getElementById('jobStatus').style.display = 'none';
+    document.getElementById('fileList').style.display = 'none';
+    document.getElementById('jobIdDisplay').textContent = 'Not set';
+    currentJobId = null;
+    
+    // Remove any success messages
+    const successMsgs = document.querySelectorAll('.alert-success');
+    successMsgs.forEach(msg => msg.remove());
+}
+
+function updateFileList() {
+    const fileInput = document.getElementById('files');
+    const fileList = document.getElementById('fileList');
+    const fileListContent = document.getElementById('fileListContent');
+    
+    if (fileInput.files.length > 0) {
+        fileListContent.innerHTML = '';
+        Array.from(fileInput.files).forEach(file => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'd-flex justify-content-between align-items-center p-2 border rounded mb-2';
+            fileItem.innerHTML = `
+                <div>
+                    <i class="fas fa-file me-2"></i>
+                    ${file.name}
+                </div>
+                <small class="text-muted">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+            `;
+            fileListContent.appendChild(fileItem);
+        });
+        fileList.style.display = 'block';
+    } else {
+        fileList.style.display = 'none';
+    }
+}
+
+document.getElementById('files').addEventListener('change', updateFileList);
+
+document.getElementById('jobForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Job...';
+    
+    const formData = {
+        job_name: document.getElementById('jobName').value,
+        description: document.getElementById('jobDescription').value,
+        provider: document.getElementById('provider').value,
+        model: document.getElementById('model').value || null,
+        prompt: document.getElementById('prompt').value,
+        priority: parseInt(document.getElementById('priority').value)
+    };
+    
+    fetch('/create_job', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentJobId = data.job_id;
+            document.getElementById('jobId').value = data.job_id;
+            document.getElementById('jobIdDisplay').textContent = data.job_id;
+            document.getElementById('uploadSection').style.display = 'block';
+            
+            // Show success message
+            const jobForm = document.getElementById('jobForm');
+            const successMsg = document.createElement('div');
+            successMsg.className = 'alert alert-success mt-3';
+            successMsg.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                Job "${formData.job_name}" created successfully! You can now upload files.
+            `;
+            jobForm.appendChild(successMsg);
+            
+            document.getElementById('uploadSection').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Error creating job: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error creating job: ' + error.message);
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Check if we have a job ID
+    const jobId = document.getElementById('jobId').value;
+    if (!jobId) {
+        alert('Please create a job first before uploading files.');
+        return;
+    }
+    
+    const formData = new FormData(this);
+    
+    // Ensure job_id is included in the form data
+    formData.set('job_id', jobId);
+    
+    const uploadBtn = document.getElementById('uploadBtn');
+    const originalText = uploadBtn.innerHTML;
+    
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+    
+    fetch('/upload_bulk', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('jobStatus').style.display = 'block';
+            
+            const statusContent = document.getElementById('statusContent');
+            statusContent.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle me-2"></i>Job Created Successfully!</h6>
+                    <p class="mb-2"><strong>Job ID:</strong> ${data.job_id}</p>
+                    <p class="mb-2"><strong>Files Uploaded:</strong> ${data.message}</p>
+                    <p class="mb-0">Your documents are now being processed in the background. You can monitor progress on the jobs page.</p>
+                </div>
+            `;
+            
+            document.getElementById('jobStatus').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Error uploading files: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error uploading files: ' + error.message);
+    })
+    .finally(() => {
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = originalText;
+    });
+});
+</script>
+{% endblock %}

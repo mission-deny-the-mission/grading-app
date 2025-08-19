@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}Document Grading - Upload{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i class="fas fa-file-alt me-3"></i>
+                Document Grading System
+            </h1>
+            <p class="lead text-muted">
+                Upload your Word documents or PDFs to get AI-powered grading and feedback
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-4">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label for="file" class="form-label fw-bold">
+                            <i class="fas fa-upload me-2"></i>Select Document
+                        </label>
+                        <input type="file" class="form-control" id="file" name="file" 
+                               accept=".docx,.pdf" required>
+                        <div class="form-text">
+                            Supported formats: .docx (Word), .pdf (PDF) - Max size: 16MB
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="provider" class="form-label fw-bold">
+                            <i class="fas fa-robot me-2"></i>AI Provider
+                        </label>
+                        <select class="form-select" id="provider" name="provider" required>
+                            <option value="openrouter">OpenRouter (Claude/GPT)</option>
+                            <option value="claude">Claude API (Direct)</option>
+                            <option value="lm_studio">LM Studio (Local)</option>
+                        </select>
+                        <div class="form-text">
+                            Choose your preferred AI model for grading
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="prompt" class="form-label fw-bold">
+                            <i class="fas fa-comment me-2"></i>Grading Instructions
+                        </label>
+                        <textarea class="form-control" id="prompt" name="prompt" rows="4" 
+                                  placeholder="Enter your grading criteria and instructions here...">Please grade this document and provide detailed feedback on:
+1. Content quality and relevance
+2. Structure and organization
+3. Writing style and clarity
+4. Grammar and mechanics
+5. Overall assessment with specific suggestions for improvement
+
+Please provide a comprehensive evaluation with specific examples from the text.</textarea>
+                        <div class="form-text">
+                            Customize the grading criteria and instructions for the AI
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-magic me-2"></i>
+                            Grade Document
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Loading indicator -->
+                <div id="loading" class="loading text-center mt-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Analyzing your document...</p>
+                </div>
+
+                <!-- Results container -->
+                <div id="results" class="result-container" style="display: none;">
+                    <h4 class="text-primary mb-3">
+                        <i class="fas fa-star me-2"></i>Grading Results
+                    </h4>
+                    <div id="resultContent"></div>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-primary" onclick="downloadResults()">
+                            <i class="fas fa-download me-2"></i>Download Results
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="clearResults()">
+                            <i class="fas fa-times me-2"></i>Clear Results
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sample prompts -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Sample Grading Prompts
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">Academic Essay</h6>
+                                <p class="card-text small">Evaluate thesis clarity, argument strength, evidence quality, and academic writing standards.</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="usePrompt('academic')">Use This</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">Business Report</h6>
+                                <p class="card-text small">Assess executive summary, data analysis, recommendations, and professional presentation.</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="usePrompt('business')">Use This</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">Creative Writing</h6>
+                                <p class="card-text small">Review narrative structure, character development, dialogue, and creative elements.</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="usePrompt('creative')">Use This</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">Technical Document</h6>
+                                <p class="card-text small">Evaluate technical accuracy, clarity, organization, and user-friendliness.</p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="usePrompt('technical')">Use This</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const samplePrompts = {
+    academic: `Please evaluate this academic essay based on the following criteria:
+1. Thesis Statement: Is it clear, specific, and arguable?
+2. Argument Development: Are arguments logical and well-supported with evidence?
+3. Research Quality: Are sources credible and properly integrated?
+4. Structure: Is the essay well-organized with clear transitions?
+5. Academic Writing: Is the tone appropriate and citations properly formatted?
+6. Grammar and Mechanics: Are there any significant errors?
+
+Provide specific examples from the text and constructive suggestions for improvement.`,
+
+    business: `Please assess this business report using the following criteria:
+1. Executive Summary: Is it concise and captures key points?
+2. Data Analysis: Are findings clearly presented and supported by data?
+3. Recommendations: Are they actionable and well-justified?
+4. Professional Presentation: Is the format appropriate for business context?
+5. Clarity: Is the language clear and accessible to the target audience?
+6. Completeness: Does it address all necessary aspects of the topic?
+
+Provide specific feedback with examples and improvement suggestions.`,
+
+    creative: `Please review this creative writing piece considering:
+1. Narrative Structure: Is the story well-paced and engaging?
+2. Character Development: Are characters believable and well-developed?
+3. Dialogue: Is it natural and advances the story?
+4. Setting and Atmosphere: Is the world-building effective?
+5. Voice and Style: Is the author's voice distinctive and appropriate?
+6. Originality: Does it bring fresh perspective or unique elements?
+
+Provide constructive feedback that encourages creativity while improving craft.`,
+
+    technical: `Please evaluate this technical document based on:
+1. Technical Accuracy: Are the facts and procedures correct?
+2. Clarity: Is the information presented clearly for the target audience?
+3. Organization: Is the structure logical and easy to follow?
+4. Completeness: Does it cover all necessary information?
+5. User-Friendliness: Is it accessible to the intended users?
+6. Formatting: Is the presentation professional and readable?
+
+Provide specific suggestions for technical improvements and clarity enhancements.`
+};
+
+function usePrompt(type) {
+    document.getElementById('prompt').value = samplePrompts[type];
+}
+
+function downloadResults() {
+    const content = document.getElementById('resultContent').innerText;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'grading_results.txt';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function clearResults() {
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('resultContent').innerHTML = '';
+    document.getElementById('uploadForm').reset();
+}
+
+$(document).ready(function() {
+    $('#uploadForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const fileInput = document.getElementById('file');
+        
+        if (!fileInput.files[0]) {
+            alert('Please select a file to upload.');
+            return;
+        }
+        
+        // Show loading
+        $('#loading').show();
+        $('#results').hide();
+        
+        $.ajax({
+            url: '/upload',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                $('#loading').hide();
+                
+                if (response.success) {
+                    const resultHtml = `
+                        <div class="alert alert-success">
+                            <strong>Provider:</strong> ${response.provider}<br>
+                            <strong>Model:</strong> ${response.model}
+                        </div>
+                        <div class="border rounded p-3 bg-white">
+                            <h6 class="fw-bold mb-2">Grading Feedback:</h6>
+                            <div style="white-space: pre-wrap;">${response.grade}</div>
+                        </div>
+                    `;
+                    $('#resultContent').html(resultHtml);
+                    $('#results').show();
+                } else {
+                    $('#resultContent').html(`
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> ${response.error}
+                        </div>
+                    `);
+                    $('#results').show();
+                }
+            },
+            error: function(xhr) {
+                $('#loading').hide();
+                let errorMsg = 'An error occurred while processing your request.';
+                
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                }
+                
+                $('#resultContent').html(`
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${errorMsg}
+                    </div>
+                `);
+                $('#results').show();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

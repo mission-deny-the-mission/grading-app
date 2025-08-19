@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Grading Jobs{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="display-4 fw-bold text-primary">
+                <i class="fas fa-tasks me-3"></i>
+                Grading Jobs
+            </h1>
+            <div>
+                <a href="/bulk_upload" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Job
+                </a>
+                <a href="/batches" class="btn btn-outline-primary">
+                    <i class="fas fa-layer-group me-2"></i>Batches
+                </a>
+            </div>
+        </div>
+
+        {% if jobs %}
+        <div class="row">
+            {% for job in jobs %}
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ job.job_name }}</h5>
+                        <span class="badge bg-{{ 'success' if job.status == 'completed' else 'warning' if job.status == 'processing' else 'danger' if job.status == 'failed' else 'secondary' }}">
+                            {{ job.status.title() }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        {% if job.description %}
+                        <p class="text-muted small">{{ job.description }}</p>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">Progress</small>
+                                <small class="text-muted">{{ job.get_progress() }}%</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-primary" style="width: {{ job.get_progress() }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="text-primary fw-bold">{{ job.total_submissions }}</div>
+                                <small class="text-muted">Total</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-success fw-bold">{{ job.processed_submissions }}</div>
+                                <small class="text-muted">Completed</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-danger fw-bold">{{ job.failed_submissions }}</div>
+                                <small class="text-muted">Failed</small>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="small text-muted">
+                            <div><i class="fas fa-robot me-1"></i>{{ job.provider.title() }}</div>
+                            <div><i class="fas fa-clock me-1"></i>{{ job.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/jobs/{{ job.id }}" class="btn btn-sm btn-outline-primary w-100">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No grading jobs yet</h4>
+            <p class="text-muted">Create your first job to start grading documents</p>
+            <a href="/bulk_upload" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create First Job
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

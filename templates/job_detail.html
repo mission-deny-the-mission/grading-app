@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Job Details - {{ job.job_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="display-4 fw-bold text-primary mb-2">
+                    <i class="fas fa-tasks me-3"></i>
+                    {{ job.job_name }}
+                </h1>
+                <p class="lead text-muted">{{ job.description or 'No description provided' }}</p>
+            </div>
+            <div class="text-end">
+                <a href="/jobs" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Jobs
+                </a>
+                <button class="btn btn-primary" onclick="refreshJobStatus()">
+                    <i class="fas fa-sync me-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Job Overview -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Job Overview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <strong>Status:</strong>
+                                    <span class="badge bg-{{ 'success' if job.status == 'completed' else 'warning' if job.status == 'processing' else 'danger' if job.status == 'failed' else 'secondary' }} ms-2">
+                                        {{ job.status.title() }}
+                                    </span>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Provider:</strong> {{ job.provider.title() }}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Model:</strong> {{ job.model or 'Default' }}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Priority:</strong> {{ job.priority }}/10
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <strong>Created:</strong> {{ job.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Updated:</strong> {{ job.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Total Submissions:</strong> {{ job.total_submissions }}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Progress:</strong> {{ job.get_progress() }}%
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">Progress</small>
+                                <small class="text-muted">{{ job.get_progress() }}%</small>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-primary" style="width: {{ job.get_progress() }}%"></div>
+                            </div>
+                            <div class="row text-center mt-2">
+                                <div class="col-4">
+                                    <div class="text-primary fw-bold">{{ job.total_submissions }}</div>
+                                    <small class="text-muted">Total</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-success fw-bold">{{ job.processed_submissions }}</div>
+                                    <small class="text-muted">Completed</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-danger fw-bold">{{ job.failed_submissions }}</div>
+                                    <small class="text-muted">Failed</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comment me-2"></i>Grading Instructions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div style="white-space: pre-wrap; font-size: 0.9rem;">{{ job.prompt }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submissions -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>Submissions ({{ job.submissions|length }})
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="exportResults()">
+                        <i class="fas fa-download me-1"></i>Export Results
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if job.submissions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Type</th>
+                                <th>Size</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for submission in job.submissions %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-{{ 'file-word' if submission.file_type == 'docx' else 'file-pdf' }} me-2 text-primary"></i>
+                                        <div>
+                                            <div class="fw-bold">{{ submission.original_filename }}</div>
+                                            <small class="text-muted">ID: {{ submission.id[:8] }}...</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ submission.file_type.upper() }}</span>
+                                </td>
+                                <td>
+                                    {{ "%.1f"|format(submission.file_size / 1024 / 1024) }} MB
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if submission.status == 'completed' else 'warning' if submission.status == 'processing' else 'danger' if submission.status == 'failed' else 'secondary' }}">
+                                        {{ submission.status.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ submission.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewSubmission('{{ submission.id }}')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if submission.status == 'completed' %}
+                                    <button class="btn btn-sm btn-outline-success" onclick="downloadGrade('{{ submission.id }}')">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No submissions yet</h5>
+                    <p class="text-muted">Upload files to this job to see submissions here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submission Modal -->
+<div class="modal fade" id="submissionModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Submission Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="submissionModalBody">
+                <!-- Content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="downloadSubmissionGrade()">Download Grade</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentSubmissionId = null;
+
+function refreshJobStatus() {
+    location.reload();
+}
+
+function viewSubmission(submissionId) {
+    currentSubmissionId = submissionId;
+    
+    fetch(`/api/submissions/${submissionId}`)
+        .then(response => response.json())
+        .then(data => {
+            const modalBody = document.getElementById('submissionModalBody');
+            
+            let statusBadge = '';
+            if (data.status === 'completed') {
+                statusBadge = '<span class="badge bg-success">Completed</span>';
+            } else if (data.status === 'processing') {
+                statusBadge = '<span class="badge bg-warning">Processing</span>';
+            } else if (data.status === 'failed') {
+                statusBadge = '<span class="badge bg-danger">Failed</span>';
+            } else {
+                statusBadge = '<span class="badge bg-secondary">Pending</span>';
+            }
+            
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>File Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Filename:</strong></td><td>${data.original_filename}</td></tr>
+                            <tr><td><strong>File Type:</strong></td><td>${data.file_type.toUpperCase()}</td></tr>
+                            <tr><td><strong>File Size:</strong></td><td>${(data.file_size / 1024 / 1024).toFixed(1)} MB</td></tr>
+                            <tr><td><strong>Status:</strong></td><td>${statusBadge}</td></tr>
+                            <tr><td><strong>Created:</strong></td><td>${new Date(data.created_at).toLocaleString()}</td></tr>
+                        </table>
+                        
+                        ${data.error_message ? `
+                        <div class="alert alert-danger mt-3">
+                            <strong>Error:</strong> ${data.error_message}
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Grading Results</h6>
+                        ${data.status === 'completed' ? `
+                        <div class="border rounded p-3 bg-light">
+                            <div style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">${data.grade}</div>
+                        </div>
+                        ${data.grade_metadata ? `
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <strong>Provider:</strong> ${data.grade_metadata.provider}<br>
+                                <strong>Model:</strong> ${data.grade_metadata.model}
+                            </small>
+                        </div>
+                        ` : ''}
+                        ` : `
+                        <div class="text-center py-4">
+                            <i class="fas fa-clock fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Grading results will appear here when processing is complete.</p>
+                        </div>
+                        `}
+                    </div>
+                </div>
+            `;
+            
+            new bootstrap.Modal(document.getElementById('submissionModal')).show();
+        })
+        .catch(error => {
+            alert('Error loading submission details: ' + error.message);
+        });
+}
+
+function downloadGrade(submissionId) {
+    fetch(`/api/submissions/${submissionId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'completed' && data.grade) {
+                const content = `Grading Results for: ${data.original_filename}\n\n${data.grade}`;
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${data.original_filename}_grade.txt`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert('No grading results available for this submission.');
+            }
+        })
+        .catch(error => {
+            alert('Error downloading grade: ' + error.message);
+        });
+}
+
+function downloadSubmissionGrade() {
+    if (currentSubmissionId) {
+        downloadGrade(currentSubmissionId);
+    }
+}
+
+function exportResults() {
+    fetch(`/api/jobs/{{ job.id }}/export`)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `job_{{ job.id }}_results.zip`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            alert('Error exporting results: ' + error.message);
+        });
+}
+
+// Auto-refresh every 30 seconds if job is still processing
+{% if job.status == 'processing' %}
+setInterval(function() {
+    if (document.visibilityState === 'visible') {
+        refreshJobStatus();
+    }
+}, 30000);
+{% endif %}
+</script>
+{% endblock %}
