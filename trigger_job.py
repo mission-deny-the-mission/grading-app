@@ -4,9 +4,13 @@ Script to manually trigger a job for processing
 """
 
 import os
+from dotenv import load_dotenv
 from tasks import process_job
 from models import db, GradingJob
 from flask import Flask
+
+# Load environment variables from .env file
+load_dotenv()
 
 def create_app():
     app = Flask(__name__)

@@ -51,7 +51,8 @@ class GradingJob(db.Model):
             'provider': self.provider,
             'prompt': self.prompt,
             'model': self.model,
-            'progress': self.get_progress()
+            'progress': self.get_progress(),
+            'can_retry': self.can_retry_failed_submissions()
         }
     
     def get_progress(self):
@@ -79,6 +80,23 @@ class GradingJob(db.Model):
                 self.status = 'completed_with_errors'
         
         db.session.commit()
+    
+    def can_retry_failed_submissions(self, max_retries=3):
+        """Check if any failed submissions can be retried."""
+        return any(submission.can_retry(max_retries) for submission in self.submissions)
+    
+    def retry_failed_submissions(self, max_retries=3):
+        """Retry all failed submissions that can be retried."""
+        retried_count = 0
+        for submission in self.submissions:
+            if submission.retry(max_retries):
+                retried_count += 1
+        
+        if retried_count > 0:
+            self.status = 'pending'
+            db.session.commit()
+        
+        return retried_count
 
 class Submission(db.Model):
     """Model for individual document submissions."""
@@ -97,6 +115,7 @@ class Submission(db.Model):
     # Processing status
     status = db.Column(db.String(50), default='pending')  # pending, processing, completed, failed
     error_message = db.Column(db.Text)
+    retry_count = db.Column(db.Integer, default=0)  # Number of retry attempts
     
     # Extracted content
     extracted_text = db.Column(db.Text)
@@ -122,7 +141,9 @@ class Submission(db.Model):
             'error_message': self.error_message,
             'grade': self.grade,
             'grade_metadata': self.grade_metadata,
-            'job_id': self.job_id
+            'job_id': self.job_id,
+            'retry_count': self.retry_count,
+            'can_retry': self.can_retry()
         }
     
     def set_status(self, status, error_message=None):
@@ -136,6 +157,28 @@ class Submission(db.Model):
         # Update job progress
         if self.job:
             self.job.update_progress()
+    
+    def can_retry(self, max_retries=3):
+        """Check if submission can be retried."""
+        return self.status == 'failed' and self.retry_count < max_retries
+    
+    def retry(self, max_retries=3):
+        """Retry a failed submission."""
+        if not self.can_retry(max_retries):
+            return False
+        
+        self.status = 'pending'
+        self.error_message = None
+        self.retry_count += 1
+        self.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        # Update job status if it was failed
+        if self.job and self.job.status == 'failed':
+            self.job.status = 'pending'
+            db.session.commit()
+        
+        return True
 
 class JobBatch(db.Model):
     """Model for managing batch uploads."""

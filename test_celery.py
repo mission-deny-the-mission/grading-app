@@ -5,9 +5,13 @@ Test script to check Celery task processing
 
 import os
 import sys
-from tasks import process_job, process_submission
+from dotenv import load_dotenv
+from tasks import process_job, process_submission_sync
 from models import db, GradingJob, Submission
 from flask import Flask
+
+# Load environment variables from .env file
+load_dotenv()
 
 def create_test_app():
     app = Flask(__name__)

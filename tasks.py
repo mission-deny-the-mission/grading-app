@@ -7,7 +7,11 @@ import PyPDF2
 import openai
 from anthropic import Anthropic
 from flask import Flask
+from dotenv import load_dotenv
 from models import db, GradingJob, Submission
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Create Flask app for Celery
 def create_app():
@@ -367,7 +371,8 @@ def process_submission_sync(submission_id):
                 if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
                     submission.set_status('failed', 'OpenRouter API key not configured. Please configure your API key in the settings.')
                     return False
-                result = grade_with_openrouter(text, job.prompt, job.model)
+                model = job.model if job.model else "anthropic/claude-3.5-sonnet"
+                result = grade_with_openrouter(text, job.prompt, model)
             elif job.provider == 'claude':
                 if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
                     submission.set_status('failed', 'Claude API key not configured. Please configure your API key in the settings.')
@@ -392,7 +397,7 @@ def process_submission_sync(submission_id):
                 }
                 submission.set_status('completed')
                 
-                # Clean up file
+                # Clean up file only on successful completion
                 try:
                     os.remove(file_path)
                 except:
@@ -401,6 +406,7 @@ def process_submission_sync(submission_id):
                 return True
             else:
                 submission.set_status('failed', result['error'])
+                # Don't clean up file on failure - keep it for retry
                 return False
                 
         except Exception as e:
@@ -448,16 +454,22 @@ def cleanup_old_files():
     app = create_app()
     with app.app_context():
         upload_folder = app.config['UPLOAD_FOLDER']
-        cutoff_time = datetime.now() - timedelta(hours=24)  # Keep files for 24 hours
+        cutoff_time = datetime.now() - timedelta(hours=72)  # Keep files for 72 hours (3 days)
         
-        # Find files older than 24 hours
+        # Find files older than 72 hours
         for file_path in glob.glob(os.path.join(upload_folder, '*')):
             if os.path.isfile(file_path):
                 file_time = datetime.fromtimestamp(os.path.getctime(file_path))
                 if file_time < cutoff_time:
-                    try:
-                        os.remove(file_path)
-                    except:
-                        pass  # Don't fail if cleanup fails
+                    # Check if this file is associated with any failed submissions
+                    filename = os.path.basename(file_path)
+                    submission = Submission.query.filter_by(filename=filename).first()
+                    
+                    # Only delete if no failed submissions are using this file
+                    if not submission or submission.status != 'failed':
+                        try:
+                            os.remove(file_path)
+                        except:
+                            pass  # Don't fail if cleanup fails
 
 

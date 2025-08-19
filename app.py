@@ -544,6 +544,85 @@ def trigger_job_processing(job_id):
             'error': str(e)
         }), 400
 
+@app.route('/api/jobs/<job_id>/retry', methods=['POST'])
+def retry_failed_submissions(job_id):
+    """Retry all failed submissions in a job."""
+    try:
+        from tasks import process_job
+        
+        # Check if job exists
+        job = GradingJob.query.get_or_404(job_id)
+        
+        # Check if there are any failed submissions that can be retried
+        if not job.can_retry_failed_submissions():
+            return jsonify({
+                'success': False,
+                'error': 'No failed submissions can be retried'
+            }), 400
+        
+        # Retry failed submissions
+        retried_count = job.retry_failed_submissions()
+        
+        if retried_count > 0:
+            # Queue the job for processing
+            result = process_job.delay(job_id)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Retried {retried_count} failed submissions. Job queued for processing.',
+                'retried_count': retried_count,
+                'task_id': result.id
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No submissions were retried'
+            }), 400
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/submissions/<submission_id>/retry', methods=['POST'])
+def retry_submission(submission_id):
+    """Retry a specific failed submission."""
+    try:
+        from tasks import process_job
+        
+        # Check if submission exists
+        submission = Submission.query.get_or_404(submission_id)
+        
+        # Check if submission can be retried
+        if not submission.can_retry():
+            return jsonify({
+                'success': False,
+                'error': 'Submission cannot be retried'
+            }), 400
+        
+        # Retry the submission
+        if submission.retry():
+            # Queue the job for processing
+            result = process_job.delay(submission.job_id)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Submission {submission.original_filename} retried successfully',
+                'task_id': result.id
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to retry submission'
+            }), 400
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(e):
     return jsonify({'error': 'File too large. Maximum size is 16MB.'}), 413

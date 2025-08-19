@@ -17,6 +17,11 @@
                 <a href="/jobs" class="btn btn-outline-primary">
                     <i class="fas fa-arrow-left me-2"></i>Back to Jobs
                 </a>
+                {% if job.can_retry %}
+                <button class="btn btn-warning" onclick="retryFailedSubmissions()">
+                    <i class="fas fa-redo me-2"></i>Retry Failed
+                </button>
+                {% endif %}
                 <button class="btn btn-primary" onclick="refreshJobStatus()">
                     <i class="fas fa-sync me-2"></i>Refresh
                 </button>
@@ -170,6 +175,11 @@
                                         <i class="fas fa-download"></i>
                                     </button>
                                     {% endif %}
+                                    {% if submission.can_retry %}
+                                    <button class="btn btn-sm btn-outline-warning" onclick="retrySubmission('{{ submission.id }}')">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -202,6 +212,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-primary" onclick="downloadSubmissionGrade()">Download Grade</button>
+                <button type="button" class="btn btn-warning" id="retrySubmissionBtn" onclick="retryCurrentSubmission()" style="display: none;">Retry Submission</button>
             </div>
         </div>
     </div>
@@ -244,6 +255,7 @@ function viewSubmission(submissionId) {
                             <tr><td><strong>File Type:</strong></td><td>${data.file_type.toUpperCase()}</td></tr>
                             <tr><td><strong>File Size:</strong></td><td>${(data.file_size / 1024 / 1024).toFixed(1)} MB</td></tr>
                             <tr><td><strong>Status:</strong></td><td>${statusBadge}</td></tr>
+                            <tr><td><strong>Retry Count:</strong></td><td>${data.retry_count || 0}</td></tr>
                             <tr><td><strong>Created:</strong></td><td>${new Date(data.created_at).toLocaleString()}</td></tr>
                         </table>
                         
@@ -276,6 +288,14 @@ function viewSubmission(submissionId) {
                     </div>
                 </div>
             `;
+            
+            // Show/hide retry button based on submission status
+            const retryBtn = document.getElementById('retrySubmissionBtn');
+            if (data.can_retry) {
+                retryBtn.style.display = 'inline-block';
+            } else {
+                retryBtn.style.display = 'none';
+            }
             
             new bootstrap.Modal(document.getElementById('submissionModal')).show();
         })
@@ -326,6 +346,58 @@ function exportResults() {
         .catch(error => {
             alert('Error exporting results: ' + error.message);
         });
+}
+
+function retryFailedSubmissions() {
+    if (confirm('Are you sure you want to retry all failed submissions in this job?')) {
+        fetch(`/api/jobs/{{ job.id }}/retry`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                refreshJobStatus();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error retrying submissions: ' + error.message);
+        });
+    }
+}
+
+function retrySubmission(submissionId) {
+    if (confirm('Are you sure you want to retry this submission?')) {
+        fetch(`/api/submissions/${submissionId}/retry`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                refreshJobStatus();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error retrying submission: ' + error.message);
+        });
+    }
+}
+
+function retryCurrentSubmission() {
+    if (currentSubmissionId) {
+        retrySubmission(currentSubmissionId);
+    }
 }
 
 // Auto-refresh every 30 seconds if job is still processing
