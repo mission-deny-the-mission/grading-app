@@ -1,0 +1,64 @@
+# Use Python 3.11 slim image as base
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=development
+ENV FLASK_DEBUG=1
+
+# Set work directory
+WORKDIR /workspace
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        g++ \
+        libffi-dev \
+        libssl-dev \
+        pkg-config \
+        curl \
+        git \
+        vim \
+        nano \
+        htop \
+        procps \
+        iputils-ping \
+        net-tools \
+        telnet \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash vscode \
+    && usermod -aG sudo vscode \
+    && echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir \
+        black \
+        flake8 \
+        isort \
+        pylint \
+        pytest \
+        pytest-cov \
+        ipython \
+        ipdb \
+        debugpy
+
+# Create necessary directories
+RUN mkdir -p uploads instance \
+    && chown -R vscode:vscode /workspace
+
+# Switch to non-root user
+USER vscode
+
+# Expose ports
+EXPOSE 5000 5555
+
+# Default command (keeps container running)
+CMD ["sleep", "infinity"]

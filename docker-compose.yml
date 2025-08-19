@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # Redis for Celery broker and result backend
+  redis:
+    image: redis:7-alpine
+    container_name: grading-app-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Flask web application
+  web:
+    build: .
+    container_name: grading-app-web
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///grading_app.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./instance:/app/instance
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: python app.py
+
+  # Celery worker for background tasks
+  worker:
+    build: .
+    container_name: grading-app-worker
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///grading_app.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./instance:/app/instance
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A tasks worker --loglevel=info --concurrency=2 --queues=grading,maintenance
+
+  # Celery beat for scheduled tasks
+  beat:
+    build: .
+    container_name: grading-app-beat
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///grading_app.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./instance:/app/instance
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A tasks beat --loglevel=info
+
+  # Flower for monitoring Celery tasks (optional)
+  flower:
+    build: .
+    container_name: grading-app-flower
+    ports:
+      - "5555:5555"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///grading_app.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A tasks flower --port=5555
+
+volumes:
+  redis_data:

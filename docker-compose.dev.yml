@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  # Redis for Celery broker and result backend
+  redis:
+    image: redis:7-alpine
+    container_name: grading-app-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Main development container (for VS Code Dev Containers)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: grading-app-dev
+    volumes:
+      - .:/workspace:cached
+      - /workspace/venv
+      - /workspace/__pycache__
+      - /workspace/.pytest_cache
+    ports:
+      - "5000:5000"
+      - "5555:5555"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - DATABASE_URL=sqlite:///grading_app.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
+      - PYTHONPATH=/workspace
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: sleep infinity
+
+  # Flask web application (runs the actual Flask app)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: grading-app-web-dev
+    volumes:
+      - .:/workspace:cached
+      - /workspace/venv
+      - /workspace/__pycache__
+      - /workspace/.pytest_cache
+    ports:
+      - "5001:5000"  # Use different port to avoid conflict with app service
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - DATABASE_URL=sqlite:///grading_app.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
+      - PYTHONPATH=/workspace
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: python app.py
+    profiles:
+      - web
+
+  # Celery worker for background tasks (optional, can be started manually)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: grading-app-worker-dev
+    volumes:
+      - .:/workspace:cached
+      - /workspace/venv
+      - /workspace/__pycache__
+      - /workspace/.pytest_cache
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///grading_app.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
+      - PYTHONPATH=/workspace
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A tasks worker --loglevel=info --concurrency=2 --queues=grading,maintenance
+    profiles:
+      - worker
+
+  # Celery beat for scheduled tasks (optional, can be started manually)
+  beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: grading-app-beat-dev
+    volumes:
+      - .:/workspace:cached
+      - /workspace/venv
+      - /workspace/__pycache__
+      - /workspace/.pytest_cache
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///grading_app.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
+      - PYTHONPATH=/workspace
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: celery -A tasks beat --loglevel=info
+    profiles:
+      - beat
+
+volumes:
+  redis_data:
