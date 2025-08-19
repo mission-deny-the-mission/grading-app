@@ -85,6 +85,11 @@ class GradingJob(db.Model):
         """Check if any failed submissions can be retried."""
         return any(submission.can_retry(max_retries) for submission in self.submissions)
     
+    @property
+    def can_retry(self):
+        """Property to check if job can retry failed submissions."""
+        return self.can_retry_failed_submissions()
+    
     def retry_failed_submissions(self, max_retries=3):
         """Retry all failed submissions that can be retried."""
         retried_count = 0
