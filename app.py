@@ -10,8 +10,9 @@ from docx import Document
 import PyPDF2
 import io
 from dotenv import load_dotenv
-from models import db, GradingJob, Submission, JobBatch, MarkingScheme
+from models import db, GradingJob, Submission, JobBatch, MarkingScheme, SavedPrompt, SavedMarkingScheme
 from tasks import process_job, process_batch
+from datetime import datetime
 
 load_dotenv()
 
@@ -38,13 +39,12 @@ OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 CLAUDE_API_KEY = os.getenv('CLAUDE_API_KEY')
 LM_STUDIO_URL = os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1')
 
-# Default models (latest versions as of 2024)
 DEFAULT_MODELS = {
     'openrouter': {
         'default': 'anthropic/claude-sonnet-4',
         'popular': [
             'anthropic/claude-opus-4.1',
-            'openai/gpt-5',
+            'openai/gpt-5-chat',
             'openai/gpt-5-mini',
             'openai/gpt-oss-120b',
             'openai/gpt-oss-20b:free',
@@ -660,9 +660,28 @@ Created: {submission.created_at}
 
 @app.route('/bulk_upload')
 def bulk_upload():
-    """Bulk upload interface."""
-    default_prompt = session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
-    return render_template('bulk_upload.html', default_prompt=default_prompt)
+    """Bulk upload page."""
+    # Get default prompt from configuration
+    default_prompt = app.config.get('DEFAULT_PROMPT', 'Please grade this document according to standard academic criteria.')
+    
+    # Get saved prompts and marking schemes for dropdowns
+    saved_prompts = SavedPrompt.query.order_by(SavedPrompt.name).all()
+    saved_marking_schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()
+    
+    return render_template('bulk_upload.html', 
+                         default_prompt=default_prompt,
+                         saved_prompts=saved_prompts,
+                         saved_marking_schemes=saved_marking_schemes)
+
+@app.route('/saved-configurations')
+def saved_configurations():
+    """Page for managing saved prompts and marking schemes."""
+    saved_prompts = SavedPrompt.query.order_by(SavedPrompt.updated_at.desc()).all()
+    saved_marking_schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.updated_at.desc()).all()
+    
+    return render_template('saved_configurations.html',
+                         saved_prompts=saved_prompts,
+                         saved_marking_schemes=saved_marking_schemes)
 
 @app.route('/create_job', methods=['POST'])
 def create_job():
@@ -679,8 +698,21 @@ def create_job():
             model=data.get('model'),
             models_to_compare=data.get('models_to_compare'),
             priority=data.get('priority', 5),
-            marking_scheme_id=data.get('marking_scheme_id')
+            marking_scheme_id=data.get('marking_scheme_id'),
+            saved_prompt_id=data.get('saved_prompt_id'),
+            saved_marking_scheme_id=data.get('saved_marking_scheme_id')
         )
+        
+        # Increment usage counts for saved configurations
+        if data.get('saved_prompt_id'):
+            saved_prompt = SavedPrompt.query.get(data['saved_prompt_id'])
+            if saved_prompt:
+                saved_prompt.increment_usage()
+        
+        if data.get('saved_marking_scheme_id'):
+            saved_scheme = SavedMarkingScheme.query.get(data['saved_marking_scheme_id'])
+            if saved_scheme:
+                saved_scheme.increment_usage()
         
         db.session.add(job)
         db.session.commit()
@@ -963,6 +995,245 @@ def retry_submission(submission_id):
                 'error': 'Failed to retry submission'
             }), 400
         
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+# Saved Prompts API Routes
+@app.route('/api/saved-prompts', methods=['GET'])
+def get_saved_prompts():
+    """Get all saved prompts."""
+    try:
+        prompts = SavedPrompt.query.order_by(SavedPrompt.updated_at.desc()).all()
+        return jsonify({
+            'success': True,
+            'prompts': [prompt.to_dict() for prompt in prompts]
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/saved-prompts', methods=['POST'])
+def create_saved_prompt():
+    """Create a new saved prompt."""
+    try:
+        data = request.get_json()
+        
+        prompt = SavedPrompt(
+            name=data['name'],
+            description=data.get('description', ''),
+            category=data.get('category', ''),
+            prompt_text=data['prompt_text'],
+            provider=data['provider'],
+            model=data.get('model', '')
+        )
+        
+        db.session.add(prompt)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'prompt': prompt.to_dict(),
+            'message': 'Prompt saved successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/saved-prompts/<prompt_id>', methods=['GET'])
+def get_saved_prompt(prompt_id):
+    """Get a specific saved prompt."""
+    try:
+        prompt = SavedPrompt.query.get_or_404(prompt_id)
+        return jsonify({
+            'success': True,
+            'prompt': prompt.to_dict()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/saved-prompts/<prompt_id>', methods=['PUT'])
+def update_saved_prompt(prompt_id):
+    """Update a saved prompt."""
+    try:
+        prompt = SavedPrompt.query.get_or_404(prompt_id)
+        data = request.get_json()
+        
+        prompt.name = data.get('name', prompt.name)
+        prompt.description = data.get('description', prompt.description)
+        prompt.category = data.get('category', prompt.category)
+        prompt.prompt_text = data.get('prompt_text', prompt.prompt_text)
+        prompt.provider = data.get('provider', prompt.provider)
+        prompt.model = data.get('model', prompt.model)
+        prompt.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'prompt': prompt.to_dict(),
+            'message': 'Prompt updated successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/saved-prompts/<prompt_id>', methods=['DELETE'])
+def delete_saved_prompt(prompt_id):
+    """Delete a saved prompt."""
+    try:
+        prompt = SavedPrompt.query.get_or_404(prompt_id)
+        db.session.delete(prompt)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Prompt deleted successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+# Saved Marking Schemes API Routes
+@app.route('/api/saved-marking-schemes', methods=['GET'])
+def get_saved_marking_schemes():
+    """Get all saved marking schemes."""
+    try:
+        schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.updated_at.desc()).all()
+        return jsonify({
+            'success': True,
+            'schemes': [scheme.to_dict() for scheme in schemes]
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/saved-marking-schemes', methods=['POST'])
+def create_saved_marking_scheme():
+    """Create a new saved marking scheme."""
+    try:
+        if 'marking_scheme' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No marking scheme file provided'
+            }), 400
+        
+        file = request.files['marking_scheme']
+        if file.filename == '':
+            return jsonify({
+                'success': False,
+                'error': 'No file selected'
+            }), 400
+        
+        # Save file
+        filename = secure_filename(file.filename)
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        filename = f"{timestamp}_{filename}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        # Extract text content
+        content = extract_text_from_file(file_path)
+        
+        # Create saved marking scheme
+        scheme = SavedMarkingScheme(
+            name=request.form.get('name', 'Untitled Marking Scheme'),
+            description=request.form.get('description', ''),
+            category=request.form.get('category', ''),
+            filename=filename,
+            original_filename=file.filename,
+            file_size=os.path.getsize(file_path),
+            file_type=os.path.splitext(file.filename)[1][1:].lower(),
+            content=content
+        )
+        
+        db.session.add(scheme)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'scheme': scheme.to_dict(),
+            'message': 'Marking scheme saved successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/saved-marking-schemes/<scheme_id>', methods=['GET'])
+def get_saved_marking_scheme(scheme_id):
+    """Get a specific saved marking scheme."""
+    try:
+        scheme = SavedMarkingScheme.query.get_or_404(scheme_id)
+        return jsonify({
+            'success': True,
+            'scheme': scheme.to_dict()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/saved-marking-schemes/<scheme_id>', methods=['PUT'])
+def update_saved_marking_scheme(scheme_id):
+    """Update a saved marking scheme."""
+    try:
+        scheme = SavedMarkingScheme.query.get_or_404(scheme_id)
+        data = request.get_json()
+        
+        scheme.name = data.get('name', scheme.name)
+        scheme.description = data.get('description', scheme.description)
+        scheme.category = data.get('category', scheme.category)
+        scheme.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'scheme': scheme.to_dict(),
+            'message': 'Marking scheme updated successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+@app.route('/api/saved-marking-schemes/<scheme_id>', methods=['DELETE'])
+def delete_saved_marking_scheme(scheme_id):
+    """Delete a saved marking scheme."""
+    try:
+        scheme = SavedMarkingScheme.query.get_or_404(scheme_id)
+        
+        # Delete the file
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], scheme.filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        db.session.delete(scheme)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Marking scheme deleted successfully'
+        })
     except Exception as e:
         return jsonify({
             'success': False,

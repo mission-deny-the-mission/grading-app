@@ -5,6 +5,108 @@ import uuid
 
 db = SQLAlchemy()
 
+class SavedPrompt(db.Model):
+    """Model for storing saved prompts that can be reused."""
+    __tablename__ = 'saved_prompts'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Prompt metadata
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    category = db.Column(db.String(100))  # e.g., 'essay', 'report', 'assignment'
+    
+    # Prompt content
+    prompt_text = db.Column(db.Text, nullable=False)
+    
+    # Configuration
+    provider = db.Column(db.String(50), nullable=False)  # openrouter, claude, lm_studio
+    model = db.Column(db.String(100))
+    
+    # Usage tracking
+    usage_count = db.Column(db.Integer, default=0)
+    last_used = db.Column(db.DateTime)
+    
+    # Relationships
+    jobs = db.relationship('GradingJob', backref='saved_prompt', lazy=True, foreign_keys='GradingJob.saved_prompt_id')
+    
+    def to_dict(self):
+        """Convert saved prompt to dictionary."""
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'name': self.name,
+            'description': self.description,
+            'category': self.category,
+            'prompt_text': self.prompt_text,
+            'provider': self.provider,
+            'model': self.model,
+            'usage_count': self.usage_count,
+            'last_used': self.last_used.isoformat() if self.last_used else None
+        }
+    
+    def increment_usage(self):
+        """Increment usage count and update last used timestamp."""
+        self.usage_count += 1
+        self.last_used = datetime.utcnow()
+        db.session.commit()
+
+class SavedMarkingScheme(db.Model):
+    """Model for storing saved marking schemes that can be reused."""
+    __tablename__ = 'saved_marking_schemes'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Marking scheme metadata
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    category = db.Column(db.String(100))  # e.g., 'essay', 'report', 'assignment'
+    
+    # File information
+    filename = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.Integer)
+    file_type = db.Column(db.String(10))  # docx, pdf, txt
+    
+    # Extracted content
+    content = db.Column(db.Text)
+    
+    # Usage tracking
+    usage_count = db.Column(db.Integer, default=0)
+    last_used = db.Column(db.DateTime)
+    
+    # Relationships
+    jobs = db.relationship('GradingJob', backref='saved_marking_scheme', lazy=True, foreign_keys='GradingJob.saved_marking_scheme_id')
+    
+    def to_dict(self):
+        """Convert saved marking scheme to dictionary."""
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'name': self.name,
+            'description': self.description,
+            'category': self.category,
+            'filename': self.filename,
+            'original_filename': self.original_filename,
+            'file_size': self.file_size,
+            'file_type': self.file_type,
+            'content': self.content,
+            'usage_count': self.usage_count,
+            'last_used': self.last_used.isoformat() if self.last_used else None
+        }
+    
+    def increment_usage(self):
+        """Increment usage count and update last used timestamp."""
+        self.usage_count += 1
+        self.last_used = datetime.utcnow()
+        db.session.commit()
+
 class MarkingScheme(db.Model):
     """Model for storing marking schemes."""
     __tablename__ = 'marking_schemes'
@@ -72,6 +174,10 @@ class GradingJob(db.Model):
     # Marking scheme reference
     marking_scheme_id = db.Column(db.String(36), db.ForeignKey('marking_schemes.id'), nullable=True)
     
+    # Saved configurations references
+    saved_prompt_id = db.Column(db.String(36), db.ForeignKey('saved_prompts.id'), nullable=True)
+    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey('saved_marking_schemes.id'), nullable=True)
+    
     # Foreign keys
     batch_id = db.Column(db.String(36), db.ForeignKey('job_batches.id'), nullable=True)
     
@@ -97,6 +203,10 @@ class GradingJob(db.Model):
             'models_to_compare': self.models_to_compare,
             'marking_scheme_id': self.marking_scheme_id,
             'marking_scheme': self.marking_scheme.to_dict() if self.marking_scheme else None,
+            'saved_prompt_id': self.saved_prompt_id,
+            'saved_prompt': self.saved_prompt.to_dict() if self.saved_prompt else None,
+            'saved_marking_scheme_id': self.saved_marking_scheme_id,
+            'saved_marking_scheme': self.saved_marking_scheme.to_dict() if self.saved_marking_scheme else None,
             'progress': self.get_progress(),
             'can_retry': self.can_retry_failed_submissions()
         }

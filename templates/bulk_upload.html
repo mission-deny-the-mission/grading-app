@@ -111,6 +111,16 @@
                         <label for="prompt" class="form-label fw-bold">
                             <i class="fas fa-comment me-2"></i>Grading Instructions
                         </label>
+                        <div class="mb-2">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadSavedPrompt()">
+                                    <i class="fas fa-bookmark me-1"></i>Load Saved Prompt
+                                </button>
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="saveCurrentPrompt()">
+                                    <i class="fas fa-save me-1"></i>Save Current Prompt
+                                </button>
+                            </div>
+                        </div>
                         <textarea class="form-control" id="prompt" rows="4" required>{{ default_prompt }}</textarea>
                     </div>
 
@@ -118,6 +128,16 @@
                         <label for="marking_scheme" class="form-label fw-bold">
                             <i class="fas fa-clipboard-check me-2"></i>Marking Scheme (Optional)
                         </label>
+                        <div class="mb-2">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadSavedMarkingScheme()">
+                                    <i class="fas fa-bookmark me-1"></i>Load Saved Scheme
+                                </button>
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="saveCurrentMarkingScheme()">
+                                    <i class="fas fa-save me-1"></i>Save Current Scheme
+                                </button>
+                            </div>
+                        </div>
                         <input type="file" class="form-control" id="marking_scheme" name="marking_scheme" 
                                accept=".docx,.pdf,.txt">
                         <div class="form-text">
@@ -500,5 +520,126 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
         uploadBtn.innerHTML = originalText;
     });
 });
+
+// Saved Configurations Functions
+function loadSavedPrompt() {
+    const savedPrompts = {{ saved_prompts|tojson }};
+    if (savedPrompts.length === 0) {
+        alert('No saved prompts available. Please save a prompt first.');
+        return;
+    }
+    
+    const promptNames = savedPrompts.map(p => p.name);
+    const selectedPrompt = prompt('Select a saved prompt:\n\n' + promptNames.map((name, i) => `${i + 1}. ${name}`).join('\n') + '\n\nEnter the number:');
+    
+    if (selectedPrompt && !isNaN(selectedPrompt) && selectedPrompt > 0 && selectedPrompt <= savedPrompts.length) {
+        const prompt = savedPrompts[selectedPrompt - 1];
+        document.getElementById('prompt').value = prompt.prompt_text;
+        document.getElementById('provider').value = prompt.provider;
+        if (prompt.model) {
+            document.getElementById('customModel').value = prompt.model;
+        }
+        alert(`Loaded prompt: ${prompt.name}`);
+    }
+}
+
+function saveCurrentPrompt() {
+    const promptText = document.getElementById('prompt').value;
+    const provider = document.getElementById('provider').value;
+    const model = document.getElementById('customModel').value;
+    
+    if (!promptText.trim()) {
+        alert('Please enter a prompt to save.');
+        return;
+    }
+    
+    const name = prompt('Enter a name for this prompt:');
+    if (!name) return;
+    
+    const description = prompt('Enter a description (optional):');
+    const category = prompt('Enter a category (optional, e.g., essay, report):');
+    
+    const formData = {
+        name: name,
+        description: description || '',
+        category: category || '',
+        prompt_text: promptText,
+        provider: provider,
+        model: model || ''
+    };
+    
+    fetch('/api/saved-prompts', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Prompt saved successfully!');
+        } else {
+            alert('Error saving prompt: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error saving prompt: ' + error.message);
+    });
+}
+
+function loadSavedMarkingScheme() {
+    const savedSchemes = {{ saved_marking_schemes|tojson }};
+    if (savedSchemes.length === 0) {
+        alert('No saved marking schemes available. Please save a marking scheme first.');
+        return;
+    }
+    
+    const schemeNames = savedSchemes.map(s => s.name);
+    const selectedScheme = prompt('Select a saved marking scheme:\n\n' + schemeNames.map((name, i) => `${i + 1}. ${name}`).join('\n') + '\n\nEnter the number:');
+    
+    if (selectedScheme && !isNaN(selectedScheme) && selectedScheme > 0 && selectedScheme <= savedSchemes.length) {
+        const scheme = savedSchemes[selectedScheme - 1];
+        // For now, we'll just show the content. In a real implementation, you might want to
+        // create a temporary file or handle this differently
+        alert(`Selected marking scheme: ${scheme.name}\n\nContent preview:\n${scheme.content.substring(0, 200)}...`);
+    }
+}
+
+function saveCurrentMarkingScheme() {
+    const fileInput = document.getElementById('marking_scheme');
+    if (!fileInput.files[0]) {
+        alert('Please select a marking scheme file to save.');
+        return;
+    }
+    
+    const name = prompt('Enter a name for this marking scheme:');
+    if (!name) return;
+    
+    const description = prompt('Enter a description (optional):');
+    const category = prompt('Enter a category (optional, e.g., essay, report):');
+    
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description || '');
+    formData.append('category', category || '');
+    formData.append('marking_scheme', fileInput.files[0]);
+    
+    fetch('/api/saved-marking-schemes', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Marking scheme saved successfully!');
+        } else {
+            alert('Error saving marking scheme: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error saving marking scheme: ' + error.message);
+    });
+}
 </script>
 {% endblock %}
