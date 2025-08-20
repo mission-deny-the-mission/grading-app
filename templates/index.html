@@ -30,16 +30,38 @@
                     </div>
 
                     <div class="mb-4">
+                        <label for="marking_scheme" class="form-label fw-bold">
+                            <i class="fas fa-clipboard-check me-2"></i>Marking Scheme (Optional)
+                        </label>
+                        <input type="file" class="form-control" id="marking_scheme" name="marking_scheme" 
+                               accept=".docx,.pdf,.txt">
+                        <div class="form-text">
+                            Upload a marking scheme or rubric to guide the grading process. Supported formats: .docx, .pdf, .txt
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
                         <label for="provider" class="form-label fw-bold">
                             <i class="fas fa-robot me-2"></i>AI Provider
                         </label>
                         <select class="form-select" id="provider" name="provider" required>
-                            <option value="openrouter">OpenRouter (Claude/GPT)</option>
+                            <option value="openrouter">OpenRouter (Claude/GPT/Gemini)</option>
                             <option value="claude">Claude API (Direct)</option>
                             <option value="lm_studio">LM Studio (Local)</option>
                         </select>
                         <div class="form-text">
                             Choose your preferred AI provider for grading
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="customModel" class="form-label fw-bold">
+                            <i class="fas fa-cog me-2"></i>Custom Model (Optional)
+                        </label>
+                        <input type="text" class="form-control" id="customModel" name="customModel" 
+                               placeholder="Enter custom model name (e.g., openai/gpt-5, anthropic/claude-4)">
+                        <div class="form-text">
+                            Leave blank to use default model, or enter any model name supported by your provider
                         </div>
                     </div>
 
@@ -56,52 +78,31 @@
                         <div id="modelSelection" class="mt-3" style="display: none;">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <h6>OpenRouter Models:</h6>
-                                    <div class="form-check">
-                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="anthropic/claude-3.5-sonnet" id="claude35">
-                                        <label class="form-check-label" for="claude35">
-                                            Claude 3.5 Sonnet
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="openai/gpt-4o" id="gpt4o">
-                                        <label class="form-check-label" for="gpt4o">
-                                            GPT-4o
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="anthropic/claude-3-opus-20240229" id="claude3opus">
-                                        <label class="form-check-label" for="claude3opus">
-                                            Claude 3 Opus
-                                        </label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="meta-llama/llama-3.1-70b-instruct" id="llama70b">
-                                        <label class="form-check-label" for="llama70b">
-                                            Llama 3.1 70B
-                                        </label>
+                                    <h6>Popular Models:</h6>
+                                    <div id="popularModels">
+                                        <!-- Popular models will be loaded dynamically -->
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <h6>Other Models:</h6>
-                                    <div class="form-check">
-                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="claude" id="claudeDirect">
-                                        <label class="form-check-label" for="claudeDirect">
-                                            Claude Direct API
-                                        </label>
+                                    <h6>Custom Models:</h6>
+                                    <div class="mb-3">
+                                        <input type="text" class="form-control" id="customModel1" name="customModels[]" 
+                                               placeholder="Enter custom model name">
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="lm_studio" id="lmStudio">
-                                        <label class="form-check-label" for="lmStudio">
-                                            LM Studio (Local)
-                                        </label>
+                                    <div class="mb-3">
+                                        <input type="text" class="form-control" id="customModel2" name="customModels[]" 
+                                               placeholder="Enter custom model name">
+                                    </div>
+                                    <div class="mb-3">
+                                        <input type="text" class="form-control" id="customModel3" name="customModels[]" 
+                                               placeholder="Enter custom model name">
                                     </div>
                                 </div>
                             </div>
                             <div class="mt-2">
                                 <small class="text-muted">
                                     <i class="fas fa-info-circle me-1"></i>
-                                    Select 2 or more models to compare their grading results. If none selected, will use default model.
+                                    Select 2 or more models to compare their grading results. You can also enter custom model names.
                                 </small>
                             </div>
                         </div>
@@ -270,10 +271,71 @@ function clearResults() {
     // Reset model selection
     document.getElementById('enableComparison').checked = false;
     document.getElementById('modelSelection').style.display = 'none';
-    // Uncheck all model checkboxes
-    document.querySelectorAll('.model-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
+    // Clear custom model inputs
+    document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
+        input.value = '';
     });
+    // Load available models again
+    loadAvailableModels();
+}
+
+function loadAvailableModels() {
+    const provider = document.getElementById('provider').value;
+    const popularModelsDiv = document.getElementById('popularModels');
+    
+    // Fetch available models for the selected provider
+    fetch(`/api/models/${provider}`)
+        .then(response => response.json())
+        .then(data => {
+            popularModelsDiv.innerHTML = '';
+            
+            if (data.popular && data.popular.length > 0) {
+                data.popular.forEach(model => {
+                    const modelId = model.replace(/[^a-zA-Z0-9]/g, '_');
+                    const displayName = getModelDisplayName(model);
+                    
+                    const div = document.createElement('div');
+                    div.className = 'form-check';
+                    div.innerHTML = `
+                        <input class="form-check-input model-checkbox" type="checkbox" 
+                               name="models_to_compare[]" value="${model}" id="${modelId}">
+                        <label class="form-check-label" for="${modelId}">
+                            ${displayName}
+                        </label>
+                    `;
+                    popularModelsDiv.appendChild(div);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading models:', error);
+            popularModelsDiv.innerHTML = '<p class="text-muted">Error loading models</p>';
+        });
+}
+
+function getModelDisplayName(modelName) {
+    // Create a more readable display name from the model identifier
+    const nameMap = {
+        'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
+        'openai/gpt-4o': 'GPT-4o',
+        'openai/gpt-4o-mini': 'GPT-4o Mini',
+        'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
+        'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
+        'google/gemini-pro-1.5': 'Gemini Pro 1.5',
+        'mistralai/mistral-7b-instruct': 'Mistral 7B',
+        'openai/gpt-4-turbo': 'GPT-4 Turbo',
+        'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku',
+        'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
+        'claude-3-opus-20240229': 'Claude 3 Opus',
+        'claude-3-sonnet-20240229': 'Claude 3 Sonnet',
+        'claude-3-haiku-20240307': 'Claude 3 Haiku',
+        'local-model': 'Local Model',
+        'llama-3.1-70b-instruct': 'Llama 3.1 70B',
+        'mistral-7b-instruct': 'Mistral 7B',
+        'codellama-34b-instruct': 'Code Llama 34B'
+    };
+    
+    return nameMap[modelName] || modelName;
 }
 
 function toggleModelSelection() {
@@ -292,8 +354,16 @@ function toggleModelSelection() {
 }
 
 $(document).ready(function() {
+    // Load available models when page loads
+    loadAvailableModels();
+    
     // Add event listener for comparison toggle
     $('#enableComparison').on('change', toggleModelSelection);
+    
+    // Add event listener for provider change
+    $('#provider').on('change', function() {
+        loadAvailableModels();
+    });
     
     $('#uploadForm').on('submit', function(e) {
         e.preventDefault();

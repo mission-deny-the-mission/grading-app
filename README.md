@@ -9,6 +9,7 @@ A modern Python web application that uses AI to grade documents. Supports multip
   - OpenRouter (access to Claude, GPT, and other models)
   - Claude API (direct Anthropic integration)
   - LM Studio (local model inference)
+- **Marking Scheme Support**: Upload grading rubrics and marking schemes to guide AI grading
 - **Bulk Processing**: Upload and process multiple documents in the background
 - **Job Management**: Track and monitor grading jobs with real-time progress
 - **Background Processing**: Celery-based task queue for scalable processing
@@ -114,10 +115,11 @@ The application features a modern, gradient-based design with:
 ### Basic Grading (Single Upload)
 
 1. **Upload Document**: Select a .docx or .pdf file (max 16MB)
-2. **Choose AI Provider**: Select from OpenRouter, Claude, or LM Studio
-3. **Customize Prompt**: Modify grading instructions or use sample prompts
-4. **Grade**: Click "Grade Document" and wait for results
-5. **Review**: View detailed feedback and download results
+2. **Upload Marking Scheme** (Optional): Select a .docx, .pdf, or .txt file with grading criteria
+3. **Choose AI Provider**: Select from OpenRouter, Claude, or LM Studio
+4. **Customize Prompt**: Modify grading instructions or use sample prompts
+5. **Grade**: Click "Grade Document" and wait for results
+6. **Review**: View detailed feedback and download results
 
 ### Bulk Processing
 
@@ -125,6 +127,7 @@ The application features a modern, gradient-based design with:
    - Set job name, description, and priority
    - Choose AI provider and model
    - Configure grading prompt
+   - **Optional**: Upload a marking scheme for consistent grading
    - Click "Create Job" to generate a job ID
 2. **Upload Files**: Select multiple documents (up to 50 files)
    - Files will be associated with the created job
@@ -161,6 +164,35 @@ You can create custom grading criteria by:
 2. Including evaluation criteria
 3. Specifying desired output format
 4. Adding context about the document type
+
+### Marking Schemes
+
+The application supports uploading marking schemes and grading rubrics:
+
+- **Supported Formats**: DOCX, PDF, TXT files
+- **Automatic Integration**: Marking scheme content is automatically included in AI prompts
+- **Consistent Grading**: Ensures all documents are graded using the same criteria
+- **View and Download**: Access marking scheme content from job details
+- **Bulk Processing**: Apply the same marking scheme to multiple documents
+
+**Example Marking Scheme Format:**
+```
+GRADING RUBRIC FOR ESSAYS
+
+CRITERIA:
+1. Thesis Statement (20 points)
+   - Clear and specific thesis
+   - Well-argued position
+
+2. Content and Analysis (30 points)
+   - Relevant evidence and examples
+   - Logical argument development
+
+GRADING SCALE:
+A (90-100): Excellent work
+B (80-89): Good work
+C (70-79): Satisfactory work
+```
 
 ## File Structure
 

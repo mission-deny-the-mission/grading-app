@@ -10,7 +10,7 @@ from docx import Document
 import PyPDF2
 import io
 from dotenv import load_dotenv
-from models import db, GradingJob, Submission, JobBatch
+from models import db, GradingJob, Submission, JobBatch, MarkingScheme
 from tasks import process_job, process_batch
 
 load_dotenv()
@@ -37,6 +37,42 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 CLAUDE_API_KEY = os.getenv('CLAUDE_API_KEY')
 LM_STUDIO_URL = os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1')
+
+# Default models (latest versions as of 2024)
+DEFAULT_MODELS = {
+    'openrouter': {
+        'default': 'anthropic/claude-sonnet-4',
+        'popular': [
+            'anthropic/claude-opus-4.1',
+            'openai/gpt-5',
+            'openai/gpt-5-mini',
+            'openai/gpt-oss-120b',
+            'openai/gpt-oss-20b:free',
+            'qwen/qwen3-235b-a22b-thinking-2507',
+            'qwen/qwen3-30b-a3b:free',
+            'mistralai/mistral-large',
+            'deepseek/deepseek-r1-0528'
+        ]
+    },
+    'claude': {
+        'default': 'claude-3-5-sonnet-20241022',
+        'popular': [
+            'claude-3-5-sonnet-20241022',
+            'claude-3-opus-20240229',
+            'claude-3-sonnet-20240229',
+            'claude-3-haiku-20240307'
+        ]
+    },
+    'lm_studio': {
+        'default': 'local-model',
+        'popular': [
+            'local-model',
+            'google/gemma-3-27b',
+            'qwen/qwen3-4b-thinking-2507',
+            'deepseek/deepseek-r1-0528-qwen3-8b'
+        ]
+    }
+}
 
 # Initialize API clients
 if OPENROUTER_API_KEY:
@@ -74,18 +110,39 @@ def extract_text_from_pdf(file_path):
     except Exception as e:
         return f"Error reading PDF: {str(e)}"
 
-def grade_with_openrouter(text, prompt, model="anthropic/claude-3.5-sonnet"):
+def extract_marking_scheme_content(file_path, file_type):
+    """Extract content from marking scheme file."""
+    try:
+        if file_type == 'docx':
+            return extract_text_from_docx(file_path)
+        elif file_type == 'pdf':
+            return extract_text_from_pdf(file_path)
+        elif file_type == 'txt':
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        else:
+            return f"Unsupported file type: {file_type}"
+    except Exception as e:
+        return f"Error reading marking scheme file: {str(e)}"
+
+def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None):
     """Grade document using OpenRouter API."""
     try:
         # Configure OpenAI for OpenRouter
         openai.api_key = OPENROUTER_API_KEY
         openai.api_base = "https://openrouter.ai/api/v1"
         
+        # Prepare the grading prompt with marking scheme if provided
+        if marking_scheme_content:
+            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+        else:
+            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+        
         response = openai.ChatCompletion.create(
             model=model,
             messages=[
-                {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback."},
-                {"role": "user", "content": f"{prompt}\n\nDocument to grade:\n{text}"}
+                {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
+                {"role": "user", "content": enhanced_prompt}
             ],
             temperature=0.3,
             max_tokens=2000
@@ -104,7 +161,7 @@ def grade_with_openrouter(text, prompt, model="anthropic/claude-3.5-sonnet"):
             'provider': 'OpenRouter'
         }
 
-def grade_with_claude(text, prompt):
+def grade_with_claude(text, prompt, marking_scheme_content=None):
     """Grade document using Claude API."""
     if not anthropic:
         return {
@@ -114,15 +171,21 @@ def grade_with_claude(text, prompt):
         }
     
     try:
+        # Prepare the grading prompt with marking scheme if provided
+        if marking_scheme_content:
+            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+        else:
+            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+        
         response = anthropic.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=2000,
             temperature=0.3,
-            system="You are a professional document grader. Provide detailed, constructive feedback.",
+            system="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
             messages=[
                 {
                     "role": "user",
-                    "content": f"{prompt}\n\nDocument to grade:\n{text}"
+                    "content": enhanced_prompt
                 }
             ]
         )
@@ -140,16 +203,22 @@ def grade_with_claude(text, prompt):
             'provider': 'Claude'
         }
 
-def grade_with_lm_studio(text, prompt):
+def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
     """Grade document using LM Studio API."""
     try:
+        # Prepare the grading prompt with marking scheme if provided
+        if marking_scheme_content:
+            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+        else:
+            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+        
         response = requests.post(
             f"{LM_STUDIO_URL}/chat/completions",
             json={
                 "model": "local-model",
                 "messages": [
-                    {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback."},
-                    {"role": "user", "content": f"{prompt}\n\nDocument to grade:\n{text}"}
+                    {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
+                    {"role": "user", "content": enhanced_prompt}
                 ],
                 "temperature": 0.3,
                 "max_tokens": 2000
@@ -195,6 +264,33 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
+    # Handle marking scheme upload if provided
+    marking_scheme_content = None
+    if 'marking_scheme' in request.files and request.files['marking_scheme'].filename != '':
+        marking_scheme_file = request.files['marking_scheme']
+        marking_scheme_filename = secure_filename(marking_scheme_file.filename)
+        marking_scheme_path = os.path.join(app.config['UPLOAD_FOLDER'], marking_scheme_filename)
+        marking_scheme_file.save(marking_scheme_path)
+        
+        # Determine marking scheme file type
+        if marking_scheme_filename.lower().endswith('.docx'):
+            marking_scheme_type = 'docx'
+        elif marking_scheme_filename.lower().endswith('.pdf'):
+            marking_scheme_type = 'pdf'
+        elif marking_scheme_filename.lower().endswith('.txt'):
+            marking_scheme_type = 'txt'
+        else:
+            return jsonify({'error': 'Unsupported marking scheme file type. Please upload .docx, .pdf, or .txt files.'}), 400
+        
+        # Extract marking scheme content
+        marking_scheme_content = extract_marking_scheme_content(marking_scheme_path, marking_scheme_type)
+        
+        # Clean up marking scheme file
+        try:
+            os.remove(marking_scheme_path)
+        except:
+            pass
+    
     if file:
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -218,11 +314,22 @@ def upload_file():
         # Get grading parameters
         prompt = request.form.get('prompt', session.get('default_prompt', 'Please grade this document and provide detailed feedback.'))
         provider = request.form.get('provider', 'openrouter')
+        custom_model = request.form.get('customModel', '').strip()
         models_to_compare = request.form.getlist('models_to_compare[]')  # Get list of models to compare
+        custom_models = request.form.getlist('customModels[]')  # Get list of custom models
+        
+        # Add custom models to the comparison list
+        if custom_models:
+            models_to_compare.extend([m.strip() for m in custom_models if m.strip()])
         
         # If no specific models selected, use default behavior
         if not models_to_compare:
-            models_to_compare = [request.form.get('model', 'anthropic/claude-3.5-sonnet')]
+            if custom_model:
+                models_to_compare = [custom_model]
+            else:
+                # Use default model for the provider
+                default_model = DEFAULT_MODELS.get(provider, {}).get('default', 'anthropic/claude-3-5-sonnet-20241022')
+                models_to_compare = [default_model]
         
         results = []
         all_successful = True
@@ -232,15 +339,15 @@ def upload_file():
             if provider == 'openrouter':
                 if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
                     return jsonify({'error': 'OpenRouter API key not configured. Please configure your API key in the settings.'}), 400
-                result = grade_with_openrouter(text, prompt, model)
+                result = grade_with_openrouter(text, prompt, model, marking_scheme_content)
             elif provider == 'claude':
                 if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
                     return jsonify({'error': 'Claude API key not configured. Please configure your API key in the settings.'}), 400
                 if not anthropic:
                     return jsonify({'error': 'Claude API client failed to initialize. Please check your API key configuration.'}), 400
-                result = grade_with_claude(text, prompt)
+                result = grade_with_claude(text, prompt, marking_scheme_content)
             elif provider == 'lm_studio':
-                result = grade_with_lm_studio(text, prompt)
+                result = grade_with_lm_studio(text, prompt, marking_scheme_content)
             else:
                 return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, lm_studio'}), 400
             
@@ -448,6 +555,19 @@ def test_lm_studio():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/models')
+def get_available_models():
+    """Get available models for each provider."""
+    return jsonify(DEFAULT_MODELS)
+
+@app.route('/api/models/<provider>')
+def get_provider_models(provider):
+    """Get available models for a specific provider."""
+    if provider in DEFAULT_MODELS:
+        return jsonify(DEFAULT_MODELS[provider])
+    else:
+        return jsonify({'error': f'Unknown provider: {provider}'}), 400
+
 @app.route('/jobs')
 def jobs():
     """View all grading jobs."""
@@ -558,7 +678,8 @@ def create_job():
             prompt=data['prompt'],
             model=data.get('model'),
             models_to_compare=data.get('models_to_compare'),
-            priority=data.get('priority', 5)
+            priority=data.get('priority', 5),
+            marking_scheme_id=data.get('marking_scheme_id')
         )
         
         db.session.add(job)
@@ -575,6 +696,67 @@ def create_job():
             'success': False,
             'error': str(e)
         }), 400
+
+@app.route('/upload_marking_scheme', methods=['POST'])
+def upload_marking_scheme():
+    """Handle marking scheme upload."""
+    try:
+        if 'marking_scheme' not in request.files:
+            return jsonify({'error': 'No marking scheme file provided'}), 400
+        
+        file = request.files['marking_scheme']
+        if file.filename == '':
+            return jsonify({'error': 'No marking scheme file selected'}), 400
+        
+        # Validate file type
+        filename = secure_filename(file.filename)
+        if not (filename.lower().endswith('.docx') or filename.lower().endswith('.pdf') or filename.lower().endswith('.txt')):
+            return jsonify({'error': 'Unsupported file type. Please upload .docx, .pdf, or .txt files.'}), 400
+        
+        # Save file temporarily
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        
+        # Determine file type
+        if filename.lower().endswith('.docx'):
+            file_type = 'docx'
+        elif filename.lower().endswith('.pdf'):
+            file_type = 'pdf'
+        else:
+            file_type = 'txt'
+        
+        # Extract content
+        content = extract_marking_scheme_content(file_path, file_type)
+        
+        # Create marking scheme record
+        marking_scheme = MarkingScheme(
+            name=request.form.get('name', filename),
+            description=request.form.get('description', ''),
+            filename=filename,
+            original_filename=file.filename,
+            file_size=os.path.getsize(file_path),
+            file_type=file_type,
+            content=content
+        )
+        
+        db.session.add(marking_scheme)
+        db.session.commit()
+        
+        # Clean up temporary file
+        try:
+            os.remove(file_path)
+        except:
+            pass
+        
+        return jsonify({
+            'success': True,
+            'marking_scheme_id': marking_scheme.id,
+            'name': marking_scheme.name,
+            'message': 'Marking scheme uploaded successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/upload_bulk', methods=['POST'])
 def upload_bulk():

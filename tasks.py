@@ -8,7 +8,7 @@ import openai
 from anthropic import Anthropic
 from flask import Flask
 from dotenv import load_dotenv
-from models import db, GradingJob, Submission
+from models import db, GradingJob, Submission, MarkingScheme
 
 # Load environment variables from .env file
 load_dotenv()
@@ -84,18 +84,24 @@ def extract_text_from_pdf(file_path):
     except Exception as e:
         return f"Error reading PDF: {str(e)}"
 
-def grade_with_openrouter(text, prompt, model="anthropic/claude-3.5-sonnet"):
+def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None):
     """Grade document using OpenRouter API."""
     try:
         # Configure OpenAI for OpenRouter
         openai.api_key = OPENROUTER_API_KEY
         openai.api_base = "https://openrouter.ai/api/v1"
         
+        # Prepare the grading prompt with marking scheme if provided
+        if marking_scheme_content:
+            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+        else:
+            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+        
         response = openai.ChatCompletion.create(
             model=model,
             messages=[
-                {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback."},
-                {"role": "user", "content": f"{prompt}\n\nDocument to grade:\n{text}"}
+                {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
+                {"role": "user", "content": enhanced_prompt}
             ],
             temperature=0.3,
             max_tokens=2000
@@ -133,7 +139,7 @@ def grade_with_openrouter(text, prompt, model="anthropic/claude-3.5-sonnet"):
             'provider': 'OpenRouter'
         }
 
-def grade_with_claude(text, prompt):
+def grade_with_claude(text, prompt, marking_scheme_content=None):
     """Grade document using Claude API."""
     if not anthropic:
         return {
@@ -143,15 +149,21 @@ def grade_with_claude(text, prompt):
         }
     
     try:
+        # Prepare the grading prompt with marking scheme if provided
+        if marking_scheme_content:
+            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+        else:
+            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+        
         response = anthropic.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=2000,
             temperature=0.3,
-            system="You are a professional document grader. Provide detailed, constructive feedback.",
+            system="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
             messages=[
                 {
                     "role": "user",
-                    "content": f"{prompt}\n\nDocument to grade:\n{text}"
+                    "content": enhanced_prompt
                 }
             ]
         )
@@ -190,16 +202,22 @@ def grade_with_claude(text, prompt):
                 'provider': 'Claude'
             }
 
-def grade_with_lm_studio(text, prompt):
+def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
     """Grade document using LM Studio API."""
     try:
+        # Prepare the grading prompt with marking scheme if provided
+        if marking_scheme_content:
+            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+        else:
+            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+        
         response = requests.post(
             f"{LM_STUDIO_URL}/chat/completions",
             json={
                 "model": "local-model",
                 "messages": [
-                    {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback."},
-                    {"role": "user", "content": f"{prompt}\n\nDocument to grade:\n{text}"}
+                    {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
+                    {"role": "user", "content": enhanced_prompt}
                 ],
                 "temperature": 0.3,
                 "max_tokens": 2000
@@ -373,12 +391,17 @@ def process_submission_sync(submission_id):
             else:
                 # Fallback to single model (backward compatibility)
                 if job.provider == 'openrouter':
-                    models_to_grade = [job.model if job.model else "anthropic/claude-3.5-sonnet"]
+                    models_to_grade = [job.model if job.model else "anthropic/claude-3-5-sonnet-20241022"]
                 else:
                     models_to_grade = [job.model if job.model else "default"]
             
             all_successful = True
             successful_results = []
+            
+            # Get marking scheme content if available
+            marking_scheme_content = None
+            if job.marking_scheme:
+                marking_scheme_content = job.marking_scheme.content
             
             # Grade with each model
             for model in models_to_grade:
@@ -387,7 +410,7 @@ def process_submission_sync(submission_id):
                     if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
                         submission.set_status('failed', 'OpenRouter API key not configured. Please configure your API key in the settings.')
                         return False
-                    result = grade_with_openrouter(text, job.prompt, model)
+                    result = grade_with_openrouter(text, job.prompt, model, marking_scheme_content)
                 elif job.provider == 'claude':
                     if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
                         submission.set_status('failed', 'Claude API key not configured. Please configure your API key in the settings.')
@@ -395,9 +418,9 @@ def process_submission_sync(submission_id):
                     if not anthropic:
                         submission.set_status('failed', 'Claude API client failed to initialize. Please check your API key configuration.')
                         return False
-                    result = grade_with_claude(text, job.prompt)
+                    result = grade_with_claude(text, job.prompt, marking_scheme_content)
                 elif job.provider == 'lm_studio':
-                    result = grade_with_lm_studio(text, job.prompt)
+                    result = grade_with_lm_studio(text, job.prompt, marking_scheme_content)
                 else:
                     submission.set_status('failed', f'Unsupported provider: {job.provider}. Supported providers are: openrouter, claude, lm_studio')
                     return False

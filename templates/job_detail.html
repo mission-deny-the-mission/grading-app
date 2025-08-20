@@ -107,7 +107,7 @@
             </div>
             
             <div class="col-lg-4">
-                <div class="card">
+                <div class="card mb-3">
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="fas fa-comment me-2"></i>Grading Instructions
@@ -117,6 +117,35 @@
                         <div style="white-space: pre-wrap; font-size: 0.9rem;">{{ job.prompt }}</div>
                     </div>
                 </div>
+                
+                {% if job.marking_scheme %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clipboard-check me-2"></i>Marking Scheme
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <strong>Name:</strong> {{ job.marking_scheme.name }}
+                        </div>
+                        {% if job.marking_scheme.description %}
+                        <div class="mb-2">
+                            <strong>Description:</strong> {{ job.marking_scheme.description }}
+                        </div>
+                        {% endif %}
+                        <div class="mb-2">
+                            <strong>File:</strong> {{ job.marking_scheme.original_filename }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Size:</strong> {{ "%.1f"|format(job.marking_scheme.file_size / 1024) }} KB
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewMarkingScheme()">
+                            <i class="fas fa-eye me-1"></i>View Content
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -223,6 +252,38 @@
         </div>
     </div>
 </div>
+
+<!-- Marking Scheme Modal -->
+{% if job.marking_scheme %}
+<div class="modal fade" id="markingSchemeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Marking Scheme: {{ job.marking_scheme.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>File:</strong> {{ job.marking_scheme.original_filename }}<br>
+                    <strong>Size:</strong> {{ "%.1f"|format(job.marking_scheme.file_size / 1024) }} KB<br>
+                    {% if job.marking_scheme.description %}
+                    <strong>Description:</strong> {{ job.marking_scheme.description }}
+                    {% endif %}
+                </div>
+                <hr>
+                <h6>Content:</h6>
+                <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-size: 0.9rem;">
+                    {{ job.marking_scheme.content }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="downloadMarkingScheme()">Download</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -433,6 +494,23 @@ function retryCurrentSubmission() {
     if (currentSubmissionId) {
         retrySubmission(currentSubmissionId);
     }
+}
+
+function viewMarkingScheme() {
+    new bootstrap.Modal(document.getElementById('markingSchemeModal')).show();
+}
+
+function downloadMarkingScheme() {
+    {% if job.marking_scheme %}
+    const content = `Marking Scheme: {{ job.marking_scheme.name }}\n\n{{ job.marking_scheme.content }}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '{{ job.marking_scheme.original_filename }}_content.txt';
+    a.click();
+    window.URL.revokeObjectURL(url);
+    {% endif %}
 }
 
 // Auto-refresh every 30 seconds if job is still processing

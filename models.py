@@ -5,6 +5,43 @@ import uuid
 
 db = SQLAlchemy()
 
+class MarkingScheme(db.Model):
+    """Model for storing marking schemes."""
+    __tablename__ = 'marking_schemes'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Marking scheme metadata
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    filename = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.Integer)
+    file_type = db.Column(db.String(10))  # docx, pdf, txt
+    
+    # Extracted content
+    content = db.Column(db.Text)
+    
+    # Relationships
+    jobs = db.relationship('GradingJob', backref='marking_scheme', lazy=True)
+    
+    def to_dict(self):
+        """Convert marking scheme to dictionary."""
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'name': self.name,
+            'description': self.description,
+            'filename': self.filename,
+            'original_filename': self.original_filename,
+            'file_size': self.file_size,
+            'file_type': self.file_type,
+            'content': self.content
+        }
+
 class GradingJob(db.Model):
     """Model for tracking grading jobs."""
     __tablename__ = 'grading_jobs'
@@ -32,6 +69,9 @@ class GradingJob(db.Model):
     # Multi-model support
     models_to_compare = db.Column(db.JSON)  # List of models to use for comparison
     
+    # Marking scheme reference
+    marking_scheme_id = db.Column(db.String(36), db.ForeignKey('marking_schemes.id'), nullable=True)
+    
     # Foreign keys
     batch_id = db.Column(db.String(36), db.ForeignKey('job_batches.id'), nullable=True)
     
@@ -55,6 +95,8 @@ class GradingJob(db.Model):
             'prompt': self.prompt,
             'model': self.model,
             'models_to_compare': self.models_to_compare,
+            'marking_scheme_id': self.marking_scheme_id,
+            'marking_scheme': self.marking_scheme.to_dict() if self.marking_scheme else None,
             'progress': self.get_progress(),
             'can_retry': self.can_retry_failed_submissions()
         }

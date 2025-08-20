@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Database migration script for multi-model comparison feature.
-This script adds the new GradeResult table and updates existing tables.
+Database migration script for adding marking scheme support.
 """
 
 import os
@@ -10,79 +9,73 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 
 def migrate_database():
-    """Run database migrations for multi-model comparison feature."""
+    """Run database migrations."""
     
-    # Get database URL from environment or use default
+    # Get database URL from environment
     database_url = os.getenv('DATABASE_URL', 'sqlite:///grading_app.db')
     
-    print(f"Connecting to database: {database_url}")
+    # Create engine
+    engine = create_engine(database_url)
+    
+    print("Starting database migration...")
     
     try:
-        # Create engine
-        engine = create_engine(database_url)
-        
         with engine.connect() as conn:
-            # Check if grade_results table already exists
-            try:
-                result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='grade_results'"))
-                if result.fetchone():
-                    print("✓ GradeResult table already exists")
-                else:
-                    print("Creating GradeResult table...")
-                    
-                    # Create grade_results table
-                    conn.execute(text("""
-                        CREATE TABLE grade_results (
-                            id VARCHAR(36) PRIMARY KEY,
-                            created_at DATETIME,
-                            grade TEXT NOT NULL,
-                            provider VARCHAR(50) NOT NULL,
-                            model VARCHAR(100) NOT NULL,
-                            status VARCHAR(50) DEFAULT 'completed',
-                            error_message TEXT,
-                            grade_metadata JSON,
-                            submission_id VARCHAR(36) NOT NULL,
-                            FOREIGN KEY (submission_id) REFERENCES submissions (id)
-                        )
-                    """))
-                    print("✓ GradeResult table created successfully")
-                    
-            except OperationalError as e:
-                print(f"Error checking/creating grade_results table: {e}")
-                return False
+            # Check if marking_schemes table exists
+            result = conn.execute(text("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name='marking_schemes'
+            """))
             
-            # Check if models_to_compare column exists in grading_jobs table
-            try:
-                result = conn.execute(text("PRAGMA table_info(grading_jobs)"))
-                columns = [row[1] for row in result.fetchall()]
-                
-                if 'models_to_compare' not in columns:
-                    print("Adding models_to_compare column to grading_jobs table...")
-                    # SQLite doesn't support JSON type, use TEXT instead
-                    conn.execute(text("ALTER TABLE grading_jobs ADD COLUMN models_to_compare TEXT"))
-                    print("✓ models_to_compare column added successfully")
-                else:
-                    print("✓ models_to_compare column already exists")
-                    
-            except OperationalError as e:
-                print(f"Error checking/adding models_to_compare column: {e}")
-                return False
+            if not result.fetchone():
+                print("Creating marking_schemes table...")
+                conn.execute(text("""
+                    CREATE TABLE marking_schemes (
+                        id VARCHAR(36) PRIMARY KEY,
+                        created_at DATETIME,
+                        updated_at DATETIME,
+                        name VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        filename VARCHAR(255) NOT NULL,
+                        original_filename VARCHAR(255) NOT NULL,
+                        file_size INTEGER,
+                        file_type VARCHAR(10),
+                        content TEXT
+                    )
+                """))
+                print("✓ marking_schemes table created")
+            else:
+                print("✓ marking_schemes table already exists")
+            
+            # Check if marking_scheme_id column exists in grading_jobs table
+            result = conn.execute(text("""
+                PRAGMA table_info(grading_jobs)
+            """))
+            
+            columns = [row[1] for row in result.fetchall()]
+            
+            if 'marking_scheme_id' not in columns:
+                print("Adding marking_scheme_id column to grading_jobs table...")
+                conn.execute(text("""
+                    ALTER TABLE grading_jobs 
+                    ADD COLUMN marking_scheme_id VARCHAR(36) 
+                    REFERENCES marking_schemes(id)
+                """))
+                print("✓ marking_scheme_id column added")
+            else:
+                print("✓ marking_scheme_id column already exists")
             
             # Commit changes
             conn.commit()
-            print("✓ Database migration completed successfully")
-            return True
             
-    except Exception as e:
-        print(f"Error during migration: {e}")
-        return False
-
-if __name__ == "__main__":
-    print("Starting database migration for multi-model comparison feature...")
-    
-    if migrate_database():
-        print("\nMigration completed successfully!")
-        print("You can now use the multi-model comparison feature.")
-    else:
-        print("\nMigration failed!")
+        print("Database migration completed successfully!")
+        
+    except OperationalError as e:
+        print(f"Database migration failed: {e}")
         sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error during migration: {e}")
+        sys.exit(1)
+
+if __name__ == '__main__':
+    migrate_database()
