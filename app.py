@@ -182,7 +182,8 @@ def grade_with_lm_studio(text, prompt):
 @app.route('/')
 def index():
     """Main page with upload form and configuration."""
-    return render_template('index.html')
+    default_prompt = session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
+    return render_template('index.html', default_prompt=default_prompt)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -208,7 +209,7 @@ def upload_file():
             return jsonify({'error': 'Unsupported file type. Please upload .docx or .pdf files.'}), 400
         
         # Get grading parameters
-        prompt = request.form.get('prompt', 'Please grade this document and provide detailed feedback.')
+        prompt = request.form.get('prompt', session.get('default_prompt', 'Please grade this document and provide detailed feedback.'))
         provider = request.form.get('provider', 'openrouter')
         
         # Grade the document
@@ -242,22 +243,179 @@ def upload_file():
 @app.route('/config')
 def config():
     """Configuration page for API keys and settings."""
-    return render_template('config.html')
+    # Load current configuration from environment variables
+    config_data = {
+        'openrouter_api_key': os.getenv('OPENROUTER_API_KEY', ''),
+        'claude_api_key': os.getenv('CLAUDE_API_KEY', ''),
+        'lm_studio_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
+        'default_prompt': session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
+    }
+    return render_template('config.html', config=config_data)
 
 @app.route('/save_config', methods=['POST'])
 def save_config():
     """Save configuration settings."""
+    try:
+        config_data = {
+            'openrouter_api_key': request.form.get('openrouter_api_key', ''),
+            'claude_api_key': request.form.get('claude_api_key', ''),
+            'lm_studio_url': request.form.get('lm_studio_url', 'http://localhost:1234/v1'),
+            'default_prompt': request.form.get('default_prompt', 'Please grade this document and provide detailed feedback.')
+        }
+        
+        # Save to session for immediate use
+        session['config'] = config_data
+        session['default_prompt'] = config_data['default_prompt']
+        
+        # Save to .env file for persistence
+        env_file_path = '.env'
+        env_content = []
+        
+        # Read existing .env file if it exists
+        if os.path.exists(env_file_path):
+            with open(env_file_path, 'r') as f:
+                existing_lines = f.readlines()
+                existing_vars = {}
+                for line in existing_lines:
+                    if '=' in line and not line.strip().startswith('#'):
+                        key, value = line.strip().split('=', 1)
+                        existing_vars[key] = value
+                
+                # Update with new values
+                if config_data['openrouter_api_key']:
+                    existing_vars['OPENROUTER_API_KEY'] = config_data['openrouter_api_key']
+                if config_data['claude_api_key']:
+                    existing_vars['CLAUDE_API_KEY'] = config_data['claude_api_key']
+                if config_data['lm_studio_url']:
+                    existing_vars['LM_STUDIO_URL'] = config_data['lm_studio_url']
+                
+                # Write back to file
+                with open(env_file_path, 'w') as f:
+                    for key, value in existing_vars.items():
+                        f.write(f"{key}={value}\n")
+        else:
+            # Create new .env file
+            with open(env_file_path, 'w') as f:
+                if config_data['openrouter_api_key']:
+                    f.write(f"OPENROUTER_API_KEY={config_data['openrouter_api_key']}\n")
+                if config_data['claude_api_key']:
+                    f.write(f"CLAUDE_API_KEY={config_data['claude_api_key']}\n")
+                if config_data['lm_studio_url']:
+                    f.write(f"LM_STUDIO_URL={config_data['lm_studio_url']}\n")
+        
+        # Reload environment variables
+        load_dotenv(override=True)
+        
+        # Update global variables
+        global OPENROUTER_API_KEY, CLAUDE_API_KEY, LM_STUDIO_URL, anthropic
+        OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+        CLAUDE_API_KEY = os.getenv('CLAUDE_API_KEY')
+        LM_STUDIO_URL = os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1')
+        
+        # Reinitialize API clients
+        if OPENROUTER_API_KEY:
+            openai.api_key = OPENROUTER_API_KEY
+            openai.api_base = "https://openrouter.ai/api/v1"
+        
+        anthropic = None
+        if CLAUDE_API_KEY:
+            try:
+                anthropic = Anthropic(api_key=CLAUDE_API_KEY)
+            except Exception as e:
+                print(f"Warning: Failed to initialize Anthropic client: {e}")
+                anthropic = None
+        
+        return jsonify({'success': True, 'message': 'Configuration saved successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Failed to save configuration: {str(e)}'})
+
+@app.route('/load_config', methods=['GET'])
+def load_config():
+    """Load current configuration from environment variables."""
     config_data = {
-        'openrouter_api_key': request.form.get('openrouter_api_key', ''),
-        'claude_api_key': request.form.get('claude_api_key', ''),
-        'lm_studio_url': request.form.get('lm_studio_url', 'http://localhost:1234/v1'),
-        'default_prompt': request.form.get('default_prompt', 'Please grade this document and provide detailed feedback.')
+        'openrouter_api_key': os.getenv('OPENROUTER_API_KEY', ''),
+        'claude_api_key': os.getenv('CLAUDE_API_KEY', ''),
+        'lm_studio_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
+        'default_prompt': session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
     }
-    
-    # Save to session for now (in production, use a database)
-    session['config'] = config_data
-    
-    return jsonify({'success': True, 'message': 'Configuration saved successfully'})
+    return jsonify(config_data)
+
+@app.route('/test_api_key', methods=['POST'])
+def test_api_key():
+    """Test API key validity."""
+    try:
+        data = request.get_json()
+        api_type = data.get('type')
+        api_key = data.get('key')
+        
+        if not api_key:
+            return jsonify({'success': False, 'error': 'No API key provided'})
+        
+        if api_type == 'openrouter':
+            # Test OpenRouter API key
+            try:
+                openai.api_key = api_key
+                openai.api_base = "https://openrouter.ai/api/v1"
+                
+                response = openai.ChatCompletion.create(
+                    model="anthropic/claude-3.5-sonnet",
+                    messages=[{"role": "user", "content": "Hello"}],
+                    max_tokens=10
+                )
+                return jsonify({'success': True, 'message': 'OpenRouter API key is valid'})
+            except Exception as e:
+                return jsonify({'success': False, 'error': f'Invalid OpenRouter API key: {str(e)}'})
+        
+        elif api_type == 'claude':
+            # Test Claude API key
+            try:
+                test_anthropic = Anthropic(api_key=api_key)
+                response = test_anthropic.messages.create(
+                    model="claude-3-sonnet-20240229",
+                    max_tokens=10,
+                    messages=[{"role": "user", "content": "Hello"}]
+                )
+                return jsonify({'success': True, 'message': 'Claude API key is valid'})
+            except Exception as e:
+                return jsonify({'success': False, 'error': f'Invalid Claude API key: {str(e)}'})
+        
+        else:
+            return jsonify({'success': False, 'error': 'Invalid API type'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/test_lm_studio', methods=['POST'])
+def test_lm_studio():
+    """Test LM Studio connection."""
+    try:
+        data = request.get_json()
+        url = data.get('url', 'http://localhost:1234/v1')
+        
+        # Test with a simple completion request
+        response = requests.post(
+            f"{url}/chat/completions",
+            json={
+                "model": "local-model",
+                "messages": [
+                    {"role": "user", "content": "Hello"}
+                ],
+                "max_tokens": 10
+            },
+            headers={"Content-Type": "application/json"},
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            return jsonify({'success': True, 'message': 'LM Studio connection successful'})
+        else:
+            return jsonify({'success': False, 'error': f'HTTP {response.status_code}: {response.text}'})
+    except requests.exceptions.ConnectionError:
+        return jsonify({'success': False, 'error': 'Connection failed. Make sure LM Studio is running.'})
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'error': 'Connection timeout. Check if LM Studio is running and accessible.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/jobs')
 def jobs():
@@ -352,7 +510,8 @@ Created: {submission.created_at}
 @app.route('/bulk_upload')
 def bulk_upload():
     """Bulk upload interface."""
-    return render_template('bulk_upload.html')
+    default_prompt = session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
+    return render_template('bulk_upload.html', default_prompt=default_prompt)
 
 @app.route('/create_job', methods=['POST'])
 def create_job():
@@ -492,33 +651,6 @@ def batch_detail(batch_id):
     """View batch details."""
     batch = JobBatch.query.get_or_404(batch_id)
     return render_template('batch_detail.html', batch=batch)
-
-@app.route('/test_lm_studio', methods=['POST'])
-def test_lm_studio():
-    """Test LM Studio connection."""
-    try:
-        data = request.get_json()
-        url = data.get('url', 'http://localhost:1234/v1')
-        
-        response = requests.post(
-            f"{url}/chat/completions",
-            json={
-                "model": "local-model",
-                "messages": [
-                    {"role": "user", "content": "Hello"}
-                ],
-                "max_tokens": 10
-            },
-            headers={"Content-Type": "application/json"},
-            timeout=5
-        )
-        
-        if response.status_code == 200:
-            return jsonify({'success': True, 'message': 'Connection successful'})
-        else:
-            return jsonify({'success': False, 'error': f'HTTP {response.status_code}'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/jobs/<job_id>/process', methods=['POST'])
 def trigger_job_processing(job_id):

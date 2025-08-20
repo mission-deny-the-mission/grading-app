@@ -29,19 +29,28 @@
                             <i class="fas fa-cloud me-2"></i>OpenRouter API
                         </h6>
                         <div class="row">
-                            <div class="col-md-8">
+                            <div class="col-md-6">
                                 <label for="openrouter_api_key" class="form-label">API Key</label>
                                 <input type="password" class="form-control" id="openrouter_api_key" 
-                                       name="openrouter_api_key" placeholder="sk-or-...">
+                                       name="openrouter_api_key" placeholder="sk-or-..." 
+                                       value="{{ config.openrouter_api_key if config else '' }}">
                                 <div class="form-text">
                                     Get your API key from <a href="https://openrouter.ai" target="_blank">OpenRouter</a>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
                                     <button type="button" class="btn btn-outline-primary" onclick="togglePassword('openrouter_api_key')">
                                         <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-success" onclick="testAPIKey('openrouter')">
+                                        <i class="fas fa-check"></i> Test Key
                                     </button>
                                 </div>
                             </div>
@@ -54,19 +63,28 @@
                             <i class="fas fa-robot me-2"></i>Claude API (Direct)
                         </h6>
                         <div class="row">
-                            <div class="col-md-8">
+                            <div class="col-md-6">
                                 <label for="claude_api_key" class="form-label">API Key</label>
                                 <input type="password" class="form-control" id="claude_api_key" 
-                                       name="claude_api_key" placeholder="sk-ant-...">
+                                       name="claude_api_key" placeholder="sk-ant-..." 
+                                       value="{{ config.claude_api_key if config else '' }}">
                                 <div class="form-text">
                                     Get your API key from <a href="https://console.anthropic.com" target="_blank">Anthropic Console</a>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
                                     <button type="button" class="btn btn-outline-primary" onclick="togglePassword('claude_api_key')">
                                         <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-success" onclick="testAPIKey('claude')">
+                                        <i class="fas fa-check"></i> Test Key
                                     </button>
                                 </div>
                             </div>
@@ -82,7 +100,7 @@
                             <div class="col-md-8">
                                 <label for="lm_studio_url" class="form-label">API URL</label>
                                 <input type="url" class="form-control" id="lm_studio_url" 
-                                       name="lm_studio_url" value="http://localhost:1234/v1">
+                                       name="lm_studio_url" value="{{ config.lm_studio_url if config else 'http://localhost:1234/v1' }}">
                                 <div class="form-text">
                                     Local LM Studio server URL (default: http://localhost:1234/v1)
                                 </div>
@@ -108,14 +126,7 @@
                         <div class="mb-3">
                             <label for="default_prompt" class="form-label">Default Grading Prompt</label>
                             <textarea class="form-control" id="default_prompt" name="default_prompt" rows="4"
-                                      placeholder="Enter your default grading instructions...">Please grade this document and provide detailed feedback on:
-1. Content quality and relevance
-2. Structure and organization
-3. Writing style and clarity
-4. Grammar and mechanics
-5. Overall assessment with specific suggestions for improvement
-
-Please provide a comprehensive evaluation with specific examples from the text.</textarea>
+                                      placeholder="Enter your default grading instructions...">{{ config.default_prompt if config else 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.' }}</textarea>
                             <div class="form-text">
                                 This prompt will be used as the default when grading documents
                             </div>
@@ -315,21 +326,113 @@ function testLMStudio() {
     });
 }
 
+function loadFromEnv() {
+    // Load values from environment variables via API
+    fetch('/load_config')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('openrouter_api_key').value = data.openrouter_api_key || '';
+            document.getElementById('claude_api_key').value = data.claude_api_key || '';
+            document.getElementById('lm_studio_url').value = data.lm_studio_url || 'http://localhost:1234/v1';
+            document.getElementById('default_prompt').value = data.default_prompt || '';
+            showStatus('Configuration loaded from environment variables', 'success');
+        })
+        .catch(error => {
+            showStatus('Failed to load configuration: ' + error.message, 'danger');
+        });
+}
+
 function checkAllAPIs() {
-    // This would be implemented with actual API tests
+    const statusIndicators = {
+        'openrouter-status': document.getElementById('openrouter-status'),
+        'claude-status': document.getElementById('claude-status'),
+        'lmstudio-status': document.getElementById('lmstudio-status')
+    };
+    
+    // Reset all status indicators
+    Object.values(statusIndicators).forEach(indicator => {
+        indicator.className = 'status-indicator';
+    });
+    
+    // Test OpenRouter
+    const openrouterKey = document.getElementById('openrouter_api_key').value;
+    if (openrouterKey) {
+        statusIndicators['openrouter-status'].classList.add('online');
+    } else {
+        statusIndicators['openrouter-status'].classList.add('offline');
+    }
+    
+    // Test Claude API
+    const claudeKey = document.getElementById('claude_api_key').value;
+    if (claudeKey) {
+        statusIndicators['claude-status'].classList.add('online');
+    } else {
+        statusIndicators['claude-status'].classList.add('offline');
+    }
+    
+    // Test LM Studio
+    testLMStudio();
+    
     showStatus('API status check completed', 'info');
 }
 
-function loadFromEnv() {
-    // This would load values from environment variables
-    showStatus('Environment variables loaded (if available)', 'info');
+function testAPIKey(provider) {
+    const apiKeyField = document.getElementById(`${provider}_api_key`);
+    const statusIndicator = document.getElementById(`${provider}-status`);
+    const apiKey = apiKeyField.value;
+
+    statusIndicator.className = 'status-indicator';
+
+    if (!apiKey) {
+        statusIndicator.classList.add('offline');
+        showStatus(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key not set.`, 'warning');
+        return;
+    }
+
+    // Show loading state
+    statusIndicator.className = 'status-indicator';
+    showStatus(`Testing ${provider.charAt(0).toUpperCase() + provider.slice(1)} API key...`, 'info');
+
+    fetch('/test_api_key', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+            type: provider, 
+            key: apiKey 
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusIndicator.classList.add('online');
+            showStatus(data.message, 'success');
+        } else {
+            statusIndicator.classList.add('offline');
+            showStatus(data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        statusIndicator.classList.add('offline');
+        showStatus(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key test failed: ${error.message}`, 'danger');
+    });
 }
 
 $(document).ready(function() {
+    // Load current configuration on page load
+    loadFromEnv();
+    
     $('#configForm').on('submit', function(e) {
         e.preventDefault();
         
         const formData = new FormData(this);
+        
+        // Show loading state
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+        submitBtn.prop('disabled', true);
         
         $.ajax({
             url: '/save_config',
@@ -344,8 +447,17 @@ $(document).ready(function() {
                     showStatus('Failed to save configuration: ' + response.message, 'danger');
                 }
             },
-            error: function() {
-                showStatus('An error occurred while saving configuration', 'danger');
+            error: function(xhr) {
+                let errorMessage = 'An error occurred while saving configuration';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                showStatus(errorMessage, 'danger');
+            },
+            complete: function() {
+                // Restore button state
+                submitBtn.html(originalText);
+                submitBtn.prop('disabled', false);
             }
         });
     });
