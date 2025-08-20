@@ -59,8 +59,72 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="model" class="form-label fw-bold">Model (Optional)</label>
+                            <label for="model" class="form-label fw-bold">Default Model (Optional)</label>
                             <input type="text" class="form-control" id="model" placeholder="Leave blank for default">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-layer-group me-2"></i>Models to Compare
+                        </label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableComparison" name="enableComparison">
+                            <label class="form-check-label" for="enableComparison">
+                                Enable multi-model comparison
+                            </label>
+                        </div>
+                        <div id="modelSelection" class="mt-3" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>OpenRouter Models:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="anthropic/claude-3.5-sonnet" id="claude35">
+                                        <label class="form-check-label" for="claude35">
+                                            Claude 3.5 Sonnet
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="openai/gpt-4o" id="gpt4o">
+                                        <label class="form-check-label" for="gpt4o">
+                                            GPT-4o
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="anthropic/claude-3-opus-20240229" id="claude3opus">
+                                        <label class="form-check-label" for="claude3opus">
+                                            Claude 3 Opus
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="meta-llama/llama-3.1-70b-instruct" id="llama70b">
+                                        <label class="form-check-label" for="llama70b">
+                                            Llama 3.1 70B
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Other Models:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="claude" id="claudeDirect">
+                                        <label class="form-check-label" for="claudeDirect">
+                                            Claude Direct API
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="lm_studio" id="lmStudio">
+                                        <label class="form-check-label" for="lmStudio">
+                                            LM Studio (Local)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Select 2 or more models to compare their grading results. If none selected, will use default model.
+                                </small>
+                            </div>
                         </div>
                     </div>
                     
@@ -154,9 +218,32 @@ function resetForm() {
     document.getElementById('jobIdDisplay').textContent = 'Not set';
     currentJobId = null;
     
+    // Reset model selection
+    document.getElementById('enableComparison').checked = false;
+    document.getElementById('modelSelection').style.display = 'none';
+    // Uncheck all model checkboxes
+    document.querySelectorAll('.model-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
     // Remove any success messages
     const successMsgs = document.querySelectorAll('.alert-success');
     successMsgs.forEach(msg => msg.remove());
+}
+
+function toggleModelSelection() {
+    const enableComparison = document.getElementById('enableComparison');
+    const modelSelection = document.getElementById('modelSelection');
+    
+    if (enableComparison.checked) {
+        modelSelection.style.display = 'block';
+    } else {
+        modelSelection.style.display = 'none';
+        // Uncheck all model checkboxes
+        document.querySelectorAll('.model-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
 }
 
 function updateFileList() {
@@ -186,6 +273,9 @@ function updateFileList() {
 
 document.getElementById('files').addEventListener('change', updateFileList);
 
+// Add event listener for comparison toggle
+document.getElementById('enableComparison').addEventListener('change', toggleModelSelection);
+
 document.getElementById('jobForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -195,11 +285,20 @@ document.getElementById('jobForm').addEventListener('submit', function(e) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Job...';
     
+    // Get selected models for comparison
+    const selectedModels = [];
+    if (document.getElementById('enableComparison').checked) {
+        document.querySelectorAll('.model-checkbox:checked').forEach(checkbox => {
+            selectedModels.push(checkbox.value);
+        });
+    }
+    
     const formData = {
         job_name: document.getElementById('jobName').value,
         description: document.getElementById('jobDescription').value,
         provider: document.getElementById('provider').value,
         model: document.getElementById('model').value || null,
+        models_to_compare: selectedModels.length > 0 ? selectedModels : null,
         prompt: document.getElementById('prompt').value,
         priority: parseInt(document.getElementById('priority').value)
     };

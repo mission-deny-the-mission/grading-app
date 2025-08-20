@@ -29,6 +29,9 @@ class GradingJob(db.Model):
     prompt = db.Column(db.Text, nullable=False)
     model = db.Column(db.String(100))
     
+    # Multi-model support
+    models_to_compare = db.Column(db.JSON)  # List of models to use for comparison
+    
     # Foreign keys
     batch_id = db.Column(db.String(36), db.ForeignKey('job_batches.id'), nullable=True)
     
@@ -51,6 +54,7 @@ class GradingJob(db.Model):
             'provider': self.provider,
             'prompt': self.prompt,
             'model': self.model,
+            'models_to_compare': self.models_to_compare,
             'progress': self.get_progress(),
             'can_retry': self.can_retry_failed_submissions()
         }
@@ -103,6 +107,40 @@ class GradingJob(db.Model):
         
         return retried_count
 
+class GradeResult(db.Model):
+    """Model for storing individual grade results from different models."""
+    __tablename__ = 'grade_results'
+    
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Grade information
+    grade = db.Column(db.Text, nullable=False)
+    provider = db.Column(db.String(50), nullable=False)  # openrouter, claude, lm_studio
+    model = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(50), default='completed')  # completed, failed
+    error_message = db.Column(db.Text)
+    
+    # Metadata
+    grade_metadata = db.Column(db.JSON)  # Store usage, tokens, etc.
+    
+    # Foreign keys
+    submission_id = db.Column(db.String(36), db.ForeignKey('submissions.id'), nullable=False)
+    
+    def to_dict(self):
+        """Convert grade result to dictionary."""
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat(),
+            'grade': self.grade,
+            'provider': self.provider,
+            'model': self.model,
+            'status': self.status,
+            'error_message': self.error_message,
+            'grade_metadata': self.grade_metadata,
+            'submission_id': self.submission_id
+        }
+
 class Submission(db.Model):
     """Model for individual document submissions."""
     __tablename__ = 'submissions'
@@ -125,12 +163,15 @@ class Submission(db.Model):
     # Extracted content
     extracted_text = db.Column(db.Text)
     
-    # Results
+    # Legacy fields (for backward compatibility)
     grade = db.Column(db.Text)
     grade_metadata = db.Column(db.JSON)  # Store provider, model, tokens used, etc.
     
     # Foreign keys
     job_id = db.Column(db.String(36), db.ForeignKey('grading_jobs.id'), nullable=False)
+    
+    # Relationships
+    grade_results = db.relationship('GradeResult', backref='submission', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
         """Convert submission to dictionary."""
@@ -144,8 +185,9 @@ class Submission(db.Model):
             'file_type': self.file_type,
             'status': self.status,
             'error_message': self.error_message,
-            'grade': self.grade,
-            'grade_metadata': self.grade_metadata,
+            'grade': self.grade,  # Legacy field
+            'grade_metadata': self.grade_metadata,  # Legacy field
+            'grade_results': [gr.to_dict() for gr in self.grade_results],
             'job_id': self.job_id,
             'retry_count': self.retry_count,
             'can_retry': self.can_retry()
@@ -176,6 +218,11 @@ class Submission(db.Model):
         self.error_message = None
         self.retry_count += 1
         self.updated_at = datetime.utcnow()
+        
+        # Clear previous grade results for retry
+        for grade_result in self.grade_results:
+            db.session.delete(grade_result)
+        
         db.session.commit()
         
         # Update job status if it was failed
@@ -184,6 +231,20 @@ class Submission(db.Model):
             db.session.commit()
         
         return True
+    
+    def add_grade_result(self, grade, provider, model, status='completed', error_message=None, metadata=None):
+        """Add a new grade result to this submission."""
+        grade_result = GradeResult(
+            grade=grade,
+            provider=provider,
+            model=model,
+            status=status,
+            error_message=error_message,
+            grade_metadata=metadata
+        )
+        self.grade_results.append(grade_result)
+        db.session.commit()
+        return grade_result
 
 class JobBatch(db.Model):
     """Model for managing batch uploads."""

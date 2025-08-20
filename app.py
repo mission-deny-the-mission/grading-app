@@ -205,28 +205,48 @@ def upload_file():
             text = extract_text_from_docx(file_path)
         elif filename.lower().endswith('.pdf'):
             text = extract_text_from_pdf(file_path)
+        elif filename.lower().endswith('.txt'):
+            # Read text file directly
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    text = f.read()
+            except Exception as e:
+                return jsonify({'error': f'Error reading text file: {str(e)}'}), 400
         else:
-            return jsonify({'error': 'Unsupported file type. Please upload .docx or .pdf files.'}), 400
+            return jsonify({'error': 'Unsupported file type. Please upload .docx, .pdf, or .txt files.'}), 400
         
         # Get grading parameters
         prompt = request.form.get('prompt', session.get('default_prompt', 'Please grade this document and provide detailed feedback.'))
         provider = request.form.get('provider', 'openrouter')
+        models_to_compare = request.form.getlist('models_to_compare[]')  # Get list of models to compare
         
-        # Grade the document
-        if provider == 'openrouter':
-            if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
-                return jsonify({'error': 'OpenRouter API key not configured. Please configure your API key in the settings.'}), 400
-            result = grade_with_openrouter(text, prompt)
-        elif provider == 'claude':
-            if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
-                return jsonify({'error': 'Claude API key not configured. Please configure your API key in the settings.'}), 400
-            if not anthropic:
-                return jsonify({'error': 'Claude API client failed to initialize. Please check your API key configuration.'}), 400
-            result = grade_with_claude(text, prompt)
-        elif provider == 'lm_studio':
-            result = grade_with_lm_studio(text, prompt)
-        else:
-            return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, lm_studio'}), 400
+        # If no specific models selected, use default behavior
+        if not models_to_compare:
+            models_to_compare = [request.form.get('model', 'anthropic/claude-3.5-sonnet')]
+        
+        results = []
+        all_successful = True
+        
+        # Grade with each selected model
+        for model in models_to_compare:
+            if provider == 'openrouter':
+                if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
+                    return jsonify({'error': 'OpenRouter API key not configured. Please configure your API key in the settings.'}), 400
+                result = grade_with_openrouter(text, prompt, model)
+            elif provider == 'claude':
+                if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
+                    return jsonify({'error': 'Claude API key not configured. Please configure your API key in the settings.'}), 400
+                if not anthropic:
+                    return jsonify({'error': 'Claude API client failed to initialize. Please check your API key configuration.'}), 400
+                result = grade_with_claude(text, prompt)
+            elif provider == 'lm_studio':
+                result = grade_with_lm_studio(text, prompt)
+            else:
+                return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, lm_studio'}), 400
+            
+            results.append(result)
+            if not result.get('success', False):
+                all_successful = False
         
         # Clean up uploaded file
         try:
@@ -234,11 +254,22 @@ def upload_file():
         except:
             pass  # Don't fail if file cleanup fails
         
-        # Check if grading was successful
-        if not result.get('success', False):
-            return jsonify({'error': result.get('error', 'Unknown error occurred during grading')}), 500
-        
-        return jsonify(result)
+        # Return results
+        if len(results) == 1:
+            # Single result - return in original format for backward compatibility
+            result = results[0]
+            if not result.get('success', False):
+                return jsonify({'error': result.get('error', 'Unknown error occurred during grading')}), 500
+            return jsonify(result)
+        else:
+            # Multiple results - return comparison format
+            return jsonify({
+                'success': all_successful,
+                'comparison': True,
+                'results': results,
+                'total_models': len(models_to_compare),
+                'successful_models': len([r for r in results if r.get('success', False)])
+            })
 
 @app.route('/config')
 def config():
@@ -526,6 +557,7 @@ def create_job():
             provider=data['provider'],
             prompt=data['prompt'],
             model=data.get('model'),
+            models_to_compare=data.get('models_to_compare'),
             priority=data.get('priority', 5)
         )
         

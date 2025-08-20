@@ -366,34 +366,78 @@ def process_submission_sync(submission_id):
             # Grade the document
             job = submission.job
             
-            # Check if provider is properly configured
-            if job.provider == 'openrouter':
-                if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
-                    submission.set_status('failed', 'OpenRouter API key not configured. Please configure your API key in the settings.')
-                    return False
-                model = job.model if job.model else "anthropic/claude-3.5-sonnet"
-                result = grade_with_openrouter(text, job.prompt, model)
-            elif job.provider == 'claude':
-                if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
-                    submission.set_status('failed', 'Claude API key not configured. Please configure your API key in the settings.')
-                    return False
-                if not anthropic:
-                    submission.set_status('failed', 'Claude API client failed to initialize. Please check your API key configuration.')
-                    return False
-                result = grade_with_claude(text, job.prompt)
-            elif job.provider == 'lm_studio':
-                result = grade_with_lm_studio(text, job.prompt)
+            # Determine which models to use
+            models_to_grade = []
+            if job.models_to_compare:
+                models_to_grade = job.models_to_compare
             else:
-                submission.set_status('failed', f'Unsupported provider: {job.provider}. Supported providers are: openrouter, claude, lm_studio')
-                return False
+                # Fallback to single model (backward compatibility)
+                if job.provider == 'openrouter':
+                    models_to_grade = [job.model if job.model else "anthropic/claude-3.5-sonnet"]
+                else:
+                    models_to_grade = [job.model if job.model else "default"]
             
-            # Store results
-            if result['success']:
-                submission.grade = result['grade']
+            all_successful = True
+            successful_results = []
+            
+            # Grade with each model
+            for model in models_to_grade:
+                # Check if provider is properly configured
+                if job.provider == 'openrouter':
+                    if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
+                        submission.set_status('failed', 'OpenRouter API key not configured. Please configure your API key in the settings.')
+                        return False
+                    result = grade_with_openrouter(text, job.prompt, model)
+                elif job.provider == 'claude':
+                    if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
+                        submission.set_status('failed', 'Claude API key not configured. Please configure your API key in the settings.')
+                        return False
+                    if not anthropic:
+                        submission.set_status('failed', 'Claude API client failed to initialize. Please check your API key configuration.')
+                        return False
+                    result = grade_with_claude(text, job.prompt)
+                elif job.provider == 'lm_studio':
+                    result = grade_with_lm_studio(text, job.prompt)
+                else:
+                    submission.set_status('failed', f'Unsupported provider: {job.provider}. Supported providers are: openrouter, claude, lm_studio')
+                    return False
+                
+                # Store individual grade result
+                if result['success']:
+                    submission.add_grade_result(
+                        grade=result['grade'],
+                        provider=result['provider'],
+                        model=result['model'],
+                        status='completed',
+                        metadata={
+                            'provider': result['provider'],
+                            'model': result['model'],
+                            'usage': result.get('usage')
+                        }
+                    )
+                    successful_results.append(result)
+                else:
+                    submission.add_grade_result(
+                        grade='',
+                        provider=result['provider'],
+                        model=model,
+                        status='failed',
+                        error_message=result['error'],
+                        metadata={'error': result['error']}
+                    )
+                    all_successful = False
+            
+            # Store legacy results for backward compatibility
+            if successful_results:
+                # Use the first successful result as the primary grade
+                primary_result = successful_results[0]
+                submission.grade = primary_result['grade']
                 submission.grade_metadata = {
-                    'provider': result['provider'],
-                    'model': result['model'],
-                    'usage': result.get('usage')
+                    'provider': primary_result['provider'],
+                    'model': primary_result['model'],
+                    'usage': primary_result.get('usage'),
+                    'total_models': len(models_to_grade),
+                    'successful_models': len(successful_results)
                 }
                 submission.set_status('completed')
                 
@@ -405,7 +449,7 @@ def process_submission_sync(submission_id):
                     
                 return True
             else:
-                submission.set_status('failed', result['error'])
+                submission.set_status('failed', 'All models failed to grade the document')
                 # Don't clean up file on failure - keep it for retry
                 return False
                 

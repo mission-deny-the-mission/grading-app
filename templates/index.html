@@ -23,9 +23,9 @@
                             <i class="fas fa-upload me-2"></i>Select Document
                         </label>
                         <input type="file" class="form-control" id="file" name="file" 
-                               accept=".docx,.pdf" required>
+                               accept=".docx,.pdf,.txt" required>
                         <div class="form-text">
-                            Supported formats: .docx (Word), .pdf (PDF) - Max size: 16MB
+                            Supported formats: .docx (Word), .pdf (PDF), .txt (Text) - Max size: 16MB
                         </div>
                     </div>
 
@@ -39,7 +39,71 @@
                             <option value="lm_studio">LM Studio (Local)</option>
                         </select>
                         <div class="form-text">
-                            Choose your preferred AI model for grading
+                            Choose your preferred AI provider for grading
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-layer-group me-2"></i>Models to Compare
+                        </label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableComparison" name="enableComparison">
+                            <label class="form-check-label" for="enableComparison">
+                                Enable multi-model comparison
+                            </label>
+                        </div>
+                        <div id="modelSelection" class="mt-3" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>OpenRouter Models:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="anthropic/claude-3.5-sonnet" id="claude35">
+                                        <label class="form-check-label" for="claude35">
+                                            Claude 3.5 Sonnet
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="openai/gpt-4o" id="gpt4o">
+                                        <label class="form-check-label" for="gpt4o">
+                                            GPT-4o
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="anthropic/claude-3-opus-20240229" id="claude3opus">
+                                        <label class="form-check-label" for="claude3opus">
+                                            Claude 3 Opus
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="meta-llama/llama-3.1-70b-instruct" id="llama70b">
+                                        <label class="form-check-label" for="llama70b">
+                                            Llama 3.1 70B
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Other Models:</h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="claude" id="claudeDirect">
+                                        <label class="form-check-label" for="claudeDirect">
+                                            Claude Direct API
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input model-checkbox" type="checkbox" name="models_to_compare[]" value="lm_studio" id="lmStudio">
+                                        <label class="form-check-label" for="lmStudio">
+                                            LM Studio (Local)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Select 2 or more models to compare their grading results. If none selected, will use default model.
+                                </small>
+                            </div>
                         </div>
                     </div>
 
@@ -203,9 +267,34 @@ function clearResults() {
     document.getElementById('results').style.display = 'none';
     document.getElementById('resultContent').innerHTML = '';
     document.getElementById('uploadForm').reset();
+    // Reset model selection
+    document.getElementById('enableComparison').checked = false;
+    document.getElementById('modelSelection').style.display = 'none';
+    // Uncheck all model checkboxes
+    document.querySelectorAll('.model-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+function toggleModelSelection() {
+    const enableComparison = document.getElementById('enableComparison');
+    const modelSelection = document.getElementById('modelSelection');
+    
+    if (enableComparison.checked) {
+        modelSelection.style.display = 'block';
+    } else {
+        modelSelection.style.display = 'none';
+        // Uncheck all model checkboxes
+        document.querySelectorAll('.model-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
 }
 
 $(document).ready(function() {
+    // Add event listener for comparison toggle
+    $('#enableComparison').on('change', toggleModelSelection);
+    
     $('#uploadForm').on('submit', function(e) {
         e.preventDefault();
         
@@ -231,16 +320,51 @@ $(document).ready(function() {
                 $('#loading').hide();
                 
                 if (response.success) {
-                    const resultHtml = `
-                        <div class="alert alert-success">
-                            <strong>Provider:</strong> ${response.provider}<br>
-                            <strong>Model:</strong> ${response.model}
-                        </div>
-                        <div class="border rounded p-3 bg-white">
-                            <h6 class="fw-bold mb-2">Grading Feedback:</h6>
-                            <div style="white-space: pre-wrap;">${response.grade}</div>
-                        </div>
-                    `;
+                    let resultHtml = '';
+                    
+                    if (response.comparison) {
+                        // Multi-model comparison results
+                        resultHtml = `
+                            <div class="alert alert-success">
+                                <strong>Comparison Results:</strong> ${response.successful_models} of ${response.total_models} models completed successfully
+                            </div>
+                        `;
+                        
+                        response.results.forEach((result, index) => {
+                            const statusClass = result.success ? 'success' : 'danger';
+                            const statusIcon = result.success ? 'check-circle' : 'exclamation-circle';
+                            
+                            resultHtml += `
+                                <div class="card mb-3">
+                                    <div class="card-header bg-${statusClass} text-white">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-${statusIcon} me-2"></i>
+                                            ${result.provider} - ${result.model}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        ${result.success ? 
+                                            `<div style="white-space: pre-wrap;">${result.grade}</div>` :
+                                            `<div class="alert alert-danger">${result.error}</div>`
+                                        }
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        // Single model result (backward compatibility)
+                        resultHtml = `
+                            <div class="alert alert-success">
+                                <strong>Provider:</strong> ${response.provider}<br>
+                                <strong>Model:</strong> ${response.model}
+                            </div>
+                            <div class="border rounded p-3 bg-white">
+                                <h6 class="fw-bold mb-2">Grading Feedback:</h6>
+                                <div style="white-space: pre-wrap;">${response.grade}</div>
+                            </div>
+                        `;
+                    }
+                    
                     $('#resultContent').html(resultHtml);
                     $('#results').show();
                 } else {

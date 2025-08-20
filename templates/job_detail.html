@@ -51,6 +51,12 @@
                                 </div>
                                 <div class="mb-3">
                                     <strong>Model:</strong> {{ job.model or 'Default' }}
+                                    {% if job.models_to_compare %}
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-layer-group me-1"></i>
+                                        Comparing {{ job.models_to_compare|length }} models
+                                    </small>
+                                    {% endif %}
                                 </div>
                                 <div class="mb-3">
                                     <strong>Priority:</strong> {{ job.priority }}/10
@@ -268,6 +274,32 @@ function viewSubmission(submissionId) {
                     <div class="col-md-6">
                         <h6>Grading Results</h6>
                         ${data.status === 'completed' ? `
+                        ${data.grade_results && data.grade_results.length > 1 ? `
+                        <!-- Multiple model comparison -->
+                        <div class="mb-3">
+                            <div class="alert alert-info">
+                                <i class="fas fa-layer-group me-2"></i>
+                                <strong>Multi-Model Comparison:</strong> ${data.grade_results.filter(r => r.status === 'completed').length} of ${data.grade_results.length} models completed
+                            </div>
+                        </div>
+                        ${data.grade_results.map(result => `
+                        <div class="card mb-3">
+                            <div class="card-header bg-${result.status === 'completed' ? 'success' : 'danger'} text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-${result.status === 'completed' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                                    ${result.provider} - ${result.model}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                ${result.status === 'completed' ? 
+                                    `<div style="white-space: pre-wrap; max-height: 300px; overflow-y: auto;">${result.grade}</div>` :
+                                    `<div class="alert alert-danger">${result.error_message || 'Failed to grade'}</div>`
+                                }
+                            </div>
+                        </div>
+                        `).join('')}
+                        ` : `
+                        <!-- Single model result (backward compatibility) -->
                         <div class="border rounded p-3 bg-light">
                             <div style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">${data.grade}</div>
                         </div>
@@ -276,9 +308,12 @@ function viewSubmission(submissionId) {
                             <small class="text-muted">
                                 <strong>Provider:</strong> ${data.grade_metadata.provider}<br>
                                 <strong>Model:</strong> ${data.grade_metadata.model}
+                                ${data.grade_metadata.total_models ? `<br><strong>Total Models:</strong> ${data.grade_metadata.total_models}` : ''}
+                                ${data.grade_metadata.successful_models ? `<br><strong>Successful:</strong> ${data.grade_metadata.successful_models}` : ''}
                             </small>
                         </div>
                         ` : ''}
+                        `}
                         ` : `
                         <div class="text-center py-4">
                             <i class="fas fa-clock fa-2x text-muted mb-2"></i>
