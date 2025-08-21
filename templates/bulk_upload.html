@@ -1,8 +1,5 @@
-{% extends "base.html" %}
-
-{% block title %}Bulk Upload{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Bulk Upload{% endblock %} {% block
+content %}
 <div class="row">
     <div class="col-lg-8 mx-auto">
         <div class="text-center mb-4">
@@ -26,12 +23,23 @@
                 <form id="jobForm">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="jobName" class="form-label fw-bold">Job Name</label>
-                            <input type="text" class="form-control" id="jobName" required>
-                            <div class="form-text">Give your job a descriptive name</div>
+                            <label for="jobName" class="form-label fw-bold"
+                                >Job Name</label
+                            >
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="jobName"
+                                required
+                            />
+                            <div class="form-text">
+                                Give your job a descriptive name
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="priority" class="form-label fw-bold">Priority</label>
+                            <label for="priority" class="form-label fw-bold"
+                                >Priority</label
+                            >
                             <select class="form-select" id="priority">
                                 <option value="1">Low (1)</option>
                                 <option value="3">Medium-Low (3)</option>
@@ -41,40 +49,73 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="jobDescription" class="form-label fw-bold">Description (Optional)</label>
-                        <textarea class="form-control" id="jobDescription" rows="2" placeholder="Describe what this job is for..."></textarea>
+                        <label for="jobDescription" class="form-label fw-bold"
+                            >Description (Optional)</label
+                        >
+                        <textarea
+                            class="form-control"
+                            id="jobDescription"
+                            rows="2"
+                            placeholder="Describe what this job is for..."
+                        ></textarea>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="provider" class="form-label fw-bold">
                                 <i class="fas fa-robot me-2"></i>AI Provider
                             </label>
                             <select class="form-select" id="provider" required>
-                                <option value="openrouter">OpenRouter (Claude/GPT/Gemini)</option>
-                                <option value="claude">Claude API (Direct)</option>
-                                <option value="lm_studio">LM Studio (Local)</option>
+                                <option value="openrouter">
+                                    OpenRouter (Claude/GPT/Gemini)
+                                </option>
+                                <option value="claude">
+                                    Claude API (Direct)
+                                </option>
+                                <option value="lm_studio">
+                                    LM Studio (Local)
+                                </option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="customModel" class="form-label fw-bold">Custom Model (Optional)</label>
-                            <input type="text" class="form-control" id="customModel" placeholder="Enter custom model name">
+                            <label for="customModel" class="form-label fw-bold"
+                                >Custom Model (Optional)</label
+                            >
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="customModel"
+                                placeholder="Enter custom model name"
+                            />
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label fw-bold">
-                            <i class="fas fa-layer-group me-2"></i>Models to Compare
+                            <i class="fas fa-layer-group me-2"></i>Models to
+                            Compare
                         </label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="enableComparison" name="enableComparison">
-                            <label class="form-check-label" for="enableComparison">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="enableComparison"
+                                name="enableComparison"
+                            />
+                            <label
+                                class="form-check-label"
+                                for="enableComparison"
+                            >
                                 Enable multi-model comparison
                             </label>
                         </div>
-                        <div id="modelSelection" class="mt-3" style="display: none;">
+                        <div
+                            id="modelSelection"
+                            class="mt-3"
+                            style="display: none"
+                        >
                             <div class="row">
                                 <div class="col-md-6">
                                     <h6>Popular Models:</h6>
@@ -85,46 +126,87 @@
                                 <div class="col-md-6">
                                     <h6>Custom Models:</h6>
                                     <div class="mb-3">
-                                        <input type="text" class="form-control" id="customModel1" name="customModels[]" 
-                                               placeholder="Enter custom model name">
+                                        <input
+                                            type="text"
+                                            class="form-control"
+                                            id="customModel1"
+                                            name="customModels[]"
+                                            placeholder="Enter custom model name"
+                                        />
                                     </div>
                                     <div class="mb-3">
-                                        <input type="text" class="form-control" id="customModel2" name="customModels[]" 
-                                               placeholder="Enter custom model name">
+                                        <input
+                                            type="text"
+                                            class="form-control"
+                                            id="customModel2"
+                                            name="customModels[]"
+                                            placeholder="Enter custom model name"
+                                        />
                                     </div>
                                     <div class="mb-3">
-                                        <input type="text" class="form-control" id="customModel3" name="customModels[]" 
-                                               placeholder="Enter custom model name">
+                                        <input
+                                            type="text"
+                                            class="form-control"
+                                            id="customModel3"
+                                            name="customModels[]"
+                                            placeholder="Enter custom model name"
+                                        />
                                     </div>
                                 </div>
                             </div>
                             <div class="mt-2">
                                 <small class="text-muted">
                                     <i class="fas fa-info-circle me-1"></i>
-                                    Select 2 or more models to compare their grading results. You can also enter custom model names.
+                                    Select 2 or more models to compare their
+                                    grading results. You can also enter custom
+                                    model names.
                                 </small>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="prompt" class="form-label fw-bold">
-                            <i class="fas fa-comment me-2"></i>Grading Instructions
+                            <i class="fas fa-comment me-2"></i>Grading
+                            Instructions
                         </label>
                         <div class="mb-2">
                             <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadSavedPrompt()">
-                                    <i class="fas fa-bookmark me-1"></i>Load Saved Prompt
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    onclick="loadSavedPrompt()"
+                                >
+                                    <i class="fas fa-bookmark me-1"></i>Load
+                                    Saved Prompt
                                 </button>
-                                <button type="button" class="btn btn-outline-success btn-sm" onclick="saveCurrentPrompt()">
-                                    <i class="fas fa-save me-1"></i>Save Current Prompt
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-success btn-sm"
+                                    onclick="saveCurrentPrompt()"
+                                >
+                                    <i class="fas fa-save me-1"></i>Save Current
+                                    Prompt
                                 </button>
                             </div>
                         </div>
-                        <textarea class="form-control" id="prompt" rows="4" required>{{ default_prompt }}</textarea>
-                        <input type="hidden" id="saved_prompt_id" value="">
-                        <div id="savedPromptInfo" class="form-text" style="display: none;">
-                            <i class="fas fa-check-circle text-success me-1"></i>
+                        <textarea
+                            class="form-control"
+                            id="prompt"
+                            rows="4"
+                            required
+                        >
+{{ default_prompt }}</textarea
+                        >
+                        <input type="hidden" id="saved_prompt_id" value="" />
+                        <div
+                            id="savedPromptInfo"
+                            class="form-text"
+                            style="display: none"
+                        >
+                            <i
+                                class="fas fa-check-circle text-success me-1"
+                            ></i>
                             <span id="savedPromptName"></span> loaded
                         </div>
                     </div>
@@ -132,31 +214,66 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="temperature" class="form-label fw-bold">
-                                    <i class="fas fa-thermometer-half me-2"></i>Temperature
+                                <label
+                                    for="temperature"
+                                    class="form-label fw-bold"
+                                >
+                                    <i class="fas fa-thermometer-half me-2"></i
+                                    >Temperature
                                 </label>
-                                <input type="range" class="form-range" id="temperature" name="temperature" 
-                                       min="0" max="2" step="0.1" value="0.3" 
-                                       oninput="updateTemperatureValue(this.value)">
+                                <input
+                                    type="range"
+                                    class="form-range"
+                                    id="temperature"
+                                    name="temperature"
+                                    min="0"
+                                    max="2"
+                                    step="0.1"
+                                    value="0.3"
+                                    oninput="updateTemperatureValue(this.value)"
+                                />
                                 <div class="d-flex justify-content-between">
-                                    <small class="text-muted">0.0 (Focused)</small>
-                                    <small class="text-muted" id="temperatureValue">0.3</small>
-                                    <small class="text-muted">2.0 (Creative)</small>
+                                    <small class="text-muted"
+                                        >0.0 (Focused)</small
+                                    >
+                                    <small
+                                        class="text-muted"
+                                        id="temperatureValue"
+                                        >0.3</small
+                                    >
+                                    <small class="text-muted"
+                                        >2.0 (Creative)</small
+                                    >
                                 </div>
                                 <div class="form-text">
-                                    Controls randomness in AI responses. Lower values = more focused, higher values = more creative
+                                    Controls randomness in AI responses. Lower
+                                    values = more focused, higher values = more
+                                    creative
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="max_tokens" class="form-label fw-bold">
-                                    <i class="fas fa-text-width me-2"></i>Maximum Output Length
+                                <label
+                                    for="max_tokens"
+                                    class="form-label fw-bold"
+                                >
+                                    <i class="fas fa-text-width me-2"></i
+                                    >Maximum Output Length
                                 </label>
-                                <input type="number" class="form-control" id="max_tokens" name="max_tokens" 
-                                       min="100" max="8000" value="2000" step="100">
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="max_tokens"
+                                    name="max_tokens"
+                                    min="100"
+                                    max="8000"
+                                    value="2000"
+                                    step="100"
+                                />
                                 <div class="form-text">
-                                    Maximum number of tokens in the AI response (100-8000)
+                                    Maximum number of tokens in the AI response
+                                    (100-8000)
                                 </div>
                             </div>
                         </div>
@@ -164,30 +281,58 @@
 
                     <div class="mb-3">
                         <label for="marking_scheme" class="form-label fw-bold">
-                            <i class="fas fa-clipboard-check me-2"></i>Marking Scheme (Optional)
+                            <i class="fas fa-clipboard-check me-2"></i>Marking
+                            Scheme (Optional)
                         </label>
                         <div class="mb-2">
                             <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadSavedMarkingScheme()">
-                                    <i class="fas fa-bookmark me-1"></i>Load Saved Scheme
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm"
+                                    onclick="loadSavedMarkingScheme()"
+                                >
+                                    <i class="fas fa-bookmark me-1"></i>Load
+                                    Saved Scheme
                                 </button>
-                                <button type="button" class="btn btn-outline-success btn-sm" onclick="saveCurrentMarkingScheme()">
-                                    <i class="fas fa-save me-1"></i>Save Current Scheme
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-success btn-sm"
+                                    onclick="saveCurrentMarkingScheme()"
+                                >
+                                    <i class="fas fa-save me-1"></i>Save Current
+                                    Scheme
                                 </button>
                             </div>
                         </div>
-                        <input type="file" class="form-control" id="marking_scheme" name="marking_scheme" 
-                               accept=".docx,.pdf,.txt">
-                        <input type="hidden" id="saved_marking_scheme_id" value="">
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="marking_scheme"
+                            name="marking_scheme"
+                            accept=".docx,.pdf,.txt"
+                        />
+                        <input
+                            type="hidden"
+                            id="saved_marking_scheme_id"
+                            value=""
+                        />
                         <div class="form-text">
-                            Upload a marking scheme or rubric to guide the grading process. Supported formats: .docx, .pdf, .txt
+                            Upload a marking scheme or rubric to guide the
+                            grading process. Supported formats: .docx, .pdf,
+                            .txt
                         </div>
-                        <div id="savedSchemeInfo" class="form-text" style="display: none;">
-                            <i class="fas fa-check-circle text-success me-1"></i>
+                        <div
+                            id="savedSchemeInfo"
+                            class="form-text"
+                            style="display: none"
+                        >
+                            <i
+                                class="fas fa-check-circle text-success me-1"
+                            ></i>
                             <span id="savedSchemeName"></span> loaded
                         </div>
                     </div>
-                    
+
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-2"></i>Create Job
@@ -198,37 +343,55 @@
         </div>
 
         <!-- Step 2: File Upload -->
-        <div class="card mb-4" id="uploadSection" style="display: none;">
+        <div class="card mb-4" id="uploadSection" style="display: none">
             <div class="card-header bg-success text-white">
                 <h5 class="mb-0">
-                    <i class="fas fa-file-upload me-2"></i>Step 2: Upload Documents
+                    <i class="fas fa-file-upload me-2"></i>Step 2: Upload
+                    Documents
                 </h5>
             </div>
             <div class="card-body">
                 <form id="uploadForm" enctype="multipart/form-data">
-                    <input type="hidden" id="jobId">
-                    
+                    <input type="hidden" id="jobId" />
+
                     <div class="alert alert-info mb-3">
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Job ID:</strong> <span id="jobIdDisplay">Not set</span>
+                        <strong>Job ID:</strong>
+                        <span id="jobIdDisplay">Not set</span>
                     </div>
-                    
+
                     <div class="mb-4">
-                        <label for="files" class="form-label fw-bold">Select Documents</label>
-                        <input type="file" class="form-control" id="files" name="files[]" multiple accept=".docx,.pdf" required>
+                        <label for="files" class="form-label fw-bold"
+                            >Select Documents</label
+                        >
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="files"
+                            name="files[]"
+                            multiple
+                            accept=".docx,.pdf"
+                            required
+                        />
                         <div class="form-text">
-                            Select multiple Word (.docx) or PDF files. Maximum 50 files per job.
+                            Select multiple Word (.docx) or PDF files. Maximum
+                            50 files per job.
                         </div>
                     </div>
-                    
-                    <div id="fileList" class="mb-3" style="display: none;">
+
+                    <div id="fileList" class="mb-3" style="display: none">
                         <h6>Selected Files:</h6>
                         <div id="fileListContent"></div>
                     </div>
-                    
+
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-success" id="uploadBtn">
-                            <i class="fas fa-upload me-2"></i>Upload and Start Processing
+                        <button
+                            type="submit"
+                            class="btn btn-success"
+                            id="uploadBtn"
+                        >
+                            <i class="fas fa-upload me-2"></i>Upload and Start
+                            Processing
                         </button>
                     </div>
                 </form>
@@ -236,7 +399,7 @@
         </div>
 
         <!-- Job Status -->
-        <div class="card" id="jobStatus" style="display: none;">
+        <div class="card" id="jobStatus" style="display: none">
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-info-circle me-2"></i>Job Status
@@ -248,7 +411,11 @@
                     <a href="/jobs" class="btn btn-outline-primary">
                         <i class="fas fa-list me-2"></i>View All Jobs
                     </a>
-                    <a href="/bulk_upload" class="btn btn-outline-secondary" onclick="resetForm()">
+                    <a
+                        href="/bulk_upload"
+                        class="btn btn-outline-secondary"
+                        onclick="resetForm()"
+                    >
                         <i class="fas fa-plus me-2"></i>Create Another Job
                     </a>
                 </div>
@@ -256,452 +423,444 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-let currentJobId = null;
+    let currentJobId = null;
 
-function loadAvailableModels() {
-    const provider = document.getElementById('provider').value;
-    const popularModelsDiv = document.getElementById('popularModels');
-    
-    // Fetch available models for the selected provider
-    fetch(`/api/models/${provider}`)
-        .then(response => response.json())
-        .then(data => {
-            popularModelsDiv.innerHTML = '';
-            
-            if (data.popular && data.popular.length > 0) {
-                data.popular.forEach(model => {
-                    const modelId = model.replace(/[^a-zA-Z0-9]/g, '_');
-                    const displayName = getModelDisplayName(model);
-                    
-                    const div = document.createElement('div');
-                    div.className = 'form-check';
-                    div.innerHTML = `
-                        <input class="form-check-input model-checkbox" type="checkbox" 
-                               name="models_to_compare[]" value="${model}" id="${modelId}">
-                        <label class="form-check-label" for="${modelId}">
-                            ${displayName}
-                        </label>
-                    `;
-                    popularModelsDiv.appendChild(div);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error loading models:', error);
-            popularModelsDiv.innerHTML = '<p class="text-muted">Error loading models</p>';
-        });
-}
+    function loadAvailableModels() {
+        const provider = document.getElementById('provider').value;
+        const popularModelsDiv = document.getElementById('popularModels');
 
-function getModelDisplayName(modelName) {
-    // Create a more readable display name from the model identifier
-    const nameMap = {
-        'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
-        'openai/gpt-4o': 'GPT-4o',
-        'openai/gpt-4o-mini': 'GPT-4o Mini',
-        'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
-        'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
-        'google/gemini-pro-1.5': 'Gemini Pro 1.5',
-        'mistralai/mistral-7b-instruct': 'Mistral 7B',
-        'openai/gpt-4-turbo': 'GPT-4 Turbo',
-        'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku',
-        'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
-        'claude-3-opus-20240229': 'Claude 3 Opus',
-        'claude-3-sonnet-20240229': 'Claude 3 Sonnet',
-        'claude-3-haiku-20240307': 'Claude 3 Haiku',
-        'local-model': 'Local Model',
-        'llama-3.1-70b-instruct': 'Llama 3.1 70B',
-        'mistral-7b-instruct': 'Mistral 7B',
-        'codellama-34b-instruct': 'Code Llama 34B'
-    };
-    
-    return nameMap[modelName] || modelName;
-}
+        // Fetch available models for the selected provider
+        fetch(`/api/models/${provider}`)
+            .then(response => response.json())
+            .then(data => {
+                popularModelsDiv.innerHTML = '';
 
-function updateTemperatureValue(value) {
-    document.getElementById('temperatureValue').textContent = value;
-}
+                if (data.popular && data.popular.length > 0) {
+                    data.popular.forEach(model => {
+                        const modelId = model.replace(/[^a-zA-Z0-9]/g, '_');
+                        const displayName = getModelDisplayName(model);
 
-function resetForm() {
-    document.getElementById('jobForm').reset();
-    document.getElementById('uploadForm').reset();
-    document.getElementById('uploadSection').style.display = 'none';
-    document.getElementById('jobStatus').style.display = 'none';
-    document.getElementById('fileList').style.display = 'none';
-    document.getElementById('jobIdDisplay').textContent = 'Not set';
-    currentJobId = null;
-    
-    // Reset model selection
-    document.getElementById('enableComparison').checked = false;
-    document.getElementById('modelSelection').style.display = 'none';
-    // Clear custom model inputs
-    document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
-        input.value = '';
-    });
-    
-    // Reset temperature display
-    document.getElementById('temperatureValue').textContent = '0.3';
-    
-    // Remove any success messages
-    const successMsgs = document.querySelectorAll('.alert-success');
-    successMsgs.forEach(msg => msg.remove());
-    
-    // Load available models again
-    loadAvailableModels();
-}
+                        const div = document.createElement('div');
+                        div.className = 'form-check';
+                        div.innerHTML = `
+                            <input class="form-check-input model-checkbox" type="checkbox"
+                                   name="models_to_compare[]" value="${model}" id="${modelId}">
+                            <label class="form-check-label" for="${modelId}">
+                                ${displayName}
+                            </label>
+                        `;
+                        popularModelsDiv.appendChild(div);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading models:', error);
+                popularModelsDiv.innerHTML = '<p class="text-muted">Error loading models</p>';
+            });
+    }
 
-function toggleModelSelection() {
-    const enableComparison = document.getElementById('enableComparison');
-    const modelSelection = document.getElementById('modelSelection');
-    
-    if (enableComparison.checked) {
-        modelSelection.style.display = 'block';
-    } else {
-        modelSelection.style.display = 'none';
+    function getModelDisplayName(modelName) {
+        // Create a more readable display name from the model identifier
+        const nameMap = {
+            'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
+            'openai/gpt-4o': 'GPT-4o',
+            'openai/gpt-4o-mini': 'GPT-4o Mini',
+            'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
+            'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
+            'google/gemini-pro-1.5': 'Gemini Pro 1.5',
+            'mistralai/mistral-7b-instruct': 'Mistral 7B',
+            'openai/gpt-4-turbo': 'GPT-4 Turbo',
+            'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku',
+            'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
+            'claude-3-opus-20240229': 'Claude 3 Opus',
+            'claude-3-sonnet-20240229': 'Claude 3 Sonnet',
+            'claude-3-haiku-20240307': 'Claude 3 Haiku',
+            'local-model': 'Local Model',
+            'llama-3.1-70b-instruct': 'Llama 3.1 70B',
+            'mistral-7b-instruct': 'Mistral 7B',
+            'codellama-34b-instruct': 'Code Llama 34B'
+        };
+
+        return nameMap[modelName] || modelName;
+    }
+
+    function updateTemperatureValue(value) {
+        document.getElementById('temperatureValue').textContent = value;
+    }
+
+    function resetForm() {
+        document.getElementById('jobForm').reset();
+        document.getElementById('uploadForm').reset();
+        document.getElementById('uploadSection').style.display = 'none';
+        document.getElementById('jobStatus').style.display = 'none';
+        document.getElementById('fileList').style.display = 'none';
+        document.getElementById('jobIdDisplay').textContent = 'Not set';
+        currentJobId = null;
+
+        // Reset model selection
+        document.getElementById('enableComparison').checked = false;
+        document.getElementById('modelSelection').style.display = 'none';
         // Clear custom model inputs
         document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
             input.value = '';
         });
+
+        // Reset temperature display
+        document.getElementById('temperatureValue').textContent = '0.3';
+
+        // Remove any success messages
+        const successMsgs = document.querySelectorAll('.alert-success');
+        successMsgs.forEach(msg => msg.remove());
+
+        // Load available models again
+        loadAvailableModels();
     }
-}
 
-function updateFileList() {
-    const fileInput = document.getElementById('files');
-    const fileList = document.getElementById('fileList');
-    const fileListContent = document.getElementById('fileListContent');
-    
-    if (fileInput.files.length > 0) {
-        fileListContent.innerHTML = '';
-        Array.from(fileInput.files).forEach(file => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'd-flex justify-content-between align-items-center p-2 border rounded mb-2';
-            fileItem.innerHTML = `
-                <div>
-                    <i class="fas fa-file me-2"></i>
-                    ${file.name}
-                </div>
-                <small class="text-muted">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
-            `;
-            fileListContent.appendChild(fileItem);
-        });
-        fileList.style.display = 'block';
-    } else {
-        fileList.style.display = 'none';
-    }
-}
+    function toggleModelSelection() {
+        const enableComparison = document.getElementById('enableComparison');
+        const modelSelection = document.getElementById('modelSelection');
 
-document.getElementById('files').addEventListener('change', updateFileList);
-
-// Add event listener for comparison toggle
-document.getElementById('enableComparison').addEventListener('change', toggleModelSelection);
-
-// Add event listener for provider change
-document.getElementById('provider').addEventListener('change', function() {
-    loadAvailableModels();
-});
-
-// Load available models when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    loadAvailableModels();
-});
-
-document.getElementById('jobForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Job...';
-    
-    // Get selected models for comparison
-    const selectedModels = [];
-    if (document.getElementById('enableComparison').checked) {
-        document.querySelectorAll('.model-checkbox:checked').forEach(checkbox => {
-            selectedModels.push(checkbox.value);
-        });
-        
-        // Add custom models
-        document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
-            if (input.value.trim()) {
-                selectedModels.push(input.value.trim());
-            }
-        });
-    }
-    
-    // Handle marking scheme - check for saved scheme first, then file upload
-    const savedMarkingSchemeId = document.getElementById('saved_marking_scheme_id').value;
-    const markingSchemeFile = document.getElementById('marking_scheme').files[0];
-    let markingSchemeId = null;
-    
-    if (savedMarkingSchemeId) {
-        // Use saved marking scheme
-        markingSchemeId = null; // We'll use saved_marking_scheme_id instead
-    } else if (markingSchemeFile) {
-        // Upload marking scheme file
-        const markingSchemeFormData = new FormData();
-        markingSchemeFormData.append('marking_scheme', markingSchemeFile);
-        markingSchemeFormData.append('name', markingSchemeFile.name);
-        markingSchemeFormData.append('description', 'Marking scheme for ' + document.getElementById('jobName').value);
-        
-        try {
-            const markingSchemeResponse = await fetch('/upload_marking_scheme', {
-                method: 'POST',
-                body: markingSchemeFormData
+        if (enableComparison.checked) {
+            modelSelection.style.display = 'block';
+        } else {
+            modelSelection.style.display = 'none';
+            // Clear custom model inputs
+            document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
+                input.value = '';
             });
-            
-            const markingSchemeResult = await markingSchemeResponse.json();
-            if (markingSchemeResult.success) {
-                markingSchemeId = markingSchemeResult.marking_scheme_id;
-            } else {
-                alert('Error uploading marking scheme: ' + markingSchemeResult.error);
+        }
+    }
+
+    function updateFileList() {
+        const fileInput = document.getElementById('files');
+        const fileList = document.getElementById('fileList');
+        const fileListContent = document.getElementById('fileListContent');
+
+        if (fileInput.files.length > 0) {
+            fileListContent.innerHTML = '';
+            Array.from(fileInput.files).forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'd-flex justify-content-between align-items-center p-2 border rounded mb-2';
+                fileItem.innerHTML = `
+                    <div>
+                        <i class="fas fa-file me-2"></i>
+                        ${file.name}
+                    </div>
+                    <small class="text-muted">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                `;
+                fileListContent.appendChild(fileItem);
+            });
+            fileList.style.display = 'block';
+        } else {
+            fileList.style.display = 'none';
+        }
+    }
+
+    document.getElementById('files').addEventListener('change', updateFileList);
+
+    // Add event listener for comparison toggle
+    document.getElementById('enableComparison').addEventListener('change', toggleModelSelection);
+
+    // Add event listener for provider change
+    document.getElementById('provider').addEventListener('change', function() {
+        loadAvailableModels();
+    });
+
+    // Load available models when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAvailableModels();
+    });
+
+    document.getElementById('jobForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Job...';
+
+        // Get selected models for comparison
+        const selectedModels = [];
+        if (document.getElementById('enableComparison').checked) {
+            document.querySelectorAll('.model-checkbox:checked').forEach(checkbox => {
+                selectedModels.push(checkbox.value);
+            });
+
+            // Add custom models
+            document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
+                if (input.value.trim()) {
+                    selectedModels.push(input.value.trim());
+                }
+            });
+        }
+
+        // Handle marking scheme - check for saved scheme first, then file upload
+        const savedMarkingSchemeId = document.getElementById('saved_marking_scheme_id').value;
+        const markingSchemeFile = document.getElementById('marking_scheme').files[0];
+        let markingSchemeId = null;
+
+        if (savedMarkingSchemeId) {
+            // Use saved marking scheme
+            markingSchemeId = null; // We'll use saved_marking_scheme_id instead
+        } else if (markingSchemeFile) {
+            // Upload marking scheme file
+            const markingSchemeFormData = new FormData();
+            markingSchemeFormData.append('marking_scheme', markingSchemeFile);
+            markingSchemeFormData.append('name', markingSchemeFile.name);
+            markingSchemeFormData.append('description', 'Marking scheme for ' + document.getElementById('jobName').value);
+
+            try {
+                const markingSchemeResponse = await fetch('/upload_marking_scheme', {
+                    method: 'POST',
+                    body: markingSchemeFormData
+                });
+
+                const markingSchemeResult = await markingSchemeResponse.json();
+                if (markingSchemeResult.success) {
+                    markingSchemeId = markingSchemeResult.marking_scheme_id;
+                } else {
+                    alert('Error uploading marking scheme: ' + markingSchemeResult.error);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                    return;
+                }
+            } catch (error) {
+                alert('Error uploading marking scheme: ' + error.message);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
                 return;
             }
-        } catch (error) {
-            alert('Error uploading marking scheme: ' + error.message);
+        }
+
+        const formData = {
+            job_name: document.getElementById('jobName').value,
+            description: document.getElementById('jobDescription').value,
+            provider: document.getElementById('provider').value,
+            model: document.getElementById('customModel').value || null,
+            models_to_compare: selectedModels.length > 0 ? selectedModels : null,
+            prompt: document.getElementById('prompt').value,
+            priority: parseInt(document.getElementById('priority').value),
+            temperature: parseFloat(document.getElementById('temperature').value),
+            max_tokens: parseInt(document.getElementById('max_tokens').value),
+            marking_scheme_id: markingSchemeId,
+            saved_prompt_id: document.getElementById('saved_prompt_id').value || null,
+            saved_marking_scheme_id: document.getElementById('saved_marking_scheme_id').value || null
+        };
+
+        fetch('/create_job', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentJobId = data.job_id;
+                document.getElementById('jobId').value = data.job_id;
+                document.getElementById('jobIdDisplay').textContent = data.job_id;
+                document.getElementById('uploadSection').style.display = 'block';
+
+                // Show success message
+                const jobForm = document.getElementById('jobForm');
+                const successMsg = document.createElement('div');
+                successMsg.className = 'alert alert-success mt-3';
+                successMsg.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    Job "${formData.job_name}" created successfully! You can now upload files.
+                `;
+                jobForm.appendChild(successMsg);
+
+                document.getElementById('uploadSection').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert('Error creating job: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error creating job: ' + error.message);
+        })
+        .finally(() => {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
+        });
+    });
+
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Check if we have a job ID
+        const jobId = document.getElementById('jobId').value;
+        if (!jobId) {
+            alert('Please create a job first before uploading files.');
             return;
         }
-    }
-    
-    const formData = {
-        job_name: document.getElementById('jobName').value,
-        description: document.getElementById('jobDescription').value,
-        provider: document.getElementById('provider').value,
-        model: document.getElementById('customModel').value || null,
-        models_to_compare: selectedModels.length > 0 ? selectedModels : null,
-        prompt: document.getElementById('prompt').value,
-        priority: parseInt(document.getElementById('priority').value),
-        temperature: parseFloat(document.getElementById('temperature').value),
-        max_tokens: parseInt(document.getElementById('max_tokens').value),
-        marking_scheme_id: markingSchemeId,
-        saved_prompt_id: document.getElementById('saved_prompt_id').value || null,
-        saved_marking_scheme_id: document.getElementById('saved_marking_scheme_id').value || null
-    };
-    
-    fetch('/create_job', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            currentJobId = data.job_id;
-            document.getElementById('jobId').value = data.job_id;
-            document.getElementById('jobIdDisplay').textContent = data.job_id;
-            document.getElementById('uploadSection').style.display = 'block';
-            
-            // Show success message
-            const jobForm = document.getElementById('jobForm');
-            const successMsg = document.createElement('div');
-            successMsg.className = 'alert alert-success mt-3';
-            successMsg.innerHTML = `
-                <i class="fas fa-check-circle me-2"></i>
-                Job "${formData.job_name}" created successfully! You can now upload files.
-            `;
-            jobForm.appendChild(successMsg);
-            
-            document.getElementById('uploadSection').scrollIntoView({ behavior: 'smooth' });
-        } else {
-            alert('Error creating job: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error creating job: ' + error.message);
-    })
-    .finally(() => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+
+        const formData = new FormData(this);
+
+        // Ensure job_id is included in the form data
+        formData.set('job_id', jobId);
+
+        const uploadBtn = document.getElementById('uploadBtn');
+        const originalText = uploadBtn.innerHTML;
+
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+
+        fetch('/upload_bulk', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('uploadSection').style.display = 'none';
+                document.getElementById('jobStatus').style.display = 'block';
+
+                const statusContent = document.getElementById('statusContent');
+                statusContent.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle me-2"></i>Job Created Successfully!</h6>
+                        <p class="mb-2"><strong>Job ID:</strong> ${data.job_id}</p>
+                        <p class="mb-2"><strong>Files Uploaded:</strong> ${data.message}</p>
+                        <p class="mb-0">Your documents are now being processed in the background. You can monitor progress on the jobs page.</p>
+                    </div>
+                `;
+
+                document.getElementById('jobStatus').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                alert('Error uploading files: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error uploading files: ' + error.message);
+        })
+        .finally(() => {
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = originalText;
+        });
     });
-});
 
-document.getElementById('uploadForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Check if we have a job ID
-    const jobId = document.getElementById('jobId').value;
-    if (!jobId) {
-        alert('Please create a job first before uploading files.');
-        return;
-    }
-    
-    const formData = new FormData(this);
-    
-    // Ensure job_id is included in the form data
-    formData.set('job_id', jobId);
-    
-    const uploadBtn = document.getElementById('uploadBtn');
-    const originalText = uploadBtn.innerHTML;
-    
-    uploadBtn.disabled = true;
-    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
-    
-    fetch('/upload_bulk', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            document.getElementById('uploadSection').style.display = 'none';
-            document.getElementById('jobStatus').style.display = 'block';
-            
-            const statusContent = document.getElementById('statusContent');
-            statusContent.innerHTML = `
-                <div class="alert alert-success">
-                    <h6><i class="fas fa-check-circle me-2"></i>Job Created Successfully!</h6>
-                    <p class="mb-2"><strong>Job ID:</strong> ${data.job_id}</p>
-                    <p class="mb-2"><strong>Files Uploaded:</strong> ${data.message}</p>
-                    <p class="mb-0">Your documents are now being processed in the background. You can monitor progress on the jobs page.</p>
-                </div>
-            `;
-            
-            document.getElementById('jobStatus').scrollIntoView({ behavior: 'smooth' });
-        } else {
-            alert('Error uploading files: ' + data.error);
+    // Saved Configurations Functions
+    function loadSavedPrompt() {
+        const savedPrompts = {{ saved_prompts|tojson }};
+        if (savedPrompts.length === 0) {
+            alert('No saved prompts available. Please save a prompt first.');
+            return;
         }
-    })
-    .catch(error => {
-        alert('Error uploading files: ' + error.message);
-    })
-    .finally(() => {
-        uploadBtn.disabled = false;
-        uploadBtn.innerHTML = originalText;
-    });
-});
 
-// Saved Configurations Functions
-function loadSavedPrompt() {
-    const savedPrompts = {{ saved_prompts|tojson }};
-    if (savedPrompts.length === 0) {
-        alert('No saved prompts available. Please save a prompt first.');
-        return;
-    }
-    
-    const promptNames = savedPrompts.map(p => p.name);
-    const selectedPrompt = prompt('Select a saved prompt:\n\n' + promptNames.map((name, i) => `${i + 1}. ${name}`).join('\n') + '\n\nEnter the number:');
-    
-    if (selectedPrompt && !isNaN(selectedPrompt) && selectedPrompt > 0 && selectedPrompt <= savedPrompts.length) {
-        const prompt = savedPrompts[selectedPrompt - 1];
-        document.getElementById('prompt').value = prompt.prompt_text;
-        document.getElementById('provider').value = prompt.provider;
-        if (prompt.model) {
-            document.getElementById('customModel').value = prompt.model;
+        const promptNames = savedPrompts.map(p => p.name);
+        const selectedPrompt = prompt('Select a saved prompt:\n\n' + promptNames.map((name, i) => `${i + 1}. ${name}`).join('\n') + '\n\nEnter the number:');
+
+        if (selectedPrompt && !isNaN(selectedPrompt) && selectedPrompt > 0 && selectedPrompt <= savedPrompts.length) {
+            const prompt = savedPrompts[selectedPrompt - 1];
+            document.getElementById('prompt').value = prompt.prompt_text;
+            // Note: saved prompts no longer restore a specific provider or model; provider and model selection are configured per job separately.
+            document.getElementById('saved_prompt_id').value = prompt.id;
+            document.getElementById('savedPromptName').textContent = prompt.name;
+            document.getElementById('savedPromptInfo').style.display = 'block';
         }
-        document.getElementById('saved_prompt_id').value = prompt.id;
-        document.getElementById('savedPromptName').textContent = prompt.name;
-        document.getElementById('savedPromptInfo').style.display = 'block';
     }
-}
 
-function saveCurrentPrompt() {
-    const promptText = document.getElementById('prompt').value;
-    const provider = document.getElementById('provider').value;
-    const model = document.getElementById('customModel').value;
-    
-    if (!promptText.trim()) {
-        alert('Please enter a prompt to save.');
-        return;
-    }
-    
-    const name = prompt('Enter a name for this prompt:');
-    if (!name) return;
-    
-    const description = prompt('Enter a description (optional):');
-    const category = prompt('Enter a category (optional, e.g., essay, report):');
-    
-    const formData = {
-        name: name,
-        description: description || '',
-        category: category || '',
-        prompt_text: promptText,
-        provider: provider,
-        model: model || ''
-    };
-    
-    fetch('/api/saved-prompts', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Prompt saved successfully!');
-        } else {
-            alert('Error saving prompt: ' + data.error);
+    function saveCurrentPrompt() {
+        const promptText = document.getElementById('prompt').value;
+
+        if (!promptText.trim()) {
+            alert('Please enter a prompt to save.');
+            return;
         }
-    })
-    .catch(error => {
-        alert('Error saving prompt: ' + error.message);
-    });
-}
 
-function loadSavedMarkingScheme() {
-    const savedSchemes = {{ saved_marking_schemes|tojson }};
-    if (savedSchemes.length === 0) {
-        alert('No saved marking schemes available. Please save a marking scheme first.');
-        return;
-    }
-    
-    const schemeNames = savedSchemes.map(s => s.name);
-    const selectedScheme = prompt('Select a saved marking scheme:\n\n' + schemeNames.map((name, i) => `${i + 1}. ${name}`).join('\n') + '\n\nEnter the number:');
-    
-    if (selectedScheme && !isNaN(selectedScheme) && selectedScheme > 0 && selectedScheme <= savedSchemes.length) {
-        const scheme = savedSchemes[selectedScheme - 1];
-        document.getElementById('saved_marking_scheme_id').value = scheme.id;
-        document.getElementById('savedSchemeName').textContent = scheme.name;
-        document.getElementById('savedSchemeInfo').style.display = 'block';
-        // Clear the file input since we're using a saved scheme
-        document.getElementById('marking_scheme').value = '';
-    }
-}
+        const name = prompt('Enter a name for this prompt:');
+        if (!name) return;
 
-function saveCurrentMarkingScheme() {
-    const fileInput = document.getElementById('marking_scheme');
-    if (!fileInput.files[0]) {
-        alert('Please select a marking scheme file to save.');
-        return;
+        const description = prompt('Enter a description (optional):');
+        const category = prompt('Enter a category (optional, e.g., essay, report):');
+
+        // Do not save model or provider as part of the saved prompt; model/provider selection is configured per job separately.
+        const formData = {
+            name: name,
+            description: description || '',
+            category: category || '',
+            prompt_text: promptText
+        };
+
+        fetch('/api/saved-prompts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Prompt saved successfully!');
+            } else {
+                alert('Error saving prompt: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error saving prompt: ' + error.message);
+        });
     }
-    
-    const name = prompt('Enter a name for this marking scheme:');
-    if (!name) return;
-    
-    const description = prompt('Enter a description (optional):');
-    const category = prompt('Enter a category (optional, e.g., essay, report):');
-    
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('description', description || '');
-    formData.append('category', category || '');
-    formData.append('marking_scheme', fileInput.files[0]);
-    
-    fetch('/api/saved-marking-schemes', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Marking scheme saved successfully!');
-        } else {
-            alert('Error saving marking scheme: ' + data.error);
+
+    function loadSavedMarkingScheme() {
+        const savedSchemes = {{ saved_marking_schemes|tojson }};
+        if (savedSchemes.length === 0) {
+            alert('No saved marking schemes available. Please save a marking scheme first.');
+            return;
         }
-    })
-    .catch(error => {
-        alert('Error saving marking scheme: ' + error.message);
-    });
-}
+
+        const schemeNames = savedSchemes.map(s => s.name);
+        const selectedScheme = prompt('Select a saved marking scheme:\n\n' + schemeNames.map((name, i) => `${i + 1}. ${name}`).join('\n') + '\n\nEnter the number:');
+
+        if (selectedScheme && !isNaN(selectedScheme) && selectedScheme > 0 && selectedScheme <= savedSchemes.length) {
+            const scheme = savedSchemes[selectedScheme - 1];
+            document.getElementById('saved_marking_scheme_id').value = scheme.id;
+            document.getElementById('savedSchemeName').textContent = scheme.name;
+            document.getElementById('savedSchemeInfo').style.display = 'block';
+            // Clear the file input since we're using a saved scheme
+            document.getElementById('marking_scheme').value = '';
+        }
+    }
+
+    function saveCurrentMarkingScheme() {
+        const fileInput = document.getElementById('marking_scheme');
+        if (!fileInput.files[0]) {
+            alert('Please select a marking scheme file to save.');
+            return;
+        }
+
+        const name = prompt('Enter a name for this marking scheme:');
+        if (!name) return;
+
+        const description = prompt('Enter a description (optional):');
+        const category = prompt('Enter a category (optional, e.g., essay, report):');
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('description', description || '');
+        formData.append('category', category || '');
+        formData.append('marking_scheme', fileInput.files[0]);
+
+        fetch('/api/saved-marking-schemes', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Marking scheme saved successfully!');
+            } else {
+                alert('Error saving marking scheme: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error saving marking scheme: ' + error.message);
+        });
+    }
 </script>
 {% endblock %}

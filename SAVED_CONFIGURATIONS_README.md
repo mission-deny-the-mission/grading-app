@@ -8,7 +8,7 @@ This feature allows users to save and reuse prompts and marking schemes for futu
 - **Save Custom Prompts**: Save frequently used grading instructions with metadata
 - **Categorization**: Organize prompts by category (e.g., essay, report, assignment)
 - **Usage Tracking**: Track how many times each prompt has been used
-- **Provider/Model Association**: Link prompts to specific AI providers and models
+- **Configuration-agnostic**: Prompts are stored without provider or model — choose provider and model when creating a job
 - **Edit & Delete**: Manage saved prompts through the web interface
 
 ### Saved Marking Schemes
@@ -30,8 +30,6 @@ CREATE TABLE saved_prompts (
     description TEXT,
     category VARCHAR(100),
     prompt_text TEXT NOT NULL,
-    provider VARCHAR(50) NOT NULL,
-    model VARCHAR(100),
     usage_count INTEGER DEFAULT 0,
     last_used DATETIME
 );
@@ -87,7 +85,7 @@ ALTER TABLE grading_jobs ADD COLUMN saved_marking_scheme_id VARCHAR(36);
 4. **Load Saved Configurations**: Use the "Load Saved Prompt" and "Load Saved Scheme" buttons in the bulk upload form
 
 ### Bulk Upload Integration
-- **Load Saved Prompt**: Automatically populates the prompt field and provider/model settings
+- **Load Saved Prompt**: Automatically populates the prompt field; provider and model are selected per-job
 - **Load Saved Marking Scheme**: Shows a preview of the marking scheme content
 - **Save Current Configurations**: Save prompts and marking schemes directly from the bulk upload form
 

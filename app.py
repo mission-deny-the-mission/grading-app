@@ -147,7 +147,7 @@ def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241
             temperature=temperature,
             max_tokens=max_tokens
         )
-        
+
         return {
             'success': True,
             'grade': response.choices[0].message.content,
@@ -189,7 +189,7 @@ def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3
                 }
             ]
         )
-        
+
         return {
             'success': True,
             'grade': response.content[0].text,
@@ -226,7 +226,7 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=
             headers={"Content-Type": "application/json"},
             timeout=120
         )
-        
+
         if response.status_code == 200:
             result = response.json()
             return {
@@ -259,11 +259,11 @@ def upload_file():
     """Handle file upload and grading."""
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
-    
+
     # Handle marking scheme upload if provided
     marking_scheme_content = None
     if 'marking_scheme' in request.files and request.files['marking_scheme'].filename != '':
@@ -271,7 +271,7 @@ def upload_file():
         marking_scheme_filename = secure_filename(marking_scheme_file.filename)
         marking_scheme_path = os.path.join(app.config['UPLOAD_FOLDER'], marking_scheme_filename)
         marking_scheme_file.save(marking_scheme_path)
-        
+
         # Determine marking scheme file type
         if marking_scheme_filename.lower().endswith('.docx'):
             marking_scheme_type = 'docx'
@@ -281,21 +281,21 @@ def upload_file():
             marking_scheme_type = 'txt'
         else:
             return jsonify({'error': 'Unsupported marking scheme file type. Please upload .docx, .pdf, or .txt files.'}), 400
-        
+
         # Extract marking scheme content
         marking_scheme_content = extract_marking_scheme_content(marking_scheme_path, marking_scheme_type)
-        
+
         # Clean up marking scheme file
         try:
             os.remove(marking_scheme_path)
         except:
             pass
-    
+
     if file:
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
-        
+
         # Extract text based on file type
         if filename.lower().endswith('.docx'):
             text = extract_text_from_docx(file_path)
@@ -310,7 +310,7 @@ def upload_file():
                 return jsonify({'error': f'Error reading text file: {str(e)}'}), 400
         else:
             return jsonify({'error': 'Unsupported file type. Please upload .docx, .pdf, or .txt files.'}), 400
-        
+
         # Get grading parameters
         prompt = request.form.get('prompt', session.get('default_prompt', 'Please grade this document and provide detailed feedback.'))
         provider = request.form.get('provider', 'openrouter')
@@ -321,11 +321,11 @@ def upload_file():
         # Get model parameters
         temperature = float(request.form.get('temperature', '0.3'))
         max_tokens = int(request.form.get('max_tokens', '2000'))
-        
+
         # Add custom models to the comparison list
         if custom_models:
             models_to_compare.extend([m.strip() for m in custom_models if m.strip()])
-        
+
         # If no specific models selected, use default behavior
         if not models_to_compare:
             if custom_model:
@@ -334,10 +334,10 @@ def upload_file():
                 # Use default model for the provider
                 default_model = DEFAULT_MODELS.get(provider, {}).get('default', 'anthropic/claude-3-5-sonnet-20241022')
                 models_to_compare = [default_model]
-        
+
         results = []
         all_successful = True
-        
+
         # Grade with each selected model
         for model in models_to_compare:
             if provider == 'openrouter':
@@ -354,17 +354,17 @@ def upload_file():
                 result = grade_with_lm_studio(text, prompt, marking_scheme_content, temperature, max_tokens)
             else:
                 return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, lm_studio'}), 400
-            
+
             results.append(result)
             if not result.get('success', False):
                 all_successful = False
-        
+
         # Clean up uploaded file
         try:
             os.remove(file_path)
         except:
             pass  # Don't fail if file cleanup fails
-        
+
         # Return results
         if len(results) == 1:
             # Single result - return in original format for backward compatibility
@@ -404,15 +404,15 @@ def save_config():
             'lm_studio_url': request.form.get('lm_studio_url', 'http://localhost:1234/v1'),
             'default_prompt': request.form.get('default_prompt', 'Please grade this document and provide detailed feedback.')
         }
-        
+
         # Save to session for immediate use
         session['config'] = config_data
         session['default_prompt'] = config_data['default_prompt']
-        
+
         # Save to .env file for persistence
         env_file_path = '.env'
         env_content = []
-        
+
         # Read existing .env file if it exists
         if os.path.exists(env_file_path):
             with open(env_file_path, 'r') as f:
@@ -422,7 +422,7 @@ def save_config():
                     if '=' in line and not line.strip().startswith('#'):
                         key, value = line.strip().split('=', 1)
                         existing_vars[key] = value
-                
+
                 # Update with new values
                 if config_data['openrouter_api_key']:
                     existing_vars['OPENROUTER_API_KEY'] = config_data['openrouter_api_key']
@@ -430,7 +430,7 @@ def save_config():
                     existing_vars['CLAUDE_API_KEY'] = config_data['claude_api_key']
                 if config_data['lm_studio_url']:
                     existing_vars['LM_STUDIO_URL'] = config_data['lm_studio_url']
-                
+
                 # Write back to file
                 with open(env_file_path, 'w') as f:
                     for key, value in existing_vars.items():
@@ -444,21 +444,21 @@ def save_config():
                     f.write(f"CLAUDE_API_KEY={config_data['claude_api_key']}\n")
                 if config_data['lm_studio_url']:
                     f.write(f"LM_STUDIO_URL={config_data['lm_studio_url']}\n")
-        
+
         # Reload environment variables
         load_dotenv(override=True)
-        
+
         # Update global variables
         global OPENROUTER_API_KEY, CLAUDE_API_KEY, LM_STUDIO_URL, anthropic
         OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
         CLAUDE_API_KEY = os.getenv('CLAUDE_API_KEY')
         LM_STUDIO_URL = os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1')
-        
+
         # Reinitialize API clients
         if OPENROUTER_API_KEY:
             openai.api_key = OPENROUTER_API_KEY
             openai.api_base = "https://openrouter.ai/api/v1"
-        
+
         anthropic = None
         if CLAUDE_API_KEY:
             try:
@@ -466,7 +466,7 @@ def save_config():
             except Exception as e:
                 print(f"Warning: Failed to initialize Anthropic client: {e}")
                 anthropic = None
-        
+
         return jsonify({'success': True, 'message': 'Configuration saved successfully'})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Failed to save configuration: {str(e)}'})
@@ -489,16 +489,16 @@ def test_api_key():
         data = request.get_json()
         api_type = data.get('type')
         api_key = data.get('key')
-        
+
         if not api_key:
             return jsonify({'success': False, 'error': 'No API key provided'})
-        
+
         if api_type == 'openrouter':
             # Test OpenRouter API key
             try:
                 openai.api_key = api_key
                 openai.api_base = "https://openrouter.ai/api/v1"
-                
+
                 response = openai.ChatCompletion.create(
                     model="anthropic/claude-3.5-sonnet",
                     messages=[{"role": "user", "content": "Hello"}],
@@ -507,7 +507,7 @@ def test_api_key():
                 return jsonify({'success': True, 'message': 'OpenRouter API key is valid'})
             except Exception as e:
                 return jsonify({'success': False, 'error': f'Invalid OpenRouter API key: {str(e)}'})
-        
+
         elif api_type == 'claude':
             # Test Claude API key
             try:
@@ -520,10 +520,10 @@ def test_api_key():
                 return jsonify({'success': True, 'message': 'Claude API key is valid'})
             except Exception as e:
                 return jsonify({'success': False, 'error': f'Invalid Claude API key: {str(e)}'})
-        
+
         else:
             return jsonify({'success': False, 'error': 'Invalid API type'})
-            
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
@@ -533,7 +533,7 @@ def test_lm_studio():
     try:
         data = request.get_json()
         url = data.get('url', 'http://localhost:1234/v1')
-        
+
         # Test with a simple completion request
         response = requests.post(
             f"{url}/chat/completions",
@@ -547,7 +547,7 @@ def test_lm_studio():
             headers={"Content-Type": "application/json"},
             timeout=5
         )
-        
+
         if response.status_code == 200:
             return jsonify({'success': True, 'message': 'LM Studio connection successful'})
         else:
@@ -615,13 +615,13 @@ def export_job_results(job_id):
     import zipfile
     import io
     from datetime import datetime, timezone
-    
+
     job = GradingJob.query.get_or_404(job_id)
-    
+
     # Create ZIP file in memory
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        
+
         # Add job summary
         summary_content = f"""Job Summary: {job.job_name}
 Created: {job.created_at}
@@ -638,7 +638,7 @@ Grading Instructions:
 
 """
         zip_file.writestr('job_summary.txt', summary_content)
-        
+
         # Add individual submission results
         for submission in job.submissions:
             if submission.status == 'completed' and submission.grade:
@@ -651,9 +651,9 @@ Created: {submission.created_at}
 {submission.grade}
 """
                 zip_file.writestr(filename, content)
-    
+
     zip_buffer.seek(0)
-    
+
     from flask import send_file
     return send_file(
         zip_buffer,
@@ -667,12 +667,12 @@ def bulk_upload():
     """Bulk upload page."""
     # Get default prompt from configuration
     default_prompt = app.config.get('DEFAULT_PROMPT', 'Please grade this document according to standard academic criteria.')
-    
+
     # Get saved prompts and marking schemes for dropdowns
     saved_prompts = [prompt.to_dict() for prompt in SavedPrompt.query.order_by(SavedPrompt.name).all()]
     saved_marking_schemes = [scheme.to_dict() for scheme in SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()]
-    
-    return render_template('bulk_upload.html', 
+
+    return render_template('bulk_upload.html',
                          default_prompt=default_prompt,
                          saved_prompts=saved_prompts,
                          saved_marking_schemes=saved_marking_schemes)
@@ -682,7 +682,7 @@ def saved_configurations():
     """Page for managing saved prompts and marking schemes."""
     saved_prompts = SavedPrompt.query.order_by(SavedPrompt.updated_at.desc()).all()
     saved_marking_schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.updated_at.desc()).all()
-    
+
     return render_template('saved_configurations.html',
                          saved_prompts=saved_prompts,
                          saved_marking_schemes=saved_marking_schemes)
@@ -692,7 +692,7 @@ def create_job():
     """Create a new grading job."""
     try:
         data = request.get_json()
-        
+
         # Create job
         job = GradingJob(
             job_name=data['job_name'],
@@ -708,27 +708,27 @@ def create_job():
             saved_prompt_id=data.get('saved_prompt_id'),
             saved_marking_scheme_id=data.get('saved_marking_scheme_id')
         )
-        
+
         # Increment usage counts for saved configurations
         if data.get('saved_prompt_id'):
             saved_prompt = SavedPrompt.query.get(data['saved_prompt_id'])
             if saved_prompt:
                 saved_prompt.increment_usage()
-        
+
         if data.get('saved_marking_scheme_id'):
             saved_scheme = SavedMarkingScheme.query.get(data['saved_marking_scheme_id'])
             if saved_scheme:
                 saved_scheme.increment_usage()
-        
+
         db.session.add(job)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'job_id': job.id,
             'message': 'Job created successfully'
         })
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -741,20 +741,20 @@ def upload_marking_scheme():
     try:
         if 'marking_scheme' not in request.files:
             return jsonify({'error': 'No marking scheme file provided'}), 400
-        
+
         file = request.files['marking_scheme']
         if file.filename == '':
             return jsonify({'error': 'No marking scheme file selected'}), 400
-        
+
         # Validate file type
         filename = secure_filename(file.filename)
         if not (filename.lower().endswith('.docx') or filename.lower().endswith('.pdf') or filename.lower().endswith('.txt')):
             return jsonify({'error': 'Unsupported file type. Please upload .docx, .pdf, or .txt files.'}), 400
-        
+
         # Save file temporarily
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
-        
+
         # Determine file type
         if filename.lower().endswith('.docx'):
             file_type = 'docx'
@@ -762,10 +762,10 @@ def upload_marking_scheme():
             file_type = 'pdf'
         else:
             file_type = 'txt'
-        
+
         # Extract content
         content = extract_marking_scheme_content(file_path, file_type)
-        
+
         # Create marking scheme record
         marking_scheme = MarkingScheme(
             name=request.form.get('name', filename),
@@ -776,23 +776,23 @@ def upload_marking_scheme():
             file_type=file_type,
             content=content
         )
-        
+
         db.session.add(marking_scheme)
         db.session.commit()
-        
+
         # Clean up temporary file
         try:
             os.remove(file_path)
         except:
             pass
-        
+
         return jsonify({
             'success': True,
             'marking_scheme_id': marking_scheme.id,
             'name': marking_scheme.name,
             'message': 'Marking scheme uploaded successfully'
         })
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -802,25 +802,25 @@ def upload_bulk():
     try:
         if 'files[]' not in request.files:
             return jsonify({'error': 'No files provided'}), 400
-        
+
         files = request.files.getlist('files[]')
         job_id = request.form.get('job_id')
-        
+
         if not job_id:
             return jsonify({'error': 'Job ID required'}), 400
-        
+
         job = GradingJob.query.get_or_404(job_id)
-        
+
         uploaded_files = []
         for file in files:
             if file.filename == '':
                 continue
-                
+
             if file:
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(file_path)
-                
+
                 # Determine file type
                 if filename.lower().endswith('.docx'):
                     file_type = 'docx'
@@ -830,7 +830,7 @@ def upload_bulk():
                     file_type = 'txt'
                 else:
                     file_type = 'pdf'  # Default to PDF for unknown types
-                
+
                 # Create submission
                 submission = Submission(
                     filename=filename,
@@ -839,26 +839,26 @@ def upload_bulk():
                     file_type=file_type,
                     job_id=job.id
                 )
-                
+
                 db.session.add(submission)
                 uploaded_files.append(submission)
-        
+
         # Commit the submissions first
         db.session.commit()
-        
+
         # Update job with submission count (now including the newly committed submissions)
         job.total_submissions = len(job.submissions)
         db.session.commit()
-        
+
         # Start processing job
         process_job.delay(job.id)
-        
+
         return jsonify({
             'success': True,
             'message': f'Uploaded {len(uploaded_files)} files',
             'job_id': job.id
         })
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -867,7 +867,7 @@ def create_batch():
     """Create a batch of jobs."""
     try:
         data = request.get_json()
-        
+
         # Create batch
         batch = JobBatch(
             batch_name=data['batch_name'],
@@ -878,16 +878,16 @@ def create_batch():
             temperature=data.get('temperature', 0.3),
             max_tokens=data.get('max_tokens', 2000)
         )
-        
+
         db.session.add(batch)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'batch_id': batch.id,
             'message': 'Batch created successfully'
         })
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -911,19 +911,19 @@ def trigger_job_processing(job_id):
     """Manually trigger job processing."""
     try:
         from tasks import process_job
-        
+
         # Check if job exists
         job = GradingJob.query.get_or_404(job_id)
-        
+
         # Queue the job for processing
         result = process_job.delay(job_id)
-        
+
         return jsonify({
             'success': True,
             'message': f'Job {job.job_name} queued for processing',
             'task_id': result.id
         })
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -935,24 +935,24 @@ def retry_failed_submissions(job_id):
     """Retry all failed submissions in a job."""
     try:
         from tasks import process_job
-        
+
         # Check if job exists
         job = GradingJob.query.get_or_404(job_id)
-        
+
         # Check if there are any failed submissions that can be retried
         if not job.can_retry_failed_submissions():
             return jsonify({
                 'success': False,
                 'error': 'No failed submissions can be retried'
             }), 400
-        
+
         # Retry failed submissions
         retried_count = job.retry_failed_submissions()
-        
+
         if retried_count > 0:
             # Queue the job for processing
             result = process_job.delay(job_id)
-            
+
             return jsonify({
                 'success': True,
                 'message': f'Retried {retried_count} failed submissions. Job queued for processing.',
@@ -964,7 +964,7 @@ def retry_failed_submissions(job_id):
                 'success': False,
                 'error': 'No submissions were retried'
             }), 400
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -976,22 +976,22 @@ def retry_submission(submission_id):
     """Retry a specific failed submission."""
     try:
         from tasks import process_job
-        
+
         # Check if submission exists
         submission = Submission.query.get_or_404(submission_id)
-        
+
         # Check if submission can be retried
         if not submission.can_retry():
             return jsonify({
                 'success': False,
                 'error': 'Submission cannot be retried'
             }), 400
-        
+
         # Retry the submission
         if submission.retry():
             # Queue the job for processing
             result = process_job.delay(submission.job_id)
-            
+
             return jsonify({
                 'success': True,
                 'message': f'Submission {submission.original_filename} retried successfully',
@@ -1002,7 +1002,7 @@ def retry_submission(submission_id):
                 'success': False,
                 'error': 'Failed to retry submission'
             }), 400
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -1030,19 +1030,17 @@ def create_saved_prompt():
     """Create a new saved prompt."""
     try:
         data = request.get_json()
-        
+
         prompt = SavedPrompt(
             name=data['name'],
             description=data.get('description', ''),
             category=data.get('category', ''),
-            prompt_text=data['prompt_text'],
-            provider=data['provider'],
-            model=data.get('model', '')
+            prompt_text=data['prompt_text']
         )
-        
+
         db.session.add(prompt)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'prompt': prompt.to_dict(),
@@ -1075,17 +1073,15 @@ def update_saved_prompt(prompt_id):
     try:
         prompt = SavedPrompt.query.get_or_404(prompt_id)
         data = request.get_json()
-        
+
         prompt.name = data.get('name', prompt.name)
         prompt.description = data.get('description', prompt.description)
         prompt.category = data.get('category', prompt.category)
         prompt.prompt_text = data.get('prompt_text', prompt.prompt_text)
-        prompt.provider = data.get('provider', prompt.provider)
-        prompt.model = data.get('model', prompt.model)
         prompt.updated_at = datetime.now(timezone.utc)
-        
+
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'prompt': prompt.to_dict(),
@@ -1104,7 +1100,7 @@ def delete_saved_prompt(prompt_id):
         prompt = SavedPrompt.query.get_or_404(prompt_id)
         db.session.delete(prompt)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'message': 'Prompt deleted successfully'
@@ -1140,21 +1136,21 @@ def create_saved_marking_scheme():
                 'success': False,
                 'error': 'No marking scheme file provided'
             }), 400
-        
+
         file = request.files['marking_scheme']
         if file.filename == '':
             return jsonify({
                 'success': False,
                 'error': 'No file selected'
             }), 400
-        
+
         # Save file
         filename = secure_filename(file.filename)
         timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
         filename = f"{timestamp}_{filename}"
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
-        
+
         # Determine file type
         if filename.lower().endswith('.docx'):
             file_type = 'docx'
@@ -1164,10 +1160,10 @@ def create_saved_marking_scheme():
             file_type = 'txt'
         else:
             file_type = 'txt'  # Default to txt for unknown types
-        
+
         # Extract text content
         content = extract_marking_scheme_content(file_path, file_type)
-        
+
         # Create saved marking scheme
         scheme = SavedMarkingScheme(
             name=request.form.get('name', 'Untitled Marking Scheme'),
@@ -1179,10 +1175,10 @@ def create_saved_marking_scheme():
             file_type=os.path.splitext(file.filename)[1][1:].lower(),
             content=content
         )
-        
+
         db.session.add(scheme)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'scheme': scheme.to_dict(),
@@ -1215,14 +1211,14 @@ def update_saved_marking_scheme(scheme_id):
     try:
         scheme = SavedMarkingScheme.query.get_or_404(scheme_id)
         data = request.get_json()
-        
+
         scheme.name = data.get('name', scheme.name)
         scheme.description = data.get('description', scheme.description)
         scheme.category = data.get('category', scheme.category)
         scheme.updated_at = datetime.now(timezone.utc)
-        
+
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'scheme': scheme.to_dict(),
@@ -1239,15 +1235,15 @@ def delete_saved_marking_scheme(scheme_id):
     """Delete a saved marking scheme."""
     try:
         scheme = SavedMarkingScheme.query.get_or_404(scheme_id)
-        
+
         # Delete the file
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], scheme.filename)
         if os.path.exists(file_path):
             os.remove(file_path)
-        
+
         db.session.delete(scheme)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'message': 'Marking scheme deleted successfully'

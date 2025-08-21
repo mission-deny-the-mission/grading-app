@@ -1,8 +1,5 @@
-{% extends "base.html" %}
-
-{% block title %}Saved Configurations{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Saved Configurations{% endblock %} {%
+block content %}
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -11,10 +8,18 @@
                 Saved Configurations
             </h1>
             <div>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#savePromptModal">
+                <button
+                    class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#savePromptModal"
+                >
                     <i class="fas fa-plus me-2"></i>Save Prompt
                 </button>
-                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#saveMarkingSchemeModal">
+                <button
+                    class="btn btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#saveMarkingSchemeModal"
+                >
                     <i class="fas fa-plus me-2"></i>Save Marking Scheme
                 </button>
             </div>
@@ -34,40 +39,74 @@
                     <div class="col-lg-6 col-xl-4 mb-3">
                         <div class="card h-100 border-primary">
                             <div class="card-header bg-primary text-white">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div
+                                    class="d-flex justify-content-between align-items-center"
+                                >
                                     <h6 class="mb-0">{{ prompt.name }}</h6>
                                     <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
+                                        <button
+                                            class="btn btn-sm btn-outline-light"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                        >
                                             <i class="fas fa-ellipsis-v"></i>
                                         </button>
                                         <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="#" onclick="editPrompt('{{ prompt.id }}')">
-                                                <i class="fas fa-edit me-2"></i>Edit
-                                            </a></li>
-                                            <li><a class="dropdown-item" href="#" onclick="deletePrompt('{{ prompt.id }}', '{{ prompt.name }}')">
-                                                <i class="fas fa-trash me-2"></i>Delete
-                                            </a></li>
+                                            <li>
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="#"
+                                                    onclick="editPrompt('{{ prompt.id }}')"
+                                                >
+                                                    <i
+                                                        class="fas fa-edit me-2"
+                                                    ></i
+                                                    >Edit
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="#"
+                                                    onclick="deletePrompt('{{ prompt.id }}', '{{ prompt.name }}')"
+                                                >
+                                                    <i
+                                                        class="fas fa-trash me-2"
+                                                    ></i
+                                                    >Delete
+                                                </a>
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
                             </div>
                             <div class="card-body">
                                 {% if prompt.description %}
-                                <p class="text-muted small mb-2">{{ prompt.description }}</p>
-                                {% endif %}
-                                {% if prompt.category %}
-                                <span class="badge bg-secondary mb-2">{{ prompt.category }}</span>
+                                <p class="text-muted small mb-2">
+                                    {{ prompt.description }}
+                                </p>
+                                {% endif %} {% if prompt.category %}
+                                <span class="badge bg-secondary mb-2"
+                                    >{{ prompt.category }}</span
+                                >
                                 {% endif %}
                                 <div class="small text-muted mb-2">
-                                    <div><i class="fas fa-robot me-1"></i>{{ prompt.provider.title() }}</div>
-                                    {% if prompt.model %}
-                                    <div><i class="fas fa-cog me-1"></i>{{ prompt.model }}</div>
-                                    {% endif %}
-                                    <div><i class="fas fa-clock me-1"></i>{{ prompt.created_at.strftime('%Y-%m-%d') }}</div>
-                                    <div><i class="fas fa-chart-line me-1"></i>Used {{ prompt.usage_count }} times</div>
+                                    <div>
+                                        <i class="fas fa-clock me-1"></i>{{
+                                        prompt.created_at.strftime('%Y-%m-%d')
+                                        }}
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-chart-line me-1"></i
+                                        >Used {{ prompt.usage_count }} times
+                                    </div>
                                 </div>
                                 <div class="prompt-preview">
-                                    <small class="text-muted">{{ prompt.prompt_text[:100] }}{% if prompt.prompt_text|length > 100 %}...{% endif %}</small>
+                                    <small class="text-muted"
+                                        >{{ prompt.prompt_text[:100] }}{% if
+                                        prompt.prompt_text|length > 100 %}...{%
+                                        endif %}</small
+                                    >
                                 </div>
                             </div>
                         </div>
@@ -78,8 +117,15 @@
                 <div class="text-center py-4">
                     <i class="fas fa-comment fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">No saved prompts yet</h5>
-                    <p class="text-muted">Save your first prompt to reuse it in future grading jobs</p>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#savePromptModal">
+                    <p class="text-muted">
+                        Save your first prompt to reuse it in future grading
+                        jobs
+                    </p>
+                    <button
+                        class="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#savePromptModal"
+                    >
                         <i class="fas fa-plus me-2"></i>Save Your First Prompt
                     </button>
                 </div>
@@ -91,7 +137,8 @@
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="fas fa-clipboard-check me-2"></i>Saved Marking Schemes
+                    <i class="fas fa-clipboard-check me-2"></i>Saved Marking
+                    Schemes
                 </h5>
             </div>
             <div class="card-body">
@@ -101,37 +148,78 @@
                     <div class="col-lg-6 col-xl-4 mb-3">
                         <div class="card h-100 border-success">
                             <div class="card-header bg-success text-white">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div
+                                    class="d-flex justify-content-between align-items-center"
+                                >
                                     <h6 class="mb-0">{{ scheme.name }}</h6>
                                     <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
+                                        <button
+                                            class="btn btn-sm btn-outline-light"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                        >
                                             <i class="fas fa-ellipsis-v"></i>
                                         </button>
                                         <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="#" onclick="editMarkingScheme('{{ scheme.id }}')">
-                                                <i class="fas fa-edit me-2"></i>Edit
-                                            </a></li>
-                                            <li><a class="dropdown-item" href="#" onclick="deleteMarkingScheme('{{ scheme.id }}', '{{ scheme.name }}')">
-                                                <i class="fas fa-trash me-2"></i>Delete
-                                            </a></li>
+                                            <li>
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="#"
+                                                    onclick="editMarkingScheme('{{ scheme.id }}')"
+                                                >
+                                                    <i
+                                                        class="fas fa-edit me-2"
+                                                    ></i
+                                                    >Edit
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a
+                                                    class="dropdown-item"
+                                                    href="#"
+                                                    onclick="deleteMarkingScheme('{{ scheme.id }}', '{{ scheme.name }}')"
+                                                >
+                                                    <i
+                                                        class="fas fa-trash me-2"
+                                                    ></i
+                                                    >Delete
+                                                </a>
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
                             </div>
                             <div class="card-body">
                                 {% if scheme.description %}
-                                <p class="text-muted small mb-2">{{ scheme.description }}</p>
-                                {% endif %}
-                                {% if scheme.category %}
-                                <span class="badge bg-secondary mb-2">{{ scheme.category }}</span>
+                                <p class="text-muted small mb-2">
+                                    {{ scheme.description }}
+                                </p>
+                                {% endif %} {% if scheme.category %}
+                                <span class="badge bg-secondary mb-2"
+                                    >{{ scheme.category }}</span
+                                >
                                 {% endif %}
                                 <div class="small text-muted mb-2">
-                                    <div><i class="fas fa-file me-1"></i>{{ scheme.original_filename }}</div>
-                                    <div><i class="fas fa-clock me-1"></i>{{ scheme.created_at.strftime('%Y-%m-%d') }}</div>
-                                    <div><i class="fas fa-chart-line me-1"></i>Used {{ scheme.usage_count }} times</div>
+                                    <div>
+                                        <i class="fas fa-file me-1"></i>{{
+                                        scheme.original_filename }}
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-clock me-1"></i>{{
+                                        scheme.created_at.strftime('%Y-%m-%d')
+                                        }}
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-chart-line me-1"></i
+                                        >Used {{ scheme.usage_count }} times
+                                    </div>
                                 </div>
                                 <div class="scheme-preview">
-                                    <small class="text-muted">{{ scheme.content[:100] }}{% if scheme.content|length > 100 %}...{% endif %}</small>
+                                    <small class="text-muted"
+                                        >{{ scheme.content[:100] }}{% if
+                                        scheme.content|length > 100 %}...{%
+                                        endif %}</small
+                                    >
                                 </div>
                             </div>
                         </div>
@@ -142,9 +230,17 @@
                 <div class="text-center py-4">
                     <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">No saved marking schemes yet</h5>
-                    <p class="text-muted">Save your first marking scheme to reuse it in future grading jobs</p>
-                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#saveMarkingSchemeModal">
-                        <i class="fas fa-plus me-2"></i>Save Your First Marking Scheme
+                    <p class="text-muted">
+                        Save your first marking scheme to reuse it in future
+                        grading jobs
+                    </p>
+                    <button
+                        class="btn btn-success"
+                        data-bs-toggle="modal"
+                        data-bs-target="#saveMarkingSchemeModal"
+                    >
+                        <i class="fas fa-plus me-2"></i>Save Your First Marking
+                        Scheme
                     </button>
                 </div>
                 {% endif %}
@@ -154,321 +250,452 @@
 </div>
 
 <!-- Save Prompt Modal -->
-<div class="modal fade" id="savePromptModal" tabindex="-1" data-bs-backdrop="false">
+<div
+    class="modal fade"
+    id="savePromptModal"
+    tabindex="-1"
+    data-bs-backdrop="false"
+>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Save Prompt</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                ></button>
             </div>
             <div class="modal-body">
                 <form id="savePromptForm">
                     <div class="mb-3">
-                        <label for="promptName" class="form-label">Name *</label>
-                        <input type="text" class="form-control" id="promptName" required>
+                        <label for="promptName" class="form-label"
+                            >Name *</label
+                        >
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="promptName"
+                            required
+                        />
                     </div>
                     <div class="mb-3">
-                        <label for="promptDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="promptDescription" rows="2"></textarea>
+                        <label for="promptDescription" class="form-label"
+                            >Description</label
+                        >
+                        <textarea
+                            class="form-control"
+                            id="promptDescription"
+                            rows="2"
+                        ></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="promptCategory" class="form-label">Category</label>
-                        <input type="text" class="form-control" id="promptCategory" placeholder="e.g., essay, report, assignment">
+                        <label for="promptCategory" class="form-label"
+                            >Category</label
+                        >
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="promptCategory"
+                            placeholder="e.g., essay, report, assignment"
+                        />
                     </div>
                     <div class="mb-3">
-                        <label for="promptText" class="form-label">Prompt Text *</label>
-                        <textarea class="form-control" id="promptText" rows="6" required></textarea>
+                        <label for="promptText" class="form-label"
+                            >Prompt Text *</label
+                        >
+                        <textarea
+                            class="form-control"
+                            id="promptText"
+                            rows="6"
+                            required
+                        ></textarea>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for="promptProvider" class="form-label">Provider *</label>
-                            <select class="form-select" id="promptProvider" required>
-                                <option value="openrouter">OpenRouter</option>
-                                <option value="claude">Claude API</option>
-                                <option value="lm_studio">LM Studio</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="promptModel" class="form-label">Model</label>
-                            <input type="text" class="form-control" id="promptModel" placeholder="Optional model name">
-                        </div>
-                    </div>
+                    <div class="row"></div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="savePrompt()">Save Prompt</button>
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="savePrompt()"
+                >
+                    Save Prompt
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Save Marking Scheme Modal -->
-<div class="modal fade" id="saveMarkingSchemeModal" tabindex="-1" data-bs-backdrop="false">
+<div
+    class="modal fade"
+    id="saveMarkingSchemeModal"
+    tabindex="-1"
+    data-bs-backdrop="false"
+>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Save Marking Scheme</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                ></button>
             </div>
             <div class="modal-body">
                 <form id="saveMarkingSchemeForm" enctype="multipart/form-data">
                     <div class="mb-3">
-                        <label for="schemeName" class="form-label">Name *</label>
-                        <input type="text" class="form-control" id="schemeName" required>
+                        <label for="schemeName" class="form-label"
+                            >Name *</label
+                        >
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="schemeName"
+                            required
+                        />
                     </div>
                     <div class="mb-3">
-                        <label for="schemeDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="schemeDescription" rows="2"></textarea>
+                        <label for="schemeDescription" class="form-label"
+                            >Description</label
+                        >
+                        <textarea
+                            class="form-control"
+                            id="schemeDescription"
+                            rows="2"
+                        ></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="schemeCategory" class="form-label">Category</label>
-                        <input type="text" class="form-control" id="schemeCategory" placeholder="e.g., essay, report, assignment">
+                        <label for="schemeCategory" class="form-label"
+                            >Category</label
+                        >
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="schemeCategory"
+                            placeholder="e.g., essay, report, assignment"
+                        />
                     </div>
                     <div class="mb-3">
-                        <label for="schemeFile" class="form-label">Marking Scheme File *</label>
-                        <input type="file" class="form-control" id="schemeFile" name="marking_scheme" 
-                               accept=".docx,.pdf,.txt" required>
-                        <div class="form-text">Supported formats: .docx, .pdf, .txt</div>
+                        <label for="schemeFile" class="form-label"
+                            >Marking Scheme File *</label
+                        >
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="schemeFile"
+                            name="marking_scheme"
+                            accept=".docx,.pdf,.txt"
+                            required
+                        />
+                        <div class="form-text">
+                            Supported formats: .docx, .pdf, .txt
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="saveMarkingScheme()">Save Marking Scheme</button>
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    onclick="saveMarkingScheme()"
+                >
+                    Save Marking Scheme
+                </button>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-function savePrompt() {
-    const formData = {
-        name: document.getElementById('promptName').value,
-        description: document.getElementById('promptDescription').value,
-        category: document.getElementById('promptCategory').value,
-        prompt_text: document.getElementById('promptText').value,
-        provider: document.getElementById('promptProvider').value,
-        model: document.getElementById('promptModel').value
-    };
-    
-    fetch('/api/saved-prompts', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Prompt saved successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error saving prompt: ' + error.message);
-    });
-}
+    function savePrompt() {
+        const formData = {
+            name: document.getElementById("promptName").value,
+            description: document.getElementById("promptDescription").value,
+            category: document.getElementById("promptCategory").value,
+            prompt_text: document.getElementById("promptText").value,
+        };
 
-function saveMarkingScheme() {
-    const formData = new FormData();
-    formData.append('name', document.getElementById('schemeName').value);
-    formData.append('description', document.getElementById('schemeDescription').value);
-    formData.append('category', document.getElementById('schemeCategory').value);
-    formData.append('marking_scheme', document.getElementById('schemeFile').files[0]);
-    
-    fetch('/api/saved-marking-schemes', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Marking scheme saved successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error saving marking scheme: ' + error.message);
-    });
-}
+        fetch("/api/saved-prompts", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    alert("Prompt saved successfully!");
+                    location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch((error) => {
+                alert("Error saving prompt: " + error.message);
+            });
+    }
 
-function deletePrompt(promptId, promptName) {
-    if (confirm(`Are you sure you want to delete the prompt "${promptName}"?`)) {
+    function saveMarkingScheme() {
+        const formData = new FormData();
+        formData.append("name", document.getElementById("schemeName").value);
+        formData.append(
+            "description",
+            document.getElementById("schemeDescription").value,
+        );
+        formData.append(
+            "category",
+            document.getElementById("schemeCategory").value,
+        );
+        formData.append(
+            "marking_scheme",
+            document.getElementById("schemeFile").files[0],
+        );
+
+        fetch("/api/saved-marking-schemes", {
+            method: "POST",
+            body: formData,
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    alert("Marking scheme saved successfully!");
+                    location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch((error) => {
+                alert("Error saving marking scheme: " + error.message);
+            });
+    }
+
+    function deletePrompt(promptId, promptName) {
+        if (
+            confirm(
+                `Are you sure you want to delete the prompt "${promptName}"?`,
+            )
+        ) {
+            fetch(`/api/saved-prompts/${promptId}`, {
+                method: "DELETE",
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.success) {
+                        alert("Prompt deleted successfully!");
+                        location.reload();
+                    } else {
+                        alert("Error: " + data.error);
+                    }
+                })
+                .catch((error) => {
+                    alert("Error deleting prompt: " + error.message);
+                });
+        }
+    }
+
+    function deleteMarkingScheme(schemeId, schemeName) {
+        if (
+            confirm(
+                `Are you sure you want to delete the marking scheme "${schemeName}"?`,
+            )
+        ) {
+            fetch(`/api/saved-marking-schemes/${schemeId}`, {
+                method: "DELETE",
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.success) {
+                        alert("Marking scheme deleted successfully!");
+                        location.reload();
+                    } else {
+                        alert("Error: " + data.error);
+                    }
+                })
+                .catch((error) => {
+                    alert("Error deleting marking scheme: " + error.message);
+                });
+        }
+    }
+
+    function editPrompt(promptId) {
+        // Load prompt data and populate modal
+        fetch(`/api/saved-prompts/${promptId}`)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    const prompt = data.prompt;
+                    document.getElementById("promptName").value = prompt.name;
+                    document.getElementById("promptDescription").value =
+                        prompt.description || "";
+                    document.getElementById("promptCategory").value =
+                        prompt.category || "";
+                    document.getElementById("promptText").value =
+                        prompt.prompt_text;
+
+                    // Change modal title and button
+                    document.querySelector(
+                        "#savePromptModal .modal-title",
+                    ).textContent = "Edit Prompt";
+                    document.querySelector(
+                        "#savePromptModal .btn-primary",
+                    ).textContent = "Update Prompt";
+                    document.querySelector(
+                        "#savePromptModal .btn-primary",
+                    ).onclick = () => updatePrompt(promptId);
+
+                    // Show modal
+                    new bootstrap.Modal(
+                        document.getElementById("savePromptModal"),
+                    ).show();
+                } else {
+                    alert("Error loading prompt: " + data.error);
+                }
+            })
+            .catch((error) => {
+                alert("Error loading prompt: " + error.message);
+            });
+    }
+
+    function updatePrompt(promptId) {
+        const formData = {
+            name: document.getElementById("promptName").value,
+            description: document.getElementById("promptDescription").value,
+            category: document.getElementById("promptCategory").value,
+            prompt_text: document.getElementById("promptText").value,
+        };
+
         fetch(`/api/saved-prompts/${promptId}`, {
-            method: 'DELETE'
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Prompt deleted successfully!');
-                location.reload();
-            } else {
-                alert('Error: ' + data.error);
-            }
-        })
-        .catch(error => {
-            alert('Error deleting prompt: ' + error.message);
-        });
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    alert("Prompt updated successfully!");
+                    location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch((error) => {
+                alert("Error updating prompt: " + error.message);
+            });
     }
-}
 
-function deleteMarkingScheme(schemeId, schemeName) {
-    if (confirm(`Are you sure you want to delete the marking scheme "${schemeName}"?`)) {
+    function editMarkingScheme(schemeId) {
+        // Load marking scheme data and populate modal
+        fetch(`/api/saved-marking-schemes/${schemeId}`)
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    const scheme = data.scheme;
+                    document.getElementById("schemeName").value = scheme.name;
+                    document.getElementById("schemeDescription").value =
+                        scheme.description || "";
+                    document.getElementById("schemeCategory").value =
+                        scheme.category || "";
+
+                    // Change modal title and button
+                    document.querySelector(
+                        "#saveMarkingSchemeModal .modal-title",
+                    ).textContent = "Edit Marking Scheme";
+                    document.querySelector(
+                        "#saveMarkingSchemeModal .btn-success",
+                    ).textContent = "Update Marking Scheme";
+                    document.querySelector(
+                        "#saveMarkingSchemeModal .btn-success",
+                    ).onclick = () => updateMarkingScheme(schemeId);
+
+                    // Show modal
+                    new bootstrap.Modal(
+                        document.getElementById("saveMarkingSchemeModal"),
+                    ).show();
+                } else {
+                    alert("Error loading marking scheme: " + data.error);
+                }
+            })
+            .catch((error) => {
+                alert("Error loading marking scheme: " + error.message);
+            });
+    }
+
+    function updateMarkingScheme(schemeId) {
+        const formData = {
+            name: document.getElementById("schemeName").value,
+            description: document.getElementById("schemeDescription").value,
+            category: document.getElementById("schemeCategory").value,
+        };
+
         fetch(`/api/saved-marking-schemes/${schemeId}`, {
-            method: 'DELETE'
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Marking scheme deleted successfully!');
-                location.reload();
-            } else {
-                alert('Error: ' + data.error);
-            }
-        })
-        .catch(error => {
-            alert('Error deleting marking scheme: ' + error.message);
-        });
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    alert("Marking scheme updated successfully!");
+                    location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch((error) => {
+                alert("Error updating marking scheme: " + error.message);
+            });
     }
-}
 
-function editPrompt(promptId) {
-    // Load prompt data and populate modal
-    fetch(`/api/saved-prompts/${promptId}`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const prompt = data.prompt;
-            document.getElementById('promptName').value = prompt.name;
-            document.getElementById('promptDescription').value = prompt.description || '';
-            document.getElementById('promptCategory').value = prompt.category || '';
-            document.getElementById('promptText').value = prompt.prompt_text;
-            document.getElementById('promptProvider').value = prompt.provider;
-            document.getElementById('promptModel').value = prompt.model || '';
-            
-            // Change modal title and button
-            document.querySelector('#savePromptModal .modal-title').textContent = 'Edit Prompt';
-            document.querySelector('#savePromptModal .btn-primary').textContent = 'Update Prompt';
-            document.querySelector('#savePromptModal .btn-primary').onclick = () => updatePrompt(promptId);
-            
-            // Show modal
-            new bootstrap.Modal(document.getElementById('savePromptModal')).show();
-        } else {
-            alert('Error loading prompt: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error loading prompt: ' + error.message);
-    });
-}
+    // Reset modal when closed
+    document
+        .getElementById("savePromptModal")
+        .addEventListener("hidden.bs.modal", function () {
+            document.getElementById("savePromptForm").reset();
+            document.querySelector(
+                "#savePromptModal .modal-title",
+            ).textContent = "Save Prompt";
+            document.querySelector(
+                "#savePromptModal .btn-primary",
+            ).textContent = "Save Prompt";
+            document.querySelector("#savePromptModal .btn-primary").onclick =
+                savePrompt;
+        });
 
-function updatePrompt(promptId) {
-    const formData = {
-        name: document.getElementById('promptName').value,
-        description: document.getElementById('promptDescription').value,
-        category: document.getElementById('promptCategory').value,
-        prompt_text: document.getElementById('promptText').value,
-        provider: document.getElementById('promptProvider').value,
-        model: document.getElementById('promptModel').value
-    };
-    
-    fetch(`/api/saved-prompts/${promptId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Prompt updated successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error updating prompt: ' + error.message);
-    });
-}
-
-function editMarkingScheme(schemeId) {
-    // Load marking scheme data and populate modal
-    fetch(`/api/saved-marking-schemes/${schemeId}`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const scheme = data.scheme;
-            document.getElementById('schemeName').value = scheme.name;
-            document.getElementById('schemeDescription').value = scheme.description || '';
-            document.getElementById('schemeCategory').value = scheme.category || '';
-            
-            // Change modal title and button
-            document.querySelector('#saveMarkingSchemeModal .modal-title').textContent = 'Edit Marking Scheme';
-            document.querySelector('#saveMarkingSchemeModal .btn-success').textContent = 'Update Marking Scheme';
-            document.querySelector('#saveMarkingSchemeModal .btn-success').onclick = () => updateMarkingScheme(schemeId);
-            
-            // Show modal
-            new bootstrap.Modal(document.getElementById('saveMarkingSchemeModal')).show();
-        } else {
-            alert('Error loading marking scheme: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error loading marking scheme: ' + error.message);
-    });
-}
-
-function updateMarkingScheme(schemeId) {
-    const formData = {
-        name: document.getElementById('schemeName').value,
-        description: document.getElementById('schemeDescription').value,
-        category: document.getElementById('schemeCategory').value
-    };
-    
-    fetch(`/api/saved-marking-schemes/${schemeId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Marking scheme updated successfully!');
-            location.reload();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error updating marking scheme: ' + error.message);
-    });
-}
-
-// Reset modal when closed
-document.getElementById('savePromptModal').addEventListener('hidden.bs.modal', function () {
-    document.getElementById('savePromptForm').reset();
-    document.querySelector('#savePromptModal .modal-title').textContent = 'Save Prompt';
-    document.querySelector('#savePromptModal .btn-primary').textContent = 'Save Prompt';
-    document.querySelector('#savePromptModal .btn-primary').onclick = savePrompt;
-});
-
-document.getElementById('saveMarkingSchemeModal').addEventListener('hidden.bs.modal', function () {
-    document.getElementById('saveMarkingSchemeForm').reset();
-    document.querySelector('#saveMarkingSchemeModal .modal-title').textContent = 'Save Marking Scheme';
-    document.querySelector('#saveMarkingSchemeModal .btn-success').textContent = 'Save Marking Scheme';
-    document.querySelector('#saveMarkingSchemeModal .btn-success').onclick = saveMarkingScheme;
-});
+    document
+        .getElementById("saveMarkingSchemeModal")
+        .addEventListener("hidden.bs.modal", function () {
+            document.getElementById("saveMarkingSchemeForm").reset();
+            document.querySelector(
+                "#saveMarkingSchemeModal .modal-title",
+            ).textContent = "Save Marking Scheme";
+            document.querySelector(
+                "#saveMarkingSchemeModal .btn-success",
+            ).textContent = "Save Marking Scheme";
+            document.querySelector(
+                "#saveMarkingSchemeModal .btn-success",
+            ).onclick = saveMarkingScheme;
+        });
 </script>
 {% endblock %}
