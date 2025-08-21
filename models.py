@@ -167,7 +167,11 @@ class GradingJob(db.Model):
     provider = db.Column(db.String(50), nullable=False)  # openrouter, claude, lm_studio
     prompt = db.Column(db.Text, nullable=False)
     model = db.Column(db.String(100))
-    
+
+    # Model parameters
+    temperature = db.Column(db.Float, default=0.3)  # Default temperature for all providers
+    max_tokens = db.Column(db.Integer, default=2000)  # Default max tokens for all providers
+
     # Multi-model support
     models_to_compare = db.Column(db.JSON)  # List of models to use for comparison
     
@@ -201,6 +205,8 @@ class GradingJob(db.Model):
             'prompt': self.prompt,
             'model': self.model,
             'models_to_compare': self.models_to_compare,
+            'temperature': self.temperature,
+            'max_tokens': self.max_tokens,
             'marking_scheme_id': self.marking_scheme_id,
             'marking_scheme': self.marking_scheme.to_dict() if self.marking_scheme else None,
             'saved_prompt_id': self.saved_prompt_id,
@@ -414,7 +420,11 @@ class JobBatch(db.Model):
     provider = db.Column(db.String(50), nullable=False)
     prompt = db.Column(db.Text, nullable=False)
     model = db.Column(db.String(100))
-    
+
+    # Model parameters
+    temperature = db.Column(db.Float, default=0.3)  # Default temperature for all providers
+    max_tokens = db.Column(db.Integer, default=2000)  # Default max tokens for all providers
+
     # Relationships
     jobs = db.relationship('GradingJob', backref='batch', lazy=True, foreign_keys='GradingJob.batch_id')
     
@@ -429,6 +439,8 @@ class JobBatch(db.Model):
             'provider': self.provider,
             'prompt': self.prompt,
             'model': self.model,
+            'temperature': self.temperature,
+            'max_tokens': self.max_tokens,
             'total_jobs': len(self.jobs),
             'completed_jobs': sum(1 for job in self.jobs if job.status == 'completed'),
             'failed_jobs': sum(1 for job in self.jobs if job.status in ['failed', 'completed_with_errors'])

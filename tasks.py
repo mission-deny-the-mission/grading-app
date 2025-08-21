@@ -84,27 +84,27 @@ def extract_text_from_pdf(file_path):
     except Exception as e:
         return f"Error reading PDF: {str(e)}"
 
-def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None):
+def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Grade document using OpenRouter API."""
     try:
         # Configure OpenAI for OpenRouter
         openai.api_key = OPENROUTER_API_KEY
         openai.api_base = "https://openrouter.ai/api/v1"
-        
+
         # Prepare the grading prompt with marking scheme if provided
         if marking_scheme_content:
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
             enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-        
+
         response = openai.ChatCompletion.create(
             model=model,
             messages=[
                 {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
                 {"role": "user", "content": enhanced_prompt}
             ],
-            temperature=0.3,
-            max_tokens=2000
+            temperature=temperature,
+            max_tokens=max_tokens
         )
         
         return {
@@ -139,7 +139,7 @@ def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241
             'provider': 'OpenRouter'
         }
 
-def grade_with_claude(text, prompt, marking_scheme_content=None):
+def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Grade document using Claude API."""
     if not anthropic:
         return {
@@ -147,18 +147,18 @@ def grade_with_claude(text, prompt, marking_scheme_content=None):
             'error': "Claude API not configured or failed to initialize",
             'provider': 'Claude'
         }
-    
+
     try:
         # Prepare the grading prompt with marking scheme if provided
         if marking_scheme_content:
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
             enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-        
+
         response = anthropic.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=2000,
-            temperature=0.3,
+            max_tokens=max_tokens,
+            temperature=temperature,
             system="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
             messages=[
                 {
@@ -202,7 +202,7 @@ def grade_with_claude(text, prompt, marking_scheme_content=None):
                 'provider': 'Claude'
             }
 
-def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
+def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Grade document using LM Studio API."""
     try:
         # Prepare the grading prompt with marking scheme if provided
@@ -210,7 +210,7 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
             enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-        
+
         response = requests.post(
             f"{LM_STUDIO_URL}/chat/completions",
             json={
@@ -219,8 +219,8 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
                     {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
                     {"role": "user", "content": enhanced_prompt}
                 ],
-                "temperature": 0.3,
-                "max_tokens": 2000
+                "temperature": temperature,
+                "max_tokens": max_tokens
             },
             headers={"Content-Type": "application/json"},
             timeout=120
@@ -419,7 +419,7 @@ def process_submission_sync(submission_id):
                     if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
                         submission.set_status('failed', 'OpenRouter API key not configured. Please configure your API key in the settings.')
                         return False
-                    result = grade_with_openrouter(text, job.prompt, model, marking_scheme_content)
+                    result = grade_with_openrouter(text, job.prompt, model, marking_scheme_content, job.temperature, job.max_tokens)
                 elif job.provider == 'claude':
                     if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
                         submission.set_status('failed', 'Claude API key not configured. Please configure your API key in the settings.')
@@ -427,9 +427,9 @@ def process_submission_sync(submission_id):
                     if not anthropic:
                         submission.set_status('failed', 'Claude API client failed to initialize. Please check your API key configuration.')
                         return False
-                    result = grade_with_claude(text, job.prompt, marking_scheme_content)
+                    result = grade_with_claude(text, job.prompt, marking_scheme_content, job.temperature, job.max_tokens)
                 elif job.provider == 'lm_studio':
-                    result = grade_with_lm_studio(text, job.prompt, marking_scheme_content)
+                    result = grade_with_lm_studio(text, job.prompt, marking_scheme_content, job.temperature, job.max_tokens)
                 else:
                     submission.set_status('failed', f'Unsupported provider: {job.provider}. Supported providers are: openrouter, claude, lm_studio')
                     return False

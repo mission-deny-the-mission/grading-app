@@ -125,27 +125,27 @@ def extract_marking_scheme_content(file_path, file_type):
     except Exception as e:
         return f"Error reading marking scheme file: {str(e)}"
 
-def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None):
+def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Grade document using OpenRouter API."""
     try:
         # Configure OpenAI for OpenRouter
         openai.api_key = OPENROUTER_API_KEY
         openai.api_base = "https://openrouter.ai/api/v1"
-        
+
         # Prepare the grading prompt with marking scheme if provided
         if marking_scheme_content:
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
             enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-        
+
         response = openai.ChatCompletion.create(
             model=model,
             messages=[
                 {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
                 {"role": "user", "content": enhanced_prompt}
             ],
-            temperature=0.3,
-            max_tokens=2000
+            temperature=temperature,
+            max_tokens=max_tokens
         )
         
         return {
@@ -161,7 +161,7 @@ def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241
             'provider': 'OpenRouter'
         }
 
-def grade_with_claude(text, prompt, marking_scheme_content=None):
+def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Grade document using Claude API."""
     if not anthropic:
         return {
@@ -169,18 +169,18 @@ def grade_with_claude(text, prompt, marking_scheme_content=None):
             'error': "Claude API not configured or failed to initialize",
             'provider': 'Claude'
         }
-    
+
     try:
         # Prepare the grading prompt with marking scheme if provided
         if marking_scheme_content:
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
             enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-        
+
         response = anthropic.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=2000,
-            temperature=0.3,
+            max_tokens=max_tokens,
+            temperature=temperature,
             system="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
             messages=[
                 {
@@ -203,7 +203,7 @@ def grade_with_claude(text, prompt, marking_scheme_content=None):
             'provider': 'Claude'
         }
 
-def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
+def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Grade document using LM Studio API."""
     try:
         # Prepare the grading prompt with marking scheme if provided
@@ -211,7 +211,7 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
             enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-        
+
         response = requests.post(
             f"{LM_STUDIO_URL}/chat/completions",
             json={
@@ -220,8 +220,8 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
                     {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
                     {"role": "user", "content": enhanced_prompt}
                 ],
-                "temperature": 0.3,
-                "max_tokens": 2000
+                "temperature": temperature,
+                "max_tokens": max_tokens
             },
             headers={"Content-Type": "application/json"},
             timeout=120
@@ -317,6 +317,10 @@ def upload_file():
         custom_model = request.form.get('customModel', '').strip()
         models_to_compare = request.form.getlist('models_to_compare[]')  # Get list of models to compare
         custom_models = request.form.getlist('customModels[]')  # Get list of custom models
+
+        # Get model parameters
+        temperature = float(request.form.get('temperature', '0.3'))
+        max_tokens = int(request.form.get('max_tokens', '2000'))
         
         # Add custom models to the comparison list
         if custom_models:
@@ -339,15 +343,15 @@ def upload_file():
             if provider == 'openrouter':
                 if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == 'sk-or-your-key-here':
                     return jsonify({'error': 'OpenRouter API key not configured. Please configure your API key in the settings.'}), 400
-                result = grade_with_openrouter(text, prompt, model, marking_scheme_content)
+                result = grade_with_openrouter(text, prompt, model, marking_scheme_content, temperature, max_tokens)
             elif provider == 'claude':
                 if not CLAUDE_API_KEY or CLAUDE_API_KEY == 'sk-ant-your-key-here':
                     return jsonify({'error': 'Claude API key not configured. Please configure your API key in the settings.'}), 400
                 if not anthropic:
                     return jsonify({'error': 'Claude API client failed to initialize. Please check your API key configuration.'}), 400
-                result = grade_with_claude(text, prompt, marking_scheme_content)
+                result = grade_with_claude(text, prompt, marking_scheme_content, temperature, max_tokens)
             elif provider == 'lm_studio':
-                result = grade_with_lm_studio(text, prompt, marking_scheme_content)
+                result = grade_with_lm_studio(text, prompt, marking_scheme_content, temperature, max_tokens)
             else:
                 return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, lm_studio'}), 400
             
@@ -698,6 +702,8 @@ def create_job():
             model=data.get('model'),
             models_to_compare=data.get('models_to_compare'),
             priority=data.get('priority', 5),
+            temperature=data.get('temperature', 0.3),
+            max_tokens=data.get('max_tokens', 2000),
             marking_scheme_id=data.get('marking_scheme_id'),
             saved_prompt_id=data.get('saved_prompt_id'),
             saved_marking_scheme_id=data.get('saved_marking_scheme_id')
@@ -868,7 +874,9 @@ def create_batch():
             description=data.get('description', ''),
             provider=data['provider'],
             prompt=data['prompt'],
-            model=data.get('model')
+            model=data.get('model'),
+            temperature=data.get('temperature', 0.3),
+            max_tokens=data.get('max_tokens', 2000)
         )
         
         db.session.add(batch)
