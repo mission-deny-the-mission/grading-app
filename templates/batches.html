@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Job Batches - Document Grader{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="display-4 fw-bold text-primary">
+                <i class="fas fa-layer-group me-3"></i>
+                Job Batches
+            </h1>
+            <a href="{{ url_for('bulk_upload') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create New Batch
+            </a>
+        </div>
+
+        {% if batches %}
+        <div class="row">
+            {% for batch in batches %}
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="card h-100 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">{{ batch.batch_name }}</h6>
+                            <span class="badge bg-light text-dark">{{ batch.status.title() }}</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% if batch.description %}
+                        <p class="text-muted small mb-3">{{ batch.description }}</p>
+                        {% endif %}
+                        
+                        <div class="small text-muted mb-3">
+                            <div><i class="fas fa-robot me-1"></i>{{ batch.provider.title() }}</div>
+                            {% if batch.model %}
+                            <div><i class="fas fa-cog me-1"></i>{{ batch.model }}</div>
+                            {% endif %}
+                            <div><i class="fas fa-clock me-1"></i>{{ batch.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            <div><i class="fas fa-tasks me-1"></i>{{ batch.total_jobs }} jobs</div>
+                        </div>
+                        
+                        <div class="progress mb-3" style="height: 8px;">
+                            {% set progress = (batch.completed_jobs / batch.total_jobs * 100) if batch.total_jobs > 0 else 0 %}
+                            <div class="progress-bar bg-success" style="width: {{ progress }}%"></div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between small text-muted mb-3">
+                            <span>{{ batch.completed_jobs }} completed</span>
+                            <span>{{ batch.failed_jobs }} failed</span>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <a href="{{ url_for('batch_detail', batch_id=batch.id) }}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-layer-group fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No job batches yet</h5>
+            <p class="text-muted">Create your first batch to process multiple documents at once</p>
+            <a href="{{ url_for('bulk_upload') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create Your First Batch
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

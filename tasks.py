@@ -8,7 +8,7 @@ import openai
 from anthropic import Anthropic
 from flask import Flask
 from dotenv import load_dotenv
-from models import db, GradingJob, Submission, MarkingScheme
+from models import db, GradingJob, Submission, MarkingScheme, SavedMarkingScheme
 
 # Load environment variables from .env file
 load_dotenv()
@@ -223,7 +223,7 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None):
                 "max_tokens": 2000
             },
             headers={"Content-Type": "application/json"},
-            timeout=30
+            timeout=120
         )
         
         if response.status_code == 200:
@@ -400,8 +400,17 @@ def process_submission_sync(submission_id):
             
             # Get marking scheme content if available
             marking_scheme_content = None
-            if job.marking_scheme:
-                marking_scheme_content = job.marking_scheme.content
+            
+            # Manually load saved marking scheme if ID is provided
+            if job.saved_marking_scheme_id:
+                saved_scheme = SavedMarkingScheme.query.get(job.saved_marking_scheme_id)
+                if saved_scheme:
+                    marking_scheme_content = saved_scheme.content
+            elif job.marking_scheme_id:
+                # Manually load uploaded marking scheme if ID is provided
+                uploaded_scheme = MarkingScheme.query.get(job.marking_scheme_id)
+                if uploaded_scheme:
+                    marking_scheme_content = uploaded_scheme.content
             
             # Grade with each model
             for model in models_to_grade:

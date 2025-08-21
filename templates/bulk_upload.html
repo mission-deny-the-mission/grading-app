@@ -122,6 +122,11 @@
                             </div>
                         </div>
                         <textarea class="form-control" id="prompt" rows="4" required>{{ default_prompt }}</textarea>
+                        <input type="hidden" id="saved_prompt_id" value="">
+                        <div id="savedPromptInfo" class="form-text" style="display: none;">
+                            <i class="fas fa-check-circle text-success me-1"></i>
+                            <span id="savedPromptName"></span> loaded
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -140,8 +145,13 @@
                         </div>
                         <input type="file" class="form-control" id="marking_scheme" name="marking_scheme" 
                                accept=".docx,.pdf,.txt">
+                        <input type="hidden" id="saved_marking_scheme_id" value="">
                         <div class="form-text">
                             Upload a marking scheme or rubric to guide the grading process. Supported formats: .docx, .pdf, .txt
+                        </div>
+                        <div id="savedSchemeInfo" class="form-text" style="display: none;">
+                            <i class="fas fa-check-circle text-success me-1"></i>
+                            <span id="savedSchemeName"></span> loaded
                         </div>
                     </div>
                     
@@ -358,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAvailableModels();
 });
 
-document.getElementById('jobForm').addEventListener('submit', function(e) {
+document.getElementById('jobForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const submitBtn = this.querySelector('button[type="submit"]');
@@ -382,12 +392,16 @@ document.getElementById('jobForm').addEventListener('submit', function(e) {
         });
     }
     
-    // Handle marking scheme upload if provided
+    // Handle marking scheme - check for saved scheme first, then file upload
+    const savedMarkingSchemeId = document.getElementById('saved_marking_scheme_id').value;
     const markingSchemeFile = document.getElementById('marking_scheme').files[0];
     let markingSchemeId = null;
     
-    if (markingSchemeFile) {
-        // Upload marking scheme first
+    if (savedMarkingSchemeId) {
+        // Use saved marking scheme
+        markingSchemeId = null; // We'll use saved_marking_scheme_id instead
+    } else if (markingSchemeFile) {
+        // Upload marking scheme file
         const markingSchemeFormData = new FormData();
         markingSchemeFormData.append('marking_scheme', markingSchemeFile);
         markingSchemeFormData.append('name', markingSchemeFile.name);
@@ -424,7 +438,9 @@ document.getElementById('jobForm').addEventListener('submit', function(e) {
         models_to_compare: selectedModels.length > 0 ? selectedModels : null,
         prompt: document.getElementById('prompt').value,
         priority: parseInt(document.getElementById('priority').value),
-        marking_scheme_id: markingSchemeId
+        marking_scheme_id: markingSchemeId,
+        saved_prompt_id: document.getElementById('saved_prompt_id').value || null,
+        saved_marking_scheme_id: document.getElementById('saved_marking_scheme_id').value || null
     };
     
     fetch('/create_job', {
@@ -539,7 +555,9 @@ function loadSavedPrompt() {
         if (prompt.model) {
             document.getElementById('customModel').value = prompt.model;
         }
-        alert(`Loaded prompt: ${prompt.name}`);
+        document.getElementById('saved_prompt_id').value = prompt.id;
+        document.getElementById('savedPromptName').textContent = prompt.name;
+        document.getElementById('savedPromptInfo').style.display = 'block';
     }
 }
 
@@ -600,9 +618,11 @@ function loadSavedMarkingScheme() {
     
     if (selectedScheme && !isNaN(selectedScheme) && selectedScheme > 0 && selectedScheme <= savedSchemes.length) {
         const scheme = savedSchemes[selectedScheme - 1];
-        // For now, we'll just show the content. In a real implementation, you might want to
-        // create a temporary file or handle this differently
-        alert(`Selected marking scheme: ${scheme.name}\n\nContent preview:\n${scheme.content.substring(0, 200)}...`);
+        document.getElementById('saved_marking_scheme_id').value = scheme.id;
+        document.getElementById('savedSchemeName').textContent = scheme.name;
+        document.getElementById('savedSchemeInfo').style.display = 'block';
+        // Clear the file input since we're using a saved scheme
+        document.getElementById('marking_scheme').value = '';
     }
 }
 

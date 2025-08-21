@@ -63,7 +63,7 @@
                                     {% if prompt.model %}
                                     <div><i class="fas fa-cog me-1"></i>{{ prompt.model }}</div>
                                     {% endif %}
-                                    <div><i class="fas fa-clock me-1"></i>{{ prompt.created_at[:10] }}</div>
+                                    <div><i class="fas fa-clock me-1"></i>{{ prompt.created_at.strftime('%Y-%m-%d') }}</div>
                                     <div><i class="fas fa-chart-line me-1"></i>Used {{ prompt.usage_count }} times</div>
                                 </div>
                                 <div class="prompt-preview">
@@ -127,7 +127,7 @@
                                 {% endif %}
                                 <div class="small text-muted mb-2">
                                     <div><i class="fas fa-file me-1"></i>{{ scheme.original_filename }}</div>
-                                    <div><i class="fas fa-clock me-1"></i>{{ scheme.created_at[:10] }}</div>
+                                    <div><i class="fas fa-clock me-1"></i>{{ scheme.created_at.strftime('%Y-%m-%d') }}</div>
                                     <div><i class="fas fa-chart-line me-1"></i>Used {{ scheme.usage_count }} times</div>
                                 </div>
                                 <div class="scheme-preview">

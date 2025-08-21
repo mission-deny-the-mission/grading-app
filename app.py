@@ -12,7 +12,7 @@ import io
 from dotenv import load_dotenv
 from models import db, GradingJob, Submission, JobBatch, MarkingScheme, SavedPrompt, SavedMarkingScheme
 from tasks import process_job, process_batch
-from datetime import datetime
+from datetime import datetime, timezone
 
 load_dotenv()
 
@@ -610,7 +610,7 @@ def export_job_results(job_id):
     """Export job results as a ZIP file."""
     import zipfile
     import io
-    from datetime import datetime
+    from datetime import datetime, timezone
     
     job = GradingJob.query.get_or_404(job_id)
     
@@ -665,8 +665,8 @@ def bulk_upload():
     default_prompt = app.config.get('DEFAULT_PROMPT', 'Please grade this document according to standard academic criteria.')
     
     # Get saved prompts and marking schemes for dropdowns
-    saved_prompts = SavedPrompt.query.order_by(SavedPrompt.name).all()
-    saved_marking_schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()
+    saved_prompts = [prompt.to_dict() for prompt in SavedPrompt.query.order_by(SavedPrompt.name).all()]
+    saved_marking_schemes = [scheme.to_dict() for scheme in SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()]
     
     return render_template('bulk_upload.html', 
                          default_prompt=default_prompt,
@@ -889,7 +889,7 @@ def create_batch():
 @app.route('/batches')
 def batches():
     """View all batches."""
-    batches = JobBatch.query.order_by(JobBatch.created_at.desc()).all()
+    batches = [batch.to_dict() for batch in JobBatch.query.order_by(JobBatch.created_at.desc()).all()]
     return render_template('batches.html', batches=batches)
 
 @app.route('/batches/<batch_id>')
@@ -1074,7 +1074,7 @@ def update_saved_prompt(prompt_id):
         prompt.prompt_text = data.get('prompt_text', prompt.prompt_text)
         prompt.provider = data.get('provider', prompt.provider)
         prompt.model = data.get('model', prompt.model)
-        prompt.updated_at = datetime.utcnow()
+        prompt.updated_at = datetime.now(timezone.utc)
         
         db.session.commit()
         
@@ -1142,13 +1142,23 @@ def create_saved_marking_scheme():
         
         # Save file
         filename = secure_filename(file.filename)
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
         filename = f"{timestamp}_{filename}"
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         
+        # Determine file type
+        if filename.lower().endswith('.docx'):
+            file_type = 'docx'
+        elif filename.lower().endswith('.pdf'):
+            file_type = 'pdf'
+        elif filename.lower().endswith('.txt'):
+            file_type = 'txt'
+        else:
+            file_type = 'txt'  # Default to txt for unknown types
+        
         # Extract text content
-        content = extract_text_from_file(file_path)
+        content = extract_marking_scheme_content(file_path, file_type)
         
         # Create saved marking scheme
         scheme = SavedMarkingScheme(
@@ -1201,7 +1211,7 @@ def update_saved_marking_scheme(scheme_id):
         scheme.name = data.get('name', scheme.name)
         scheme.description = data.get('description', scheme.description)
         scheme.category = data.get('category', scheme.category)
-        scheme.updated_at = datetime.utcnow()
+        scheme.updated_at = datetime.now(timezone.utc)
         
         db.session.commit()
         

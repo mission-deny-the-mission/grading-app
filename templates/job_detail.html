@@ -118,11 +118,41 @@
                     </div>
                 </div>
                 
-                {% if job.marking_scheme %}
+                {% if job.saved_marking_scheme %}
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="fas fa-clipboard-check me-2"></i>Marking Scheme
+                            <i class="fas fa-bookmark me-2"></i>Saved Marking Scheme
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <strong>Name:</strong> {{ job.saved_marking_scheme.name }}
+                        </div>
+                        {% if job.saved_marking_scheme.description %}
+                        <div class="mb-2">
+                            <strong>Description:</strong> {{ job.saved_marking_scheme.description }}
+                        </div>
+                        {% endif %}
+                        <div class="mb-2">
+                            <strong>Category:</strong> {{ job.saved_marking_scheme.category or 'None' }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>File:</strong> {{ job.saved_marking_scheme.original_filename }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Size:</strong> {{ "%.1f"|format(job.saved_marking_scheme.file_size / 1024) }} KB
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewSavedMarkingScheme()">
+                            <i class="fas fa-eye me-1"></i>View Content
+                        </button>
+                    </div>
+                </div>
+                {% elif job.marking_scheme %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clipboard-check me-2"></i>Uploaded Marking Scheme
                         </h5>
                     </div>
                     <div class="card-body">
@@ -254,12 +284,42 @@
 </div>
 
 <!-- Marking Scheme Modal -->
-{% if job.marking_scheme %}
+{% if job.saved_marking_scheme %}
+<div class="modal fade" id="savedMarkingSchemeModal" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Saved Marking Scheme: {{ job.saved_marking_scheme.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>File:</strong> {{ job.saved_marking_scheme.original_filename }}<br>
+                    <strong>Size:</strong> {{ "%.1f"|format(job.saved_marking_scheme.file_size / 1024) }} KB<br>
+                    <strong>Category:</strong> {{ job.saved_marking_scheme.category or 'None' }}<br>
+                    {% if job.saved_marking_scheme.description %}
+                    <strong>Description:</strong> {{ job.saved_marking_scheme.description }}
+                    {% endif %}
+                </div>
+                <hr>
+                <h6>Content:</h6>
+                <div class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto; white-space: pre-wrap; font-size: 0.9rem;">
+                    {{ job.saved_marking_scheme.content }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="downloadSavedMarkingScheme()">Download</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% elif job.marking_scheme %}
 <div class="modal fade" id="markingSchemeModal" tabindex="-1" data-bs-backdrop="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Marking Scheme: {{ job.marking_scheme.name }}</h5>
+                <h5 class="modal-title">Uploaded Marking Scheme: {{ job.marking_scheme.name }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -500,6 +560,10 @@ function viewMarkingScheme() {
     new bootstrap.Modal(document.getElementById('markingSchemeModal')).show();
 }
 
+function viewSavedMarkingScheme() {
+    new bootstrap.Modal(document.getElementById('savedMarkingSchemeModal')).show();
+}
+
 function downloadMarkingScheme() {
     {% if job.marking_scheme %}
     const content = `Marking Scheme: {{ job.marking_scheme.name }}\n\n{{ job.marking_scheme.content }}`;
@@ -508,6 +572,19 @@ function downloadMarkingScheme() {
     const a = document.createElement('a');
     a.href = url;
     a.download = '{{ job.marking_scheme.original_filename }}_content.txt';
+    a.click();
+    window.URL.revokeObjectURL(url);
+    {% endif %}
+}
+
+function downloadSavedMarkingScheme() {
+    {% if job.saved_marking_scheme %}
+    const content = `Saved Marking Scheme: {{ job.saved_marking_scheme.name }}\n\n{{ job.saved_marking_scheme.content }}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '{{ job.saved_marking_scheme.original_filename }}_content.txt';
     a.click();
     window.URL.revokeObjectURL(url);
     {% endif %}

@@ -30,7 +30,7 @@ class SavedPrompt(db.Model):
     last_used = db.Column(db.DateTime)
     
     # Relationships
-    jobs = db.relationship('GradingJob', backref='saved_prompt', lazy=True, foreign_keys='GradingJob.saved_prompt_id')
+    jobs = db.relationship('GradingJob', backref='saved_prompt', lazy=True)
     
     def to_dict(self):
         """Convert saved prompt to dictionary."""
@@ -81,7 +81,7 @@ class SavedMarkingScheme(db.Model):
     last_used = db.Column(db.DateTime)
     
     # Relationships
-    jobs = db.relationship('GradingJob', backref='saved_marking_scheme', lazy=True, foreign_keys='GradingJob.saved_marking_scheme_id')
+    jobs = db.relationship('GradingJob', backref='saved_marking_scheme', lazy=True)
     
     def to_dict(self):
         """Convert saved marking scheme to dictionary."""
