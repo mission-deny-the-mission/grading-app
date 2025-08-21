@@ -8,7 +8,7 @@ import openai
 from anthropic import Anthropic
 from flask import Flask
 from dotenv import load_dotenv
-from models import db, GradingJob, Submission, MarkingScheme, SavedMarkingScheme
+from models import db, GradingJob, Submission, MarkingScheme, SavedMarkingScheme, JobBatch, BatchTemplate
 
 # Load environment variables from .env file
 load_dotenv()
@@ -324,6 +324,12 @@ def process_job(self, job_id):
             # Update job progress after all submissions are processed
             job.update_progress()
             
+            # Update batch progress if job belongs to a batch
+            if job.batch_id:
+                batch = JobBatch.query.get(job.batch_id)
+                if batch:
+                    batch.update_progress()
+            
             print(f"Completed processing job: {job.job_name} (ID: {job_id})")
             _currently_processing_job = None
             return True
@@ -493,33 +499,202 @@ def process_submission_sync(submission_id):
             return False
 
 @celery_app.task(bind=True)
-def process_batch(self, batch_id):
-    """Process all jobs in a batch."""
+def process_batch(self, batch_id, priority_override=None):
+    """Process all jobs in a batch with intelligent scheduling."""
     app = create_app()
     with app.app_context():
         try:
-            from models import JobBatch
             batch = JobBatch.query.get(batch_id)
             if not batch:
                 raise Exception(f"Batch {batch_id} not found")
             
-            # Update batch status
-            batch.status = 'processing'
-            db.session.commit()
+            print(f"Starting to process batch: {batch.batch_name} (ID: {batch_id})")
             
-            # Process each job
-            for job in batch.jobs:
-                if job.status == 'pending':
-                    process_job.delay(job.id)
+            # Check if batch can be started
+            if not batch.can_start():
+                print(f"Batch {batch_id} cannot be started. Status: {batch.status}")
+                return False
+            
+            # Start the batch
+            batch.start_batch()
+            
+            # Get pending jobs sorted by priority
+            pending_jobs = [job for job in batch.jobs if job.status == 'pending']
+            
+            if not pending_jobs:
+                print(f"No pending jobs in batch {batch_id}")
+                batch.update_progress()
+                return True
+            
+            # Sort jobs by priority (higher priority first)
+            pending_jobs.sort(key=lambda x: x.priority, reverse=True)
+            
+            print(f"Queuing {len(pending_jobs)} jobs for processing")
+            
+            # Queue jobs for processing with staggered delays for better resource management
+            for i, job in enumerate(pending_jobs):
+                # Add small delay between job starts to prevent overwhelming the system
+                delay = i * 5  # 5 second intervals
+                process_job.apply_async(args=[job.id], countdown=delay)
+                print(f"Queued job {job.job_name} with {delay}s delay")
             
             return True
             
         except Exception as e:
+            print(f"Error processing batch {batch_id}: {str(e)}")
             batch = JobBatch.query.get(batch_id)
             if batch:
                 batch.status = 'failed'
                 db.session.commit()
             return False
+
+@celery_app.task
+def process_batch_with_priority():
+    """Process batches in priority order."""
+    app = create_app()
+    with app.app_context():
+        try:
+            # Get all pending batches sorted by priority
+            pending_batches = JobBatch.query.filter_by(status='pending').order_by(JobBatch.priority.desc()).all()
+            
+            for batch in pending_batches:
+                if batch.can_start():
+                    print(f"Auto-starting high priority batch: {batch.batch_name}")
+                    process_batch.delay(batch.id)
+                    
+        except Exception as e:
+            print(f"Error in priority batch processing: {str(e)}")
+
+@celery_app.task
+def retry_batch_failed_jobs(batch_id):
+    """Retry all failed jobs in a batch."""
+    app = create_app()
+    with app.app_context():
+        try:
+            batch = JobBatch.query.get(batch_id)
+            if not batch:
+                raise Exception(f"Batch {batch_id} not found")
+            
+            retried_count = batch.retry_failed_jobs()
+            
+            if retried_count > 0:
+                # Start processing the batch again
+                process_batch.delay(batch_id)
+                print(f"Retried {retried_count} failed jobs in batch {batch.batch_name}")
+            
+            return retried_count
+            
+        except Exception as e:
+            print(f"Error retrying batch {batch_id}: {str(e)}")
+            return 0
+
+@celery_app.task
+def pause_batch_processing(batch_id):
+    """Pause batch processing."""
+    app = create_app()
+    with app.app_context():
+        try:
+            batch = JobBatch.query.get(batch_id)
+            if not batch:
+                raise Exception(f"Batch {batch_id} not found")
+            
+            if batch.pause_batch():
+                print(f"Paused batch: {batch.batch_name}")
+                return True
+            else:
+                print(f"Could not pause batch: {batch.batch_name} (status: {batch.status})")
+                return False
+                
+        except Exception as e:
+            print(f"Error pausing batch {batch_id}: {str(e)}")
+            return False
+
+@celery_app.task
+def resume_batch_processing(batch_id):
+    """Resume batch processing."""
+    app = create_app()
+    with app.app_context():
+        try:
+            batch = JobBatch.query.get(batch_id)
+            if not batch:
+                raise Exception(f"Batch {batch_id} not found")
+            
+            if batch.resume_batch():
+                print(f"Resumed batch: {batch.batch_name}")
+                return True
+            else:
+                print(f"Could not resume batch: {batch.batch_name} (status: {batch.status})")
+                return False
+                
+        except Exception as e:
+            print(f"Error resuming batch {batch_id}: {str(e)}")
+            return False
+
+@celery_app.task
+def cancel_batch_processing(batch_id):
+    """Cancel batch processing."""
+    app = create_app()
+    with app.app_context():
+        try:
+            batch = JobBatch.query.get(batch_id)
+            if not batch:
+                raise Exception(f"Batch {batch_id} not found")
+            
+            if batch.cancel_batch():
+                print(f"Cancelled batch: {batch.batch_name}")
+                return True
+            else:
+                print(f"Could not cancel batch: {batch.batch_name} (status: {batch.status})")
+                return False
+                
+        except Exception as e:
+            print(f"Error cancelling batch {batch_id}: {str(e)}")
+            return False
+
+@celery_app.task
+def update_batch_progress(batch_id):
+    """Update batch progress and status."""
+    app = create_app()
+    with app.app_context():
+        try:
+            batch = JobBatch.query.get(batch_id)
+            if not batch:
+                return False
+            
+            batch.update_progress()
+            return True
+            
+        except Exception as e:
+            print(f"Error updating batch progress {batch_id}: {str(e)}")
+            return False
+
+@celery_app.task
+def cleanup_completed_batches():
+    """Archive old completed batches."""
+    from datetime import datetime, timedelta
+    
+    app = create_app()
+    with app.app_context():
+        try:
+            # Archive batches completed more than 30 days ago
+            cutoff_date = datetime.utcnow() - timedelta(days=30)
+            
+            old_batches = JobBatch.query.filter(
+                JobBatch.status == 'completed',
+                JobBatch.completed_at < cutoff_date
+            ).all()
+            
+            archived_count = 0
+            for batch in old_batches:
+                batch.archive()
+                archived_count += 1
+                
+            print(f"Archived {archived_count} old batches")
+            return archived_count
+            
+        except Exception as e:
+            print(f"Error in batch cleanup: {str(e)}")
+            return 0
 
 @celery_app.task
 def cleanup_old_files():

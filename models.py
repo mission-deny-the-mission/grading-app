@@ -401,44 +401,333 @@ class Submission(db.Model):
         db.session.commit()
         return grade_result
 
+class BatchTemplate(db.Model):
+    """Model for storing reusable batch templates."""
+    __tablename__ = 'batch_templates'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Template metadata
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    category = db.Column(db.String(100))  # e.g., 'academic', 'business', 'research'
+    
+    # Template configuration
+    default_settings = db.Column(db.JSON)  # Default provider, prompts, etc.
+    job_structure = db.Column(db.JSON)     # How jobs should be organized
+    processing_rules = db.Column(db.JSON)  # Auto-processing configuration
+    
+    # Usage tracking
+    usage_count = db.Column(db.Integer, default=0)
+    last_used = db.Column(db.DateTime)
+    is_public = db.Column(db.Boolean, default=False)
+    
+    # Ownership
+    created_by = db.Column(db.String(100))
+    
+    def to_dict(self):
+        """Convert template to dictionary."""
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'name': self.name,
+            'description': self.description,
+            'category': self.category,
+            'default_settings': self.default_settings,
+            'job_structure': self.job_structure,
+            'processing_rules': self.processing_rules,
+            'usage_count': self.usage_count,
+            'last_used': self.last_used.isoformat() if self.last_used else None,
+            'is_public': self.is_public,
+            'created_by': self.created_by
+        }
+    
+    def increment_usage(self):
+        """Increment usage count and update last used timestamp."""
+        self.usage_count += 1
+        self.last_used = datetime.utcnow()
+        db.session.commit()
+
 class JobBatch(db.Model):
-    """Model for managing batch uploads."""
+    """Model for managing batch uploads with enhanced functionality."""
     __tablename__ = 'job_batches'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Batch metadata
     batch_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    status = db.Column(db.String(50), default='pending')  # pending, processing, completed
+    status = db.Column(db.String(50), default='draft')  # draft, pending, processing, paused, completed, completed_with_errors, failed, cancelled, archived
+    priority = db.Column(db.Integer, default=5)  # 1-10, higher is more important
+    tags = db.Column(db.JSON)  # For categorization and filtering
 
     # Configuration
-    provider = db.Column(db.String(50), nullable=False)
-    prompt = db.Column(db.Text, nullable=False)
-    model = db.Column(db.String(100))
+    provider = db.Column(db.String(50))  # Can be null for mixed batches
+    prompt = db.Column(db.Text)  # Default prompt for batch
+    model = db.Column(db.String(100))  # Default model for batch
+    models_to_compare = db.Column(db.JSON)  # Default models for comparison
 
     # Model parameters
-    temperature = db.Column(db.Float, default=0.3)  # Default temperature for all providers
-    max_tokens = db.Column(db.Integer, default=2000)  # Default max tokens for all providers
+    temperature = db.Column(db.Float, default=0.3)
+    max_tokens = db.Column(db.Integer, default=2000)
+
+    # Advanced settings
+    batch_settings = db.Column(db.JSON)  # Additional configuration
+    auto_assign_jobs = db.Column(db.Boolean, default=False)  # Auto-assign new jobs
+    
+    # Progress tracking
+    total_jobs = db.Column(db.Integer, default=0)
+    completed_jobs = db.Column(db.Integer, default=0)
+    failed_jobs = db.Column(db.Integer, default=0)
+    
+    # Timeline
+    deadline = db.Column(db.DateTime)
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    estimated_completion = db.Column(db.DateTime)
+    
+    # Template reference
+    template_id = db.Column(db.String(36), db.ForeignKey('batch_templates.id'), nullable=True)
+    
+    # Ownership and permissions
+    created_by = db.Column(db.String(100))
+    shared_with = db.Column(db.JSON)  # List of users/groups with access
+    
+    # Saved configurations references
+    saved_prompt_id = db.Column(db.String(36), db.ForeignKey('saved_prompts.id'), nullable=True)
+    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey('saved_marking_schemes.id'), nullable=True)
 
     # Relationships
     jobs = db.relationship('GradingJob', backref='batch', lazy=True, foreign_keys='GradingJob.batch_id')
+    template = db.relationship('BatchTemplate', backref='batches', lazy=True)
 
     def to_dict(self):
         """Convert batch to dictionary."""
         return {
             'id': self.id,
             'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
             'batch_name': self.batch_name,
             'description': self.description,
             'status': self.status,
+            'priority': self.priority,
+            'tags': self.tags or [],
             'provider': self.provider,
             'prompt': self.prompt,
             'model': self.model,
+            'models_to_compare': self.models_to_compare,
             'temperature': self.temperature,
             'max_tokens': self.max_tokens,
+            'batch_settings': self.batch_settings or {},
+            'auto_assign_jobs': self.auto_assign_jobs,
             'total_jobs': len(self.jobs),
             'completed_jobs': sum(1 for job in self.jobs if job.status == 'completed'),
-            'failed_jobs': sum(1 for job in self.jobs if job.status in ['failed', 'completed_with_errors'])
+            'failed_jobs': sum(1 for job in self.jobs if job.status in ['failed', 'completed_with_errors']),
+            'processing_jobs': sum(1 for job in self.jobs if job.status == 'processing'),
+            'pending_jobs': sum(1 for job in self.jobs if job.status == 'pending'),
+            'deadline': self.deadline.isoformat() if self.deadline else None,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'estimated_completion': self.estimated_completion.isoformat() if self.estimated_completion else None,
+            'template_id': self.template_id,
+            'template': self.template.to_dict() if self.template else None,
+            'created_by': self.created_by,
+            'shared_with': self.shared_with or [],
+            'saved_prompt_id': self.saved_prompt_id,
+            'saved_marking_scheme_id': self.saved_marking_scheme_id,
+            'progress': self.get_progress(),
+            'can_retry': self.can_retry_failed_jobs(),
+            'can_start': self.can_start(),
+            'can_pause': self.can_pause(),
+            'can_resume': self.can_resume()
         }
+
+    def get_progress(self):
+        """Calculate batch progress percentage."""
+        if not self.jobs:
+            return 0
+        total = len(self.jobs)
+        completed = sum(1 for job in self.jobs if job.status in ['completed', 'failed', 'completed_with_errors'])
+        return round((completed / total) * 100, 2) if total > 0 else 0
+
+    def update_progress(self):
+        """Update batch progress and status based on jobs."""
+        if not self.jobs:
+            return
+            
+        total = len(self.jobs)
+        completed = sum(1 for job in self.jobs if job.status == 'completed')
+        failed = sum(1 for job in self.jobs if job.status in ['failed', 'completed_with_errors'])
+        processing = sum(1 for job in self.jobs if job.status == 'processing')
+        
+        self.total_jobs = total
+        self.completed_jobs = completed
+        self.failed_jobs = failed
+        
+        # Update batch status based on job states
+        if processing > 0:
+            if self.status != 'paused':
+                self.status = 'processing'
+        elif completed + failed >= total:
+            if failed == 0:
+                self.status = 'completed'
+                self.completed_at = datetime.utcnow()
+            elif completed == 0:
+                self.status = 'failed'
+            else:
+                self.status = 'completed_with_errors'
+                self.completed_at = datetime.utcnow()
+        
+        db.session.commit()
+
+    def can_start(self):
+        """Check if batch can be started."""
+        return self.status in ['draft', 'pending'] and len(self.jobs) > 0
+
+    def can_pause(self):
+        """Check if batch can be paused."""
+        return self.status == 'processing'
+
+    def can_resume(self):
+        """Check if batch can be resumed."""
+        return self.status == 'paused'
+
+    def can_retry_failed_jobs(self):
+        """Check if batch has failed jobs that can be retried."""
+        return any(job.can_retry_failed_submissions() for job in self.jobs if job.status in ['failed', 'completed_with_errors'])
+
+    def start_batch(self):
+        """Start processing the batch."""
+        if not self.can_start():
+            return False
+        
+        self.status = 'processing'
+        self.started_at = datetime.utcnow()
+        
+        # Queue all pending jobs for processing
+        for job in self.jobs:
+            if job.status == 'pending':
+                from tasks import process_job
+                process_job.delay(job.id)
+        
+        db.session.commit()
+        return True
+
+    def pause_batch(self):
+        """Pause batch processing."""
+        if not self.can_pause():
+            return False
+        
+        self.status = 'paused'
+        # Note: Individual jobs will continue but new jobs won't start
+        db.session.commit()
+        return True
+
+    def resume_batch(self):
+        """Resume batch processing."""
+        if not self.can_resume():
+            return False
+        
+        self.status = 'processing'
+        
+        # Queue pending jobs for processing
+        for job in self.jobs:
+            if job.status == 'pending':
+                from tasks import process_job
+                process_job.delay(job.id)
+        
+        db.session.commit()
+        return True
+
+    def cancel_batch(self):
+        """Cancel batch processing."""
+        if self.status in ['completed', 'cancelled', 'archived']:
+            return False
+        
+        self.status = 'cancelled'
+        
+        # Cancel pending jobs
+        for job in self.jobs:
+            if job.status == 'pending':
+                job.status = 'cancelled'
+        
+        db.session.commit()
+        return True
+
+    def retry_failed_jobs(self):
+        """Retry all failed jobs in the batch."""
+        retried_count = 0
+        
+        for job in self.jobs:
+            if job.status in ['failed', 'completed_with_errors'] and job.can_retry_failed_submissions():
+                count = job.retry_failed_submissions()
+                if count > 0:
+                    retried_count += 1
+        
+        if retried_count > 0:
+            self.status = 'processing'
+            db.session.commit()
+        
+        return retried_count
+
+    def add_job(self, job):
+        """Add a job to this batch."""
+        job.batch_id = self.id
+        
+        # Apply batch defaults to job if not set
+        if not job.provider and self.provider:
+            job.provider = self.provider
+        if not job.prompt and self.prompt:
+            job.prompt = self.prompt
+        if not job.model and self.model:
+            job.model = self.model
+        if not job.models_to_compare and self.models_to_compare:
+            job.models_to_compare = self.models_to_compare
+        if job.temperature is None and self.temperature is not None:
+            job.temperature = self.temperature
+        if job.max_tokens is None and self.max_tokens is not None:
+            job.max_tokens = self.max_tokens
+        
+        db.session.commit()
+        self.update_progress()
+
+    def remove_job(self, job):
+        """Remove a job from this batch."""
+        job.batch_id = None
+        db.session.commit()
+        self.update_progress()
+
+    def duplicate(self, new_name=None):
+        """Create a duplicate of this batch."""
+        new_batch = JobBatch(
+            batch_name=new_name or f"{self.batch_name} (Copy)",
+            description=self.description,
+            provider=self.provider,
+            prompt=self.prompt,
+            model=self.model,
+            models_to_compare=self.models_to_compare,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            batch_settings=self.batch_settings,
+            auto_assign_jobs=self.auto_assign_jobs,
+            priority=self.priority,
+            tags=self.tags,
+            template_id=self.template_id,
+            saved_prompt_id=self.saved_prompt_id,
+            saved_marking_scheme_id=self.saved_marking_scheme_id,
+            created_by=self.created_by
+        )
+        
+        db.session.add(new_batch)
+        db.session.commit()
+        return new_batch
+
+    def archive(self):
+        """Archive this batch."""
+        self.status = 'archived'
+        db.session.commit()

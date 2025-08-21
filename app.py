@@ -10,13 +10,14 @@ from docx import Document
 import PyPDF2
 import io
 from dotenv import load_dotenv
-from models import db, GradingJob, Submission, JobBatch, MarkingScheme, SavedPrompt, SavedMarkingScheme
-from tasks import process_job, process_batch
+from models import db, GradingJob, Submission, JobBatch, MarkingScheme, SavedPrompt, SavedMarkingScheme, BatchTemplate
+from tasks import (process_job, process_batch, retry_batch_failed_jobs, pause_batch_processing,
+                   resume_batch_processing, cancel_batch_processing, update_batch_progress)
 from datetime import datetime, timezone
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
@@ -864,20 +865,57 @@ def upload_bulk():
 
 @app.route('/create_batch', methods=['POST'])
 def create_batch():
-    """Create a batch of jobs."""
+    """Create a new batch with enhanced functionality."""
     try:
         data = request.get_json()
 
-        # Create batch
+        # Create batch with enhanced fields
         batch = JobBatch(
             batch_name=data['batch_name'],
             description=data.get('description', ''),
-            provider=data['provider'],
-            prompt=data['prompt'],
+            provider=data.get('provider'),
+            prompt=data.get('prompt'),
             model=data.get('model'),
+            models_to_compare=data.get('models_to_compare'),
             temperature=data.get('temperature', 0.3),
-            max_tokens=data.get('max_tokens', 2000)
+            max_tokens=data.get('max_tokens', 2000),
+            priority=data.get('priority', 5),
+            tags=data.get('tags', []),
+            batch_settings=data.get('batch_settings', {}),
+            auto_assign_jobs=data.get('auto_assign_jobs', False),
+            deadline=datetime.fromisoformat(data['deadline']) if data.get('deadline') else None,
+            template_id=data.get('template_id'),
+            saved_prompt_id=data.get('saved_prompt_id'),
+            saved_marking_scheme_id=data.get('saved_marking_scheme_id'),
+            created_by=data.get('created_by', 'anonymous')
         )
+
+        # Apply template settings if template is specified
+        if batch.template_id:
+            template = BatchTemplate.query.get(batch.template_id)
+            if template:
+                template.increment_usage()
+                # Apply template defaults
+                default_settings = template.default_settings or {}
+                if not batch.provider and default_settings.get('provider'):
+                    batch.provider = default_settings['provider']
+                if not batch.model and default_settings.get('model'):
+                    batch.model = default_settings['model']
+                if batch.temperature is None and default_settings.get('temperature') is not None:
+                    batch.temperature = default_settings['temperature']
+                if batch.max_tokens is None and default_settings.get('max_tokens') is not None:
+                    batch.max_tokens = default_settings['max_tokens']
+
+        # Increment usage counts for saved configurations
+        if data.get('saved_prompt_id'):
+            saved_prompt = SavedPrompt.query.get(data['saved_prompt_id'])
+            if saved_prompt:
+                saved_prompt.increment_usage()
+
+        if data.get('saved_marking_scheme_id'):
+            saved_scheme = SavedMarkingScheme.query.get(data['saved_marking_scheme_id'])
+            if saved_scheme:
+                saved_scheme.increment_usage()
 
         db.session.add(batch)
         db.session.commit()
@@ -885,10 +923,12 @@ def create_batch():
         return jsonify({
             'success': True,
             'batch_id': batch.id,
+            'batch': batch.to_dict(),
             'message': 'Batch created successfully'
         })
 
     except Exception as e:
+        db.session.rollback()
         return jsonify({
             'success': False,
             'error': str(e)
@@ -896,15 +936,72 @@ def create_batch():
 
 @app.route('/batches')
 def batches():
-    """View all batches."""
-    batches = [batch.to_dict() for batch in JobBatch.query.order_by(JobBatch.created_at.desc()).all()]
-    return render_template('batches.html', batches=batches)
+    """View all batches with filtering and search."""
+    # Get filter parameters
+    status_filter = request.args.get('status')
+    priority_filter = request.args.get('priority')
+    tag_filter = request.args.get('tag')
+    search_query = request.args.get('search', '').strip()
+
+    # Build query
+    query = JobBatch.query
+
+    # Apply filters
+    if status_filter and status_filter != 'all':
+        query = query.filter(JobBatch.status == status_filter)
+    
+    if priority_filter and priority_filter != 'all':
+        query = query.filter(JobBatch.priority == int(priority_filter))
+    
+    if tag_filter:
+        query = query.filter(JobBatch.tags.contains([tag_filter]))
+    
+    if search_query:
+        query = query.filter(
+            JobBatch.batch_name.contains(search_query) |
+            JobBatch.description.contains(search_query)
+        )
+
+    # Order by priority and creation date
+    batches = query.order_by(JobBatch.priority.desc(), JobBatch.created_at.desc()).all()
+    
+    # Get available filter options
+    all_statuses = db.session.query(JobBatch.status).distinct().all()
+    all_priorities = db.session.query(JobBatch.priority).distinct().all()
+    all_tags = set()
+    for batch in JobBatch.query.all():
+        if batch.tags:
+            all_tags.update(batch.tags)
+
+    # Get batch templates for creation
+    templates = BatchTemplate.query.filter_by(is_public=True).order_by(BatchTemplate.usage_count.desc()).all()
+
+    return render_template('batches.html',
+                         batches=[b.to_dict() for b in batches],
+                         templates=[t.to_dict() for t in templates],
+                         filter_options={
+                             'statuses': [s[0] for s in all_statuses],
+                             'priorities': sorted([p[0] for p in all_priorities]),
+                             'tags': sorted(list(all_tags))
+                         },
+                         current_filters={
+                             'status': status_filter,
+                             'priority': priority_filter,
+                             'tag': tag_filter,
+                             'search': search_query
+                         })
 
 @app.route('/batches/<batch_id>')
 def batch_detail(batch_id):
-    """View batch details."""
+    """View batch details with comprehensive information."""
     batch = JobBatch.query.get_or_404(batch_id)
-    return render_template('batch_detail.html', batch=batch)
+    
+    # Get available jobs that can be added to this batch
+    available_jobs = GradingJob.query.filter_by(batch_id=None).order_by(GradingJob.created_at.desc()).limit(50).all()
+    
+    return render_template('batch_detail.html',
+                         batch=batch,
+                         available_jobs=[j.to_dict() for j in available_jobs])
 
 @app.route('/api/jobs/<job_id>/process', methods=['POST'])
 def trigger_job_processing(job_id):
@@ -1253,6 +1350,557 @@ def delete_saved_marking_scheme(scheme_id):
             'success': False,
             'error': str(e)
         }), 400
+
+# ============================================================================
+# COMPREHENSIVE BATCH MANAGEMENT API ROUTES
+# ============================================================================
+
+# Batch CRUD Operations
+@app.route('/api/batches', methods=['GET'])
+def api_get_batches():
+    """Get all batches with filtering and pagination."""
+    try:
+        # Get filter parameters
+        status = request.args.get('status')
+        priority = request.args.get('priority')
+        tag = request.args.get('tag')
+        search = request.args.get('search', '').strip()
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+
+        # Build query
+        query = JobBatch.query
+
+        # Apply filters
+        if status and status != 'all':
+            query = query.filter(JobBatch.status == status)
+        if priority and priority != 'all':
+            query = query.filter(JobBatch.priority == int(priority))
+        if tag:
+            query = query.filter(JobBatch.tags.contains([tag]))
+        if search:
+            query = query.filter(
+                JobBatch.batch_name.contains(search) |
+                JobBatch.description.contains(search)
+            )
+
+        # Pagination
+        paginated = query.order_by(JobBatch.priority.desc(), JobBatch.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+
+        return jsonify({
+            'success': True,
+            'batches': [batch.to_dict() for batch in paginated.items],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': paginated.total,
+                'pages': paginated.pages,
+                'has_next': paginated.has_next,
+                'has_prev': paginated.has_prev
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>', methods=['GET'])
+def api_get_batch(batch_id):
+    """Get a specific batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        return jsonify({
+            'success': True,
+            'batch': batch.to_dict()
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>', methods=['PUT'])
+def api_update_batch(batch_id):
+    """Update a batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        data = request.get_json()
+
+        # Update batch fields
+        if 'batch_name' in data:
+            batch.batch_name = data['batch_name']
+        if 'description' in data:
+            batch.description = data['description']
+        if 'priority' in data:
+            batch.priority = data['priority']
+        if 'tags' in data:
+            batch.tags = data['tags']
+        if 'deadline' in data:
+            batch.deadline = datetime.fromisoformat(data['deadline']) if data['deadline'] else None
+        if 'batch_settings' in data:
+            batch.batch_settings = data['batch_settings']
+        if 'auto_assign_jobs' in data:
+            batch.auto_assign_jobs = data['auto_assign_jobs']
+
+        batch.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'batch': batch.to_dict(),
+            'message': 'Batch updated successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>', methods=['DELETE'])
+def api_delete_batch(batch_id):
+    """Delete a batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        # Check if batch can be deleted
+        if batch.status == 'processing':
+            return jsonify({
+                'success': False,
+                'error': 'Cannot delete a batch that is currently processing'
+            }), 400
+
+        # Remove batch_id from associated jobs
+        for job in batch.jobs:
+            job.batch_id = None
+
+        db.session.delete(batch)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Batch deleted successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# Batch Operations
+@app.route('/api/batches/<batch_id>/start', methods=['POST'])
+def api_start_batch(batch_id):
+    """Start batch processing."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        if batch.start_batch():
+            # Trigger background processing
+            process_batch.delay(batch_id)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Batch "{batch.batch_name}" started successfully',
+                'batch': batch.to_dict()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Cannot start batch. Current status: {batch.status}'
+            }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/pause', methods=['POST'])
+def api_pause_batch(batch_id):
+    """Pause batch processing."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        if batch.pause_batch():
+            # Trigger background pause
+            pause_batch_processing.delay(batch_id)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Batch "{batch.batch_name}" paused successfully',
+                'batch': batch.to_dict()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Cannot pause batch. Current status: {batch.status}'
+            }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/resume', methods=['POST'])
+def api_resume_batch(batch_id):
+    """Resume batch processing."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        if batch.resume_batch():
+            # Trigger background resume
+            resume_batch_processing.delay(batch_id)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Batch "{batch.batch_name}" resumed successfully',
+                'batch': batch.to_dict()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Cannot resume batch. Current status: {batch.status}'
+            }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/cancel', methods=['POST'])
+def api_cancel_batch(batch_id):
+    """Cancel batch processing."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        if batch.cancel_batch():
+            # Trigger background cancellation
+            cancel_batch_processing.delay(batch_id)
+            
+            return jsonify({
+                'success': True,
+                'message': f'Batch "{batch.batch_name}" cancelled successfully',
+                'batch': batch.to_dict()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Cannot cancel batch. Current status: {batch.status}'
+            }), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/retry', methods=['POST'])
+def api_retry_batch(batch_id):
+    """Retry failed jobs in a batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        if not batch.can_retry_failed_jobs():
+            return jsonify({
+                'success': False,
+                'error': 'No failed jobs can be retried in this batch'
+            }), 400
+
+        # Trigger retry process
+        retry_batch_failed_jobs.delay(batch_id)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Retrying failed jobs in batch "{batch.batch_name}"',
+            'batch': batch.to_dict()
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/duplicate', methods=['POST'])
+def api_duplicate_batch(batch_id):
+    """Duplicate a batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        data = request.get_json()
+        
+        new_name = data.get('new_name') or f"{batch.batch_name} (Copy)"
+        duplicated_batch = batch.duplicate(new_name)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Batch duplicated successfully',
+            'original_batch': batch.to_dict(),
+            'new_batch': duplicated_batch.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/archive', methods=['POST'])
+def api_archive_batch(batch_id):
+    """Archive a batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        batch.archive()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Batch "{batch.batch_name}" archived successfully',
+            'batch': batch.to_dict()
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# Job Management within Batches
+@app.route('/api/batches/<batch_id>/jobs', methods=['GET'])
+def api_get_batch_jobs(batch_id):
+    """Get all jobs in a batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        jobs = [job.to_dict() for job in batch.jobs]
+        
+        return jsonify({
+            'success': True,
+            'batch_id': batch_id,
+            'jobs': jobs,
+            'total_jobs': len(jobs)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/jobs', methods=['POST'])
+def api_add_jobs_to_batch(batch_id):
+    """Add jobs to a batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        data = request.get_json()
+        job_ids = data.get('job_ids', [])
+        
+        if not job_ids:
+            return jsonify({
+                'success': False,
+                'error': 'No job IDs provided'
+            }), 400
+
+        added_jobs = []
+        for job_id in job_ids:
+            job = GradingJob.query.get(job_id)
+            if job and not job.batch_id:  # Only add unassigned jobs
+                batch.add_job(job)
+                added_jobs.append(job.to_dict())
+
+        return jsonify({
+            'success': True,
+            'message': f'Added {len(added_jobs)} jobs to batch "{batch.batch_name}"',
+            'batch': batch.to_dict(),
+            'added_jobs': added_jobs
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/jobs/<job_id>', methods=['DELETE'])
+def api_remove_job_from_batch(batch_id, job_id):
+    """Remove a job from a batch."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        job = GradingJob.query.get_or_404(job_id)
+        
+        if job.batch_id != batch.id:
+            return jsonify({
+                'success': False,
+                'error': 'Job is not part of this batch'
+            }), 400
+
+        batch.remove_job(job)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Job "{job.job_name}" removed from batch "{batch.batch_name}"',
+            'batch': batch.to_dict(),
+            'job': job.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# Batch Export and Reporting
+@app.route('/api/batches/<batch_id>/export')
+def api_export_batch(batch_id):
+    """Export batch results as a ZIP file."""
+    try:
+        import zipfile
+        import io
+        from datetime import datetime
+
+        batch = JobBatch.query.get_or_404(batch_id)
+
+        # Create ZIP file in memory
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+
+            # Add batch summary
+            summary_content = f"""Batch Summary: {batch.batch_name}
+Created: {batch.created_at}
+Updated: {batch.updated_at}
+Status: {batch.status}
+Priority: {batch.priority}
+Total Jobs: {len(batch.jobs)}
+Completed Jobs: {batch.completed_jobs}
+Failed Jobs: {batch.failed_jobs}
+Progress: {batch.get_progress()}%
+
+Description:
+{batch.description or 'No description provided'}
+
+Tags: {', '.join(batch.tags or [])}
+
+Default Configuration:
+Provider: {batch.provider or 'Mixed'}
+Model: {batch.model or 'Mixed'}
+Temperature: {batch.temperature}
+Max Tokens: {batch.max_tokens}
+
+Deadline: {batch.deadline.isoformat() if batch.deadline else 'No deadline set'}
+Started: {batch.started_at.isoformat() if batch.started_at else 'Not started'}
+Completed: {batch.completed_at.isoformat() if batch.completed_at else 'Not completed'}
+
+"""
+            zip_file.writestr('batch_summary.txt', summary_content)
+
+            # Add job summaries
+            for job in batch.jobs:
+                job_summary = f"""Job: {job.job_name}
+Status: {job.status}
+Provider: {job.provider}
+Model: {job.model or 'Default'}
+Total Submissions: {job.total_submissions}
+Completed: {job.processed_submissions}
+Failed: {job.failed_submissions}
+Progress: {job.get_progress()}%
+
+Prompt:
+{job.prompt}
+
+"""
+                zip_file.writestr(f'jobs/{job.job_name}_summary.txt', job_summary)
+
+                # Add submission results for completed jobs
+                for submission in job.submissions:
+                    if submission.status == 'completed' and submission.grade:
+                        filename = f"jobs/{job.job_name}/results/{submission.original_filename}_grade.txt"
+                        content = f"""Grading Results for: {submission.original_filename}
+Job: {job.job_name}
+Submission ID: {submission.id}
+Status: {submission.status}
+Created: {submission.created_at}
+
+{submission.grade}
+"""
+                        zip_file.writestr(filename, content)
+
+        zip_buffer.seek(0)
+
+        from flask import send_file
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=f"batch_{batch_id}_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/analytics')
+def api_batch_analytics(batch_id):
+    """Get batch analytics and statistics."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        # Calculate analytics
+        total_jobs = len(batch.jobs)
+        total_submissions = sum(job.total_submissions for job in batch.jobs)
+        completed_submissions = sum(job.processed_submissions for job in batch.jobs)
+        failed_submissions = sum(job.failed_submissions for job in batch.jobs)
+        
+        # Job status breakdown
+        job_status_counts = {}
+        for job in batch.jobs:
+            status = job.status
+            job_status_counts[status] = job_status_counts.get(status, 0) + 1
+        
+        # Provider breakdown
+        provider_counts = {}
+        for job in batch.jobs:
+            provider = job.provider
+            provider_counts[provider] = provider_counts.get(provider, 0) + 1
+        
+        # Calculate processing time if applicable
+        processing_time = None
+        if batch.started_at and batch.completed_at:
+            processing_time = (batch.completed_at - batch.started_at).total_seconds()
+        
+        analytics = {
+            'batch_id': batch_id,
+            'batch_name': batch.batch_name,
+            'overview': {
+                'total_jobs': total_jobs,
+                'total_submissions': total_submissions,
+                'completed_submissions': completed_submissions,
+                'failed_submissions': failed_submissions,
+                'success_rate': round((completed_submissions / total_submissions * 100) if total_submissions > 0 else 0, 2),
+                'progress': batch.get_progress(),
+                'processing_time_seconds': processing_time
+            },
+            'job_status_breakdown': job_status_counts,
+            'provider_breakdown': provider_counts,
+            'timeline': {
+                'created_at': batch.created_at.isoformat(),
+                'started_at': batch.started_at.isoformat() if batch.started_at else None,
+                'completed_at': batch.completed_at.isoformat() if batch.completed_at else None,
+                'deadline': batch.deadline.isoformat() if batch.deadline else None
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'analytics': analytics
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# Batch Templates API
+@app.route('/api/batch-templates', methods=['GET'])
+def api_get_batch_templates():
+    """Get all batch templates."""
+    try:
+        templates = BatchTemplate.query.order_by(BatchTemplate.usage_count.desc()).all()
+        return jsonify({
+            'success': True,
+            'templates': [template.to_dict() for template in templates]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batch-templates', methods=['POST'])
+def api_create_batch_template():
+    """Create a new batch template."""
+    try:
+        data = request.get_json()
+        
+        template = BatchTemplate(
+            name=data['name'],
+            description=data.get('description', ''),
+            category=data.get('category', ''),
+            default_settings=data.get('default_settings', {}),
+            job_structure=data.get('job_structure', {}),
+            processing_rules=data.get('processing_rules', {}),
+            is_public=data.get('is_public', False),
+            created_by=data.get('created_by', 'anonymous')
+        )
+        
+        db.session.add(template)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'template': template.to_dict(),
+            'message': 'Batch template created successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batch-templates/<template_id>', methods=['GET'])
+def api_get_batch_template(template_id):
+    """Get a specific batch template."""
+    try:
+        template = BatchTemplate.query.get_or_404(template_id)
+        return jsonify({
+            'success': True,
+            'template': template.to_dict()
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(e):

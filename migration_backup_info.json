@@ -1,0 +1,13 @@
+{
+  "migration_date": "2025-08-21T20:35:34.790217",
+  "database_url": "sqlite:///grading_app.db",
+  "migration_version": "1.0.0",
+  "description": "Enhanced Batch System Migration",
+  "changes": [
+    "Added BatchTemplate table",
+    "Enhanced JobBatch table with new columns",
+    "Updated batch status values",
+    "Created default batch templates",
+    "Added foreign key relationships"
+  ]
+}
