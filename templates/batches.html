@@ -93,7 +93,7 @@
                             </div>
                         </td>
                         <td>{{ batch.completed_jobs }}/{{ batch.failed_jobs }}/{{ batch.total_jobs }}</td>
-                        <td>{{ moment(batch.updated_at).fromNow() }}</td>
+                        <td>{{ batch.updated_at[:16].replace('T', ' ') if batch.updated_at else 'N/A' }}</td>
                         <td>
                             <div class="d-flex">
                                 <!-- Action Buttons -->
