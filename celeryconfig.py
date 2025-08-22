@@ -1,8 +1,11 @@
 # Celery Configuration
+import os
 
-# Broker settings
-broker_url = 'redis://localhost:6379/0'
-result_backend = 'redis://localhost:6379/0'
+# Broker settings (allow override in containers/CI)
+_redis_host = os.getenv('REDIS_HOST', 'localhost')
+_redis_port = os.getenv('REDIS_PORT', '6379')
+broker_url = f'redis://{_redis_host}:{_redis_port}/0'
+result_backend = f'redis://{_redis_host}:{_redis_port}/0'
 
 # Task settings
 task_serializer = 'json'

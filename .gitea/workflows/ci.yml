@@ -58,10 +58,13 @@ jobs:
           docker run --rm --name grading-app-test \
             --network grading-app-ci \
             -u root \
+            -e REDIS_HOST=grading-app-redis-ci \
+            -e REDIS_PORT=6379 \
             -e OPENROUTER_API_KEY=dummy \
             -e CLAUDE_API_KEY=dummy \
             -e LM_STUDIO_URL=http://localhost:1234/v1 \
             -v "$PWD":/workspace \
+            -v "$PWD":/home/harry/grading-app \
             -w /workspace \
             grading-app-dev:ci \
             pytest -v tests/

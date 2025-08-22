@@ -629,8 +629,9 @@ def retry_batch_failed_jobs(batch_id):
                 # Start processing the batch again
                 process_batch.delay(batch_id)
                 print(f"Retried {retried_count} failed jobs in batch {batch.batch_name}")
+                return True
             
-            return retried_count
+            return False
             
         except Exception as e:
             print(f"Error retrying batch {batch_id}: {str(e)}")
