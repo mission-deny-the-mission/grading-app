@@ -1855,12 +1855,15 @@ def api_create_job_in_batch_with_files(batch_id):
             }), 400
 
         # Create job with batch settings first
+        models_to_compare = request.form.getlist('models_to_compare[]')  # Get list of models to compare
+        
         job_data = {
             'job_name': job_name,
             'description': request.form.get('description'),
             'provider': request.form.get('provider'),
             'prompt': request.form.get('prompt'),
             'model': request.form.get('model'),
+            'models_to_compare': models_to_compare if models_to_compare else None,
             'temperature': float(request.form.get('temperature')) if request.form.get('temperature') else None,
             'max_tokens': int(request.form.get('max_tokens')) if request.form.get('max_tokens') else None,
             'priority': 5  # Default priority

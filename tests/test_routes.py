@@ -929,3 +929,140 @@ class TestBatchJobCreationWithFiles:
         
         # Should return error status
         assert response.status_code == 400
+
+
+class TestBatchMultiModelComparison:
+    """Test cases for batch multi-model comparison functionality."""
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_create_batch_with_multi_model_comparison(self, mock_process_job, client, app):
+        """Test creating a batch with multi-model comparison enabled."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        models_to_compare = ['anthropic/claude-3-5-sonnet-20241022', 'openai/gpt-4o']
+        
+        response = client.post('/create_batch', json={
+            'batch_name': 'Multi-Model Test Batch',
+            'description': 'A batch with multi-model comparison',
+            'provider': 'openrouter',
+            'models_to_compare': models_to_compare,
+            'priority': 5
+        })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        
+        # Verify batch was created with multi-model settings
+        with app.app_context():
+            from models import JobBatch, db
+            batch = db.session.get(JobBatch, data['batch_id'])
+            assert batch is not None
+            assert batch.models_to_compare == models_to_compare
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_batch_job_inherits_multi_model_settings(self, mock_process_job, client, app, sample_text_file):
+        """Test that jobs created in multi-model batch inherit the multi-model settings."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        models_to_compare = ['anthropic/claude-3-5-sonnet-20241022', 'openai/gpt-4o']
+        
+        with app.app_context():
+            from models import JobBatch, db
+            # Create batch with multi-model comparison
+            batch = JobBatch(
+                batch_name="Multi-Model Batch",
+                provider="openrouter",
+                models_to_compare=models_to_compare
+            )
+            db.session.add(batch)
+            db.session.commit()
+            batch_id = batch.id
+        
+        # Create job with files in the batch
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{batch_id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Multi-Model Inheritance Test',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        
+        # Verify job inherited multi-model settings
+        job = data['job']
+        assert job['models_to_compare'] == models_to_compare
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_batch_job_override_multi_model_settings(self, mock_process_job, client, app, sample_text_file):
+        """Test that jobs can override batch multi-model settings."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        batch_models = ['anthropic/claude-3-5-sonnet-20241022', 'openai/gpt-4o']
+        job_models = ['openai/gpt-4o', 'meta-llama/llama-3.1-70b-instruct']
+        
+        with app.app_context():
+            from models import JobBatch, db
+            # Create batch with multi-model comparison
+            batch = JobBatch(
+                batch_name="Multi-Model Batch",
+                provider="openrouter",
+                models_to_compare=batch_models
+            )
+            db.session.add(batch)
+            db.session.commit()
+            batch_id = batch.id
+        
+        # Create job with different models
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{batch_id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Override Test',
+                                     'models_to_compare[]': job_models,
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        
+        # Verify job used override models
+        job = data['job']
+        assert job['models_to_compare'] == job_models
+        assert job['models_to_compare'] != batch_models
+    
+    @pytest.mark.api  
+    def test_batch_displays_multi_model_info(self, client, app):
+        """Test that batch detail page displays multi-model comparison information."""
+        models_to_compare = ['anthropic/claude-3-5-sonnet-20241022', 'openai/gpt-4o', 'claude-3-5-sonnet-20241022']
+        
+        with app.app_context():
+            from models import JobBatch, db
+            # Create batch with multi-model comparison
+            batch = JobBatch(
+                batch_name="Display Test Batch",
+                description="Testing multi-model display",
+                provider="openrouter",
+                models_to_compare=models_to_compare
+            )
+            db.session.add(batch)
+            db.session.commit()
+            batch_id = batch.id
+        
+        # Get batch detail page
+        response = client.get(f'/batches/{batch_id}')
+        assert response.status_code == 200
+        
+        # Check that multi-model information is displayed
+        html_content = response.data.decode('utf-8')
+        assert 'Multi-Model Comparison' in html_content
+        assert f'Enabled ({len(models_to_compare)} models)' in html_content
+        
+        # Check that individual models are displayed
+        for model in models_to_compare:
+            assert model in html_content
