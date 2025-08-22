@@ -42,14 +42,14 @@ jobs:
         run: |
           # Sanity check: list files and ensure tests exist
           docker run --rm \
-            -v "$PWD":/workspace \
+            -v "${GITHUB_WORKSPACE}":/workspace \
             -w /workspace \
             grading-app-dev:ci \
             bash -lc "python -V && pip list | head -n 50 && ls -la && ls -la tests || true"
 
           # Collect-only to confirm discovery
           docker run --rm \
-            -v "$PWD":/workspace \
+            -v "${GITHUB_WORKSPACE}":/workspace \
             -w /workspace \
             grading-app-dev:ci \
             pytest --collect-only -q || true
@@ -63,8 +63,8 @@ jobs:
             -e OPENROUTER_API_KEY=dummy \
             -e CLAUDE_API_KEY=dummy \
             -e LM_STUDIO_URL=http://localhost:1234/v1 \
-            -v "$PWD":/workspace \
-            -v "$PWD":/home/harry/grading-app \
+            -v "${GITHUB_WORKSPACE}":/workspace \
+            -v "${GITHUB_WORKSPACE}":/home/harry/grading-app \
             -w /workspace \
             grading-app-dev:ci \
             pytest -v tests/
