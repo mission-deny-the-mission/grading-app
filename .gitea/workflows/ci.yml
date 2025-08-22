@@ -42,20 +42,18 @@ jobs:
         run: |
           # Sanity check: list files and ensure tests exist
           docker run --rm \
-            -v "${GITHUB_WORKSPACE}":/workspace \
             -w /workspace \
             grading-app-dev:ci \
             bash -lc "python -V && pip list | head -n 50 && ls -la && ls -la tests || true"
 
           # Collect-only to confirm discovery
           docker run --rm \
-            -v "${GITHUB_WORKSPACE}":/workspace \
             -w /workspace \
             grading-app-dev:ci \
             pytest --collect-only -q || true
 
           # Run the test suite explicitly against tests/ and generate coverage
-          docker run --rm --name grading-app-test \
+          docker run --name grading-app-test \
             --network grading-app-ci \
             -u root \
             -e REDIS_HOST=grading-app-redis-ci \
@@ -63,11 +61,16 @@ jobs:
             -e OPENROUTER_API_KEY=dummy \
             -e CLAUDE_API_KEY=dummy \
             -e LM_STUDIO_URL=http://localhost:1234/v1 \
-            -v "${GITHUB_WORKSPACE}":/workspace \
-            -v "${GITHUB_WORKSPACE}":/home/harry/grading-app \
             -w /workspace \
             grading-app-dev:ci \
-            pytest -v tests/
+            bash -lc "mkdir -p /home/harry && [ ! -e /home/harry/grading-app ] && ln -s /workspace /home/harry/grading-app || true; pytest -v tests/"
+
+      - name: Copy coverage artifacts
+        if: always()
+        run: |
+          docker cp grading-app-test:/workspace/coverage.xml ./coverage.xml || true
+          rm -rf htmlcov || true
+          docker cp grading-app-test:/workspace/htmlcov ./htmlcov || true
 
       - name: Upload coverage artifact
         if: always()
@@ -86,6 +89,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
+          docker rm -f grading-app-test || true
           docker rm -f grading-app-redis-ci || true
           docker network rm grading-app-ci || true
 
