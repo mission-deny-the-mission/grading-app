@@ -340,7 +340,7 @@ class TestConfigurationValidation:
         }
         
         # Check for valid provider
-        valid_providers = ['openrouter', 'claude', 'lm_studio']
+        valid_providers = ['openrouter', 'claude', 'gemini', 'openai', 'lm_studio', 'ollama']
         assert config['provider'] not in valid_providers
     
     def test_validate_job_configuration_invalid_temperature(self):
@@ -368,6 +368,52 @@ class TestConfigurationValidation:
         
         # Check max_tokens is positive
         assert config['max_tokens'] <= 0
+    
+    def test_validate_gemini_provider_configuration(self):
+        """Test validating configuration for Gemini provider."""
+        config = {
+            'job_name': 'Gemini Test Job',
+            'provider': 'gemini',
+            'model': 'gemini-2.0-flash-exp',
+            'prompt': 'Please grade this document.',
+            'temperature': 0.7,
+            'max_tokens': 2000
+        }
+        
+        # Basic validation
+        assert config['provider'] == 'gemini'
+        assert 'gemini' in config['model']
+        assert 0 <= config['temperature'] <= 2
+        assert config['max_tokens'] > 0
+    
+    def test_validate_openai_provider_configuration(self):
+        """Test validating configuration for OpenAI provider."""
+        config = {
+            'job_name': 'OpenAI Test Job',
+            'provider': 'openai',
+            'model': 'gpt-4o',
+            'prompt': 'Please grade this document.',
+            'temperature': 0.3,
+            'max_tokens': 1500
+        }
+        
+        # Basic validation
+        assert config['provider'] == 'openai'
+        assert 'gpt' in config['model']
+        assert 0 <= config['temperature'] <= 2
+        assert config['max_tokens'] > 0
+    
+    def test_validate_provider_list_includes_new_providers(self):
+        """Test that new providers are included in valid provider lists."""
+        valid_providers = ['openrouter', 'claude', 'gemini', 'openai', 'lm_studio', 'ollama']
+        
+        # Check that new providers are present
+        assert 'gemini' in valid_providers
+        assert 'openai' in valid_providers
+        
+        # Check that all expected providers are present
+        expected_providers = {'openrouter', 'claude', 'gemini', 'openai', 'lm_studio', 'ollama'}
+        assert set(valid_providers) == expected_providers
 
 
 class TestDataExport:

@@ -58,6 +58,25 @@ DEFAULT_MODELS = {
             'gemma',
             'phi'
         ]
+    },
+    'gemini': {
+        'default': 'gemini-2.0-flash-exp',
+        'popular': [
+            'gemini-2.0-flash-exp',
+            'gemini-1.5-pro',
+            'gemini-1.5-flash',
+            'gemini-1.0-pro'
+        ]
+    },
+    'openai': {
+        'default': 'gpt-4o',
+        'popular': [
+            'gpt-4o',
+            'gpt-4o-mini',
+            'gpt-4-turbo',
+            'gpt-4',
+            'gpt-3.5-turbo'
+        ]
     }
 }
 

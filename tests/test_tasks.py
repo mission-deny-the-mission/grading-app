@@ -6,12 +6,13 @@ import pytest
 from unittest.mock import patch, MagicMock, Mock
 import os
 import tempfile
+import openai
 from tasks import (
     process_submission_sync, process_job_sync,
     retry_batch_failed_jobs, pause_batch_processing,
     resume_batch_processing, cancel_batch_processing
 )
-from utils.llm_providers import get_llm_provider, grade_with_claude, grade_with_lm_studio
+from utils.llm_providers import get_llm_provider, grade_with_claude, grade_with_lm_studio, grade_with_gemini, grade_with_openai
 
 
 class TestGradingFunctions:
@@ -157,6 +158,166 @@ class TestGradingFunctions:
                 assert result['success'] == False
                 assert 'error' in result
                 assert 'connect' in result['error'].lower()
+    
+    @patch('utils.llm_providers.genai.GenerativeModel')
+    @patch('utils.llm_providers.genai.configure')
+    def test_grade_with_gemini_success(self, mock_configure, mock_model_class, app):
+        """Test successful grading with Gemini."""
+        # Setup mock model instance
+        mock_model = MagicMock()
+        mock_model_class.return_value = mock_model
+        
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.text = "Excellent essay! Grade: A-"
+        mock_response.usage_metadata = MagicMock()
+        mock_response.usage_metadata.prompt_token_count = 100
+        mock_response.usage_metadata.candidates_token_count = 50
+        mock_response.usage_metadata.total_token_count = 150
+        mock_model.generate_content.return_value = mock_response
+        
+        with patch.dict(os.environ, {'GEMINI_API_KEY': 'test-gemini-key'}, clear=True):
+            with app.app_context():
+                result = grade_with_gemini(
+                    "This is a test document.",
+                    "Please grade this document.",
+                    model="gemini-1.5-pro",
+                    temperature=0.7,
+                    max_tokens=2000
+                )
+                
+                assert result['success'] == True
+                assert 'grade' in result
+                assert 'Excellent essay!' in result['grade']
+                assert result['provider'] == 'Gemini'
+                assert result['model'] == 'gemini-1.5-pro'
+                mock_configure.assert_called_once_with(api_key='test-gemini-key')
+    
+    @patch('utils.llm_providers.genai.GenerativeModel')
+    @patch('utils.llm_providers.genai.configure')
+    def test_grade_with_gemini_failure(self, mock_configure, mock_model_class, app):
+        """Test failed grading with Gemini."""
+        # Setup mock to raise exception
+        mock_model_class.side_effect = Exception("API Error")
+        
+        with patch.dict(os.environ, {'GEMINI_API_KEY': 'test-gemini-key'}, clear=True):
+            with app.app_context():
+                result = grade_with_gemini(
+                    "This is a test document.",
+                    "Please grade this document."
+                )
+                
+                assert result['success'] == False
+                assert 'error' in result
+                assert 'API Error' in result['error']
+    
+    def test_grade_with_gemini_no_api_key(self, app):
+        """Test Gemini grading without API key."""
+        with patch.dict(os.environ, {}, clear=True):
+            with app.app_context():
+                result = grade_with_gemini(
+                    "This is a test document.",
+                    "Please grade this document."
+                )
+                
+                assert result['success'] == False
+                assert 'error' in result
+                assert 'authentication' in result['error'].lower()
+    
+    @patch('utils.llm_providers.openai.OpenAI')
+    def test_grade_with_openai_success(self, mock_openai_class, app):
+        """Test successful grading with OpenAI."""
+        # Setup mock client
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+        
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_choice = MagicMock()
+        mock_choice.message.content = "Great work! Grade: B+"
+        mock_response.choices = [mock_choice]
+        mock_response.usage.prompt_tokens = 80
+        mock_response.usage.completion_tokens = 40
+        mock_response.usage.total_tokens = 120
+        mock_client.chat.completions.create.return_value = mock_response
+        
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-openai-key'}, clear=True):
+            with app.app_context():
+                result = grade_with_openai(
+                    "This is a test document.",
+                    "Please grade this document.",
+                    model="gpt-4o",
+                    temperature=0.7,
+                    max_tokens=2000
+                )
+                
+                assert result['success'] == True
+                assert 'grade' in result
+                assert 'Great work!' in result['grade']
+                assert result['provider'] == 'OpenAI'
+                assert result['model'] == 'gpt-4o'
+                mock_openai_class.assert_called_once_with(api_key='test-openai-key')
+    
+    @patch('utils.llm_providers.openai.OpenAI')
+    def test_grade_with_openai_auth_error(self, mock_openai_class, app):
+        """Test OpenAI authentication error."""
+        # Setup mock client to raise auth error
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+        
+        # Create a proper mock response for the AuthenticationError
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        
+        # Use the proper exception format for the new OpenAI SDK
+        auth_error = openai.AuthenticationError(
+            message="Invalid API key",
+            response=mock_response,
+            body={"error": {"message": "Invalid API key"}}
+        )
+        mock_client.chat.completions.create.side_effect = auth_error
+        
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'invalid-key'}, clear=True):
+            with app.app_context():
+                result = grade_with_openai(
+                    "This is a test document.",
+                    "Please grade this document."
+                )
+                
+                assert result['success'] == False
+                assert 'error' in result
+                assert 'authentication' in result['error'].lower()
+    
+    def test_grade_with_openai_no_api_key(self, app):
+        """Test OpenAI grading without API key."""
+        with patch.dict(os.environ, {}, clear=True):
+            with app.app_context():
+                result = grade_with_openai(
+                    "This is a test document.",
+                    "Please grade this document."
+                )
+                
+                assert result['success'] == False
+                assert 'error' in result
+                assert 'authentication' in result['error'].lower()
+    
+    def test_get_llm_provider_gemini(self, app):
+        """Test getting Gemini provider instance."""
+        with app.app_context():
+            provider = get_llm_provider('Gemini')
+            assert provider.__class__.__name__ == 'GeminiLLMProvider'
+    
+    def test_get_llm_provider_openai(self, app):
+        """Test getting OpenAI provider instance."""
+        with app.app_context():
+            provider = get_llm_provider('OpenAI')
+            assert provider.__class__.__name__ == 'OpenAILLMProvider'
+    
+    def test_get_llm_provider_invalid(self, app):
+        """Test getting invalid provider raises ValueError."""
+        with app.app_context():
+            with pytest.raises(ValueError, match="Unknown LLM provider"):
+                get_llm_provider('InvalidProvider')
 
 
 class TestProcessSubmission:

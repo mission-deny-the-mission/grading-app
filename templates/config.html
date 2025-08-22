@@ -91,6 +91,74 @@
                         </div>
                     </div>
 
+                    <!-- Google Gemini Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-star me-2"></i>Google Gemini
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="gemini_api_key" class="form-label">API Key</label>
+                                <input type="password" class="form-control" id="gemini_api_key" 
+                                       name="gemini_api_key" placeholder="your-gemini-key-here" 
+                                       value="{{ config.gemini_api_key if config else '' }}">
+                                <div class="form-text">
+                                    Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-primary" onclick="togglePassword('gemini_api_key')">
+                                        <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-success" onclick="testAPIKey('gemini')">
+                                        <i class="fas fa-check"></i> Test Key
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OpenAI Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-brain me-2"></i>OpenAI (Direct)
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="openai_api_key" class="form-label">API Key</label>
+                                <input type="password" class="form-control" id="openai_api_key" 
+                                       name="openai_api_key" placeholder="sk-..." 
+                                       value="{{ config.openai_api_key if config else '' }}">
+                                <div class="form-text">
+                                    Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-primary" onclick="togglePassword('openai_api_key')">
+                                        <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-success" onclick="testAPIKey('openai')">
+                                        <i class="fas fa-check"></i> Test Key
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- LM Studio Configuration -->
                     <div class="mb-4">
                         <h6 class="fw-bold text-primary">
@@ -109,6 +177,31 @@
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
                                     <button type="button" class="btn btn-outline-secondary" onclick="testLMStudio()">
+                                        <i class="fas fa-plug"></i> Test Connection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ollama Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-cube me-2"></i>Ollama (Local)
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <label for="ollama_url" class="form-label">API URL</label>
+                                <input type="url" class="form-control" id="ollama_url" 
+                                       name="ollama_url" value="{{ config.ollama_url if config else 'http://localhost:11434/api/generate' }}">
+                                <div class="form-text">
+                                    Local Ollama server URL (default: http://localhost:11434/api/generate)
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="testOllama()">
                                         <i class="fas fa-plug"></i> Test Connection
                                     </button>
                                 </div>
@@ -157,22 +250,40 @@
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
                             <div id="openrouter-status" class="status-indicator me-2"></div>
                             <span>OpenRouter</span>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
                             <div id="claude-status" class="status-indicator me-2"></div>
                             <span>Claude API</span>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div id="gemini-status" class="status-indicator me-2"></div>
+                            <span>Gemini</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div id="openai-status" class="status-indicator me-2"></div>
+                            <span>OpenAI</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
                             <div id="lmstudio-status" class="status-indicator me-2"></div>
                             <span>LM Studio</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="d-flex align-items-center">
+                            <div id="ollama-status" class="status-indicator me-2"></div>
+                            <span>Ollama</span>
                         </div>
                     </div>
                 </div>
@@ -231,6 +342,44 @@
                     </div>
                     <div class="accordion-item">
                         <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gemini-help">
+                                Google Gemini Setup
+                            </button>
+                        </h2>
+                        <div id="gemini-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Visit <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                                    <li>Sign in with your Google account</li>
+                                    <li>Click "Create API Key"</li>
+                                    <li>Copy the generated API key</li>
+                                    <li>Paste it in the configuration above</li>
+                                    <li>Note: Gemini has free tier limits and paid usage options</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#openai-help">
+                                OpenAI Setup
+                            </button>
+                        </h2>
+                        <div id="openai-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Visit <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
+                                    <li>Sign up or log into your account</li>
+                                    <li>Add payment method (required for API usage)</li>
+                                    <li>Click "Create new secret key"</li>
+                                    <li>Copy the key (starts with "sk-")</li>
+                                    <li>Paste it in the configuration above</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#lmstudio-help">
                                 LM Studio Setup
                             </button>
@@ -243,6 +392,25 @@
                                     <li>Download a model (e.g., Llama 2, Mistral)</li>
                                     <li>Start the local server</li>
                                     <li>Ensure the API URL is correct (default: http://localhost:1234/v1)</li>
+                                    <li>Test the connection using the button above</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ollama-help">
+                                Ollama Setup
+                            </button>
+                        </h2>
+                        <div id="ollama-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Download <a href="https://ollama.ai" target="_blank">Ollama</a></li>
+                                    <li>Install and start Ollama service</li>
+                                    <li>Download a model: <code>ollama pull llama2</code> or <code>ollama pull mistral</code></li>
+                                    <li>Ensure Ollama is running (default: http://localhost:11434)</li>
+                                    <li>Verify the API URL is correct (default: http://localhost:11434/api/generate)</li>
                                     <li>Test the connection using the button above</li>
                                 </ol>
                             </div>
@@ -333,7 +501,10 @@ function loadFromEnv() {
         .then(data => {
             document.getElementById('openrouter_api_key').value = data.openrouter_api_key || '';
             document.getElementById('claude_api_key').value = data.claude_api_key || '';
+            document.getElementById('gemini_api_key').value = data.gemini_api_key || '';
+            document.getElementById('openai_api_key').value = data.openai_api_key || '';
             document.getElementById('lm_studio_url').value = data.lm_studio_url || 'http://localhost:1234/v1';
+            document.getElementById('ollama_url').value = data.ollama_url || 'http://localhost:11434/api/generate';
             document.getElementById('default_prompt').value = data.default_prompt || '';
             showStatus('Configuration loaded from environment variables', 'success');
         })
@@ -342,11 +513,43 @@ function loadFromEnv() {
         });
 }
 
+function testOllama() {
+    const url = document.getElementById('ollama_url').value;
+    const statusIndicator = document.getElementById('ollama-status');
+    
+    statusIndicator.className = 'status-indicator';
+    
+    fetch('/test_ollama', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: url })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusIndicator.classList.add('online');
+            showStatus('Ollama connection successful!', 'success');
+        } else {
+            statusIndicator.classList.add('offline');
+            showStatus('Ollama connection failed: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        statusIndicator.classList.add('offline');
+        showStatus('Connection test failed: ' + error.message, 'danger');
+    });
+}
+
 function checkAllAPIs() {
     const statusIndicators = {
         'openrouter-status': document.getElementById('openrouter-status'),
         'claude-status': document.getElementById('claude-status'),
-        'lmstudio-status': document.getElementById('lmstudio-status')
+        'gemini-status': document.getElementById('gemini-status'),
+        'openai-status': document.getElementById('openai-status'),
+        'lmstudio-status': document.getElementById('lmstudio-status'),
+        'ollama-status': document.getElementById('ollama-status')
     };
     
     // Reset all status indicators
@@ -370,8 +573,27 @@ function checkAllAPIs() {
         statusIndicators['claude-status'].classList.add('offline');
     }
     
+    // Test Gemini API
+    const geminiKey = document.getElementById('gemini_api_key').value;
+    if (geminiKey) {
+        statusIndicators['gemini-status'].classList.add('online');
+    } else {
+        statusIndicators['gemini-status'].classList.add('offline');
+    }
+    
+    // Test OpenAI API
+    const openaiKey = document.getElementById('openai_api_key').value;
+    if (openaiKey) {
+        statusIndicators['openai-status'].classList.add('online');
+    } else {
+        statusIndicators['openai-status'].classList.add('offline');
+    }
+    
     // Test LM Studio
     testLMStudio();
+    
+    // Test Ollama
+    testOllama();
     
     showStatus('API status check completed', 'info');
 }

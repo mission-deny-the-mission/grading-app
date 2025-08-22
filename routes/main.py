@@ -27,6 +27,8 @@ def config():
     config_data = {
         'openrouter_api_key': os.getenv('OPENROUTER_API_KEY', ''),
         'claude_api_key': os.getenv('CLAUDE_API_KEY', ''),
+        'gemini_api_key': os.getenv('GEMINI_API_KEY', ''),
+        'openai_api_key': os.getenv('OPENAI_API_KEY', ''),
         'lm_studio_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
         'ollama_url': os.getenv('OLLAMA_URL', 'http://localhost:11434/api/generate'),
         'default_prompt': session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
@@ -41,7 +43,10 @@ def save_config():
         config_data = {
             'openrouter_api_key': request.form.get('openrouter_api_key', ''),
             'claude_api_key': request.form.get('claude_api_key', ''),
+            'gemini_api_key': request.form.get('gemini_api_key', ''),
+            'openai_api_key': request.form.get('openai_api_key', ''),
             'lm_studio_url': request.form.get('lm_studio_url', 'http://localhost:1234/v1'),
+            'ollama_url': request.form.get('ollama_url', 'http://localhost:11434/api/generate'),
             'default_prompt': request.form.get('default_prompt', 'Please grade this document and provide detailed feedback.')
         }
 
@@ -68,8 +73,14 @@ def save_config():
                     existing_vars['OPENROUTER_API_KEY'] = config_data['openrouter_api_key']
                 if config_data['claude_api_key']:
                     existing_vars['CLAUDE_API_KEY'] = config_data['claude_api_key']
+                if config_data['gemini_api_key']:
+                    existing_vars['GEMINI_API_KEY'] = config_data['gemini_api_key']
+                if config_data['openai_api_key']:
+                    existing_vars['OPENAI_API_KEY'] = config_data['openai_api_key']
                 if config_data['lm_studio_url']:
                     existing_vars['LM_STUDIO_URL'] = config_data['lm_studio_url']
+                if config_data['ollama_url']:
+                    existing_vars['OLLAMA_URL'] = config_data['ollama_url']
 
                 # Write back to file
                 with open(env_file_path, 'w') as f:
@@ -82,8 +93,14 @@ def save_config():
                     f.write(f"OPENROUTER_API_KEY={config_data['openrouter_api_key']}\n")
                 if config_data['claude_api_key']:
                     f.write(f"CLAUDE_API_KEY={config_data['claude_api_key']}\n")
+                if config_data['gemini_api_key']:
+                    f.write(f"GEMINI_API_KEY={config_data['gemini_api_key']}\n")
+                if config_data['openai_api_key']:
+                    f.write(f"OPENAI_API_KEY={config_data['openai_api_key']}\n")
                 if config_data['lm_studio_url']:
                     f.write(f"LM_STUDIO_URL={config_data['lm_studio_url']}\n")
+                if config_data['ollama_url']:
+                    f.write(f"OLLAMA_URL={config_data['ollama_url']}\n")
 
         # Reload environment variables
         load_dotenv(override=True)
@@ -105,7 +122,10 @@ def load_config():
     config_data = {
         'openrouter_api_key': os.getenv('OPENROUTER_API_KEY', ''),
         'claude_api_key': os.getenv('CLAUDE_API_KEY', ''),
+        'gemini_api_key': os.getenv('GEMINI_API_KEY', ''),
+        'openai_api_key': os.getenv('OPENAI_API_KEY', ''),
         'lm_studio_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
+        'ollama_url': os.getenv('OLLAMA_URL', 'http://localhost:11434/api/generate'),
         'default_prompt': session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
     }
     return jsonify(config_data)
@@ -150,6 +170,33 @@ def test_api_key():
             except Exception as e:
                 return jsonify({'success': False, 'error': f'Invalid Claude API key: {str(e)}'})
 
+        elif api_type == 'gemini':
+            # Test Gemini API key
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                response = model.generate_content(
+                    "Hello",
+                    generation_config=genai.types.GenerationConfig(max_output_tokens=10)
+                )
+                return jsonify({'success': True, 'message': 'Gemini API key is valid'})
+            except Exception as e:
+                return jsonify({'success': False, 'error': f'Invalid Gemini API key: {str(e)}'})
+
+        elif api_type == 'openai':
+            # Test OpenAI API key
+            try:
+                test_client = openai.OpenAI(api_key=api_key)
+                response = test_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": "Hello"}],
+                    max_tokens=10
+                )
+                return jsonify({'success': True, 'message': 'OpenAI API key is valid'})
+            except Exception as e:
+                return jsonify({'success': False, 'error': f'Invalid OpenAI API key: {str(e)}'})
+
         else:
             return jsonify({'success': False, 'error': 'Invalid API type'})
 
@@ -187,6 +234,38 @@ def test_lm_studio():
         return jsonify({'success': False, 'error': 'Connection failed. Make sure LM Studio is running.'})
     except requests.exceptions.Timeout:
         return jsonify({'success': False, 'error': 'Connection timeout. Check if LM Studio is running and accessible.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@main_bp.route('/test_ollama', methods=['POST'])
+def test_ollama():
+    """Test Ollama connection."""
+    try:
+        import requests
+        data = request.get_json()
+        url = data.get('url', 'http://localhost:11434/api/generate')
+
+        # Test with a simple generation request
+        response = requests.post(
+            url,
+            json={
+                "model": "llama2",
+                "prompt": "Hello",
+                "options": {"num_predict": 10}
+            },
+            headers={"Content-Type": "application/json"},
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            return jsonify({'success': True, 'message': 'Ollama connection successful'})
+        else:
+            return jsonify({'success': False, 'error': f'HTTP {response.status_code}: {response.text}'})
+    except requests.exceptions.ConnectionError:
+        return jsonify({'success': False, 'error': 'Connection failed. Make sure Ollama is running.'})
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'error': 'Connection timeout. Check if Ollama is running and accessible.'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 

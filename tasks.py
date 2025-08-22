@@ -260,13 +260,15 @@ def process_submission_sync(submission_id):
                         'openrouter': 'OpenRouter',
                         'claude': 'Claude',
                         'lm_studio': 'LM Studio', 
-                        'ollama': 'Ollama'
+                        'ollama': 'Ollama',
+                        'gemini': 'Gemini',
+                        'openai': 'OpenAI'
                     }
                     provider_name = provider_mapping.get(job.provider, job.provider)
                     llm_provider = get_llm_provider(provider_name)
                     
-                    # For OpenRouter and Ollama, pass the model parameter
-                    if job.provider.lower() in ['openrouter', 'ollama']:
+                    # For providers that support model selection, pass the model parameter
+                    if job.provider.lower() in ['openrouter', 'ollama', 'gemini', 'openai']:
                         result = llm_provider.grade_document(
                             text, job.prompt, model, marking_scheme_content, 
                             job.temperature, job.max_tokens

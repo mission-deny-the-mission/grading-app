@@ -59,6 +59,25 @@ DEFAULT_MODELS = {
             'gemma',
             'phi'
         ]
+    },
+    'gemini': {
+        'default': 'gemini-2.0-flash-exp',
+        'popular': [
+            'gemini-2.0-flash-exp',
+            'gemini-1.5-pro',
+            'gemini-1.5-flash',
+            'gemini-1.0-pro'
+        ]
+    },
+    'openai': {
+        'default': 'gpt-4o',
+        'popular': [
+            'gpt-4o',
+            'gpt-4o-mini',
+            'gpt-4-turbo',
+            'gpt-4',
+            'gpt-3.5-turbo'
+        ]
     }
 }
 
@@ -145,7 +164,9 @@ def upload_file():
                     'openrouter': 'OpenRouter',
                     'claude': 'Claude',
                     'lm_studio': 'LM Studio', 
-                    'ollama': 'Ollama'
+                    'ollama': 'Ollama',
+                    'gemini': 'Gemini',
+                    'openai': 'OpenAI'
                 }
                 provider_name = provider_mapping.get(provider, provider.title())
                 if provider_name == 'Lm Studio':
@@ -161,12 +182,20 @@ def upload_file():
                     if not os.getenv('CLAUDE_API_KEY') or os.getenv('CLAUDE_API_KEY') == 'sk-ant-your-key-here':
                         return jsonify({'error': 'Claude API key not configured. Please configure your API key in the settings.'}), 400
                     result = llm_provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
+                elif provider == 'gemini':
+                    if not os.getenv('GEMINI_API_KEY') or os.getenv('GEMINI_API_KEY') == 'your-gemini-key-here':
+                        return jsonify({'error': 'Gemini API key not configured. Please configure your API key in the settings.'}), 400
+                    result = llm_provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
+                elif provider == 'openai':
+                    if not os.getenv('OPENAI_API_KEY') or os.getenv('OPENAI_API_KEY') == 'sk-your-openai-key-here':
+                        return jsonify({'error': 'OpenAI API key not configured. Please configure your API key in the settings.'}), 400
+                    result = llm_provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
                 elif provider == 'lm_studio':
                     result = llm_provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
                 elif provider == 'ollama':
                     result = llm_provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
                 else:
-                    return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, lm_studio, ollama'}), 400
+                    return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, gemini, openai, lm_studio, ollama'}), 400
             except ValueError as e:
                 return jsonify({'error': f'Provider error: {str(e)}'}), 400
 

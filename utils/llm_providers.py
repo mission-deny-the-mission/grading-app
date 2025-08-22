@@ -6,6 +6,7 @@ import os
 import requests
 import openai
 from anthropic import Anthropic
+import google.generativeai as genai
 from abc import ABC, abstractmethod
 
 
@@ -329,6 +330,153 @@ class OllamaLLMProvider(LLMProvider):
             }
 
 
+class GeminiLLMProvider(LLMProvider):
+    """LLM Provider for Google Gemini API."""
+
+    def grade_document(self, text, prompt, model="gemini-2.0-flash-exp", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+        try:
+            # Re-check environment each call to satisfy tests that clear env
+            gemini_key = os.getenv('GEMINI_API_KEY')
+            if not gemini_key:
+                return {
+                    'success': False,
+                    'error': "Gemini API authentication failed. Please check your API key configuration.",
+                    'provider': 'Gemini'
+                }
+            
+            # Configure Gemini
+            genai.configure(api_key=gemini_key)
+            
+            # Prepare the grading prompt with marking scheme if provided
+            if marking_scheme_content:
+                enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+            else:
+                enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+
+            # Create the model
+            gemini_model = genai.GenerativeModel(
+                model_name=model,
+                system_instruction="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."
+            )
+            
+            # Generate response
+            response = gemini_model.generate_content(
+                enhanced_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_tokens,
+                )
+            )
+
+            return {
+                'success': True,
+                'grade': response.text,
+                'model': model,
+                'provider': 'Gemini',
+                'usage': {
+                    'prompt_tokens': response.usage_metadata.prompt_token_count if response.usage_metadata else None,
+                    'completion_tokens': response.usage_metadata.candidates_token_count if response.usage_metadata else None,
+                    'total_tokens': response.usage_metadata.total_token_count if response.usage_metadata else None
+                }
+            }
+        except Exception as e:
+            error_msg = str(e)
+            if "authentication" in error_msg.lower() or "api_key" in error_msg.lower() or "permission" in error_msg.lower():
+                return {
+                    'success': False,
+                    'error': "Gemini API authentication failed. Please check your API key.",
+                    'provider': 'Gemini'
+                }
+            elif "quota" in error_msg.lower() or "rate" in error_msg.lower() or "limit" in error_msg.lower():
+                return {
+                    'success': False,
+                    'error': "Gemini API rate limit exceeded. Please try again later.",
+                    'provider': 'Gemini'
+                }
+            elif "timeout" in error_msg.lower():
+                return {
+                    'success': False,
+                    'error': "Gemini API request timed out. Please try again.",
+                    'provider': 'Gemini'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f"Gemini API error: {error_msg}",
+                    'provider': 'Gemini'
+                }
+
+
+class OpenAILLMProvider(LLMProvider):
+    """LLM Provider for OpenAI API (direct, not through OpenRouter)."""
+
+    def grade_document(self, text, prompt, model="gpt-4o", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+        try:
+            # Re-check environment each call to satisfy tests that clear env
+            openai_key = os.getenv('OPENAI_API_KEY')
+            if not openai_key:
+                return {
+                    'success': False,
+                    'error': "OpenAI API authentication failed. Please check your API key configuration.",
+                    'provider': 'OpenAI'
+                }
+            
+            # Create OpenAI client with new SDK
+            client = openai.OpenAI(api_key=openai_key)
+            
+            # Prepare the grading prompt with marking scheme if provided
+            if marking_scheme_content:
+                enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+            else:
+                enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
+                    {"role": "user", "content": enhanced_prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+
+            return {
+                'success': True,
+                'grade': response.choices[0].message.content,
+                'model': model,
+                'provider': 'OpenAI',
+                'usage': {
+                    'prompt_tokens': response.usage.prompt_tokens,
+                    'completion_tokens': response.usage.completion_tokens,
+                    'total_tokens': response.usage.total_tokens
+                }
+            }
+        except openai.AuthenticationError:
+            return {
+                'success': False,
+                'error': "OpenAI API authentication failed. Please check your API key.",
+                'provider': 'OpenAI'
+            }
+        except openai.RateLimitError:
+            return {
+                'success': False,
+                'error': "OpenAI API rate limit exceeded. Please try again later.",
+                'provider': 'OpenAI'
+            }
+        except openai.APIError as e:
+            return {
+                'success': False,
+                'error': f"OpenAI API error: {str(e)}",
+                'provider': 'OpenAI'
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f"Unexpected error with OpenAI API: {str(e)}",
+                'provider': 'OpenAI'
+            }
+
+
 def get_llm_provider(provider_name):
     """Factory function to get an LLM provider instance."""
     if provider_name == 'OpenRouter':
@@ -339,6 +487,10 @@ def get_llm_provider(provider_name):
         return LMStudioLLMProvider()
     elif provider_name == 'Ollama':
         return OllamaLLMProvider()
+    elif provider_name == 'Gemini':
+        return GeminiLLMProvider()
+    elif provider_name == 'OpenAI':
+        return OpenAILLMProvider()
     else:
         raise ValueError(f"Unknown LLM provider: {provider_name}")
 
@@ -360,3 +512,15 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=
     """Backward compatibility wrapper for LM Studio grading."""
     provider = LMStudioLLMProvider()
     return provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
+
+
+def grade_with_gemini(text, prompt, model="gemini-2.0-flash-exp", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    """Backward compatibility wrapper for Gemini grading."""
+    provider = GeminiLLMProvider()
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
+
+
+def grade_with_openai(text, prompt, model="gpt-4o", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    """Backward compatibility wrapper for OpenAI grading."""
+    provider = OpenAILLMProvider()
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
