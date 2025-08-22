@@ -1,0 +1,24 @@
+[Unit]
+Description=Document Grading App - Celery Worker
+After=network.target redis.service valkey.service
+Wants=redis.service valkey.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/grading-app
+Environment=PATH=/opt/grading-app/venv/bin
+ExecStart=/opt/grading-app/venv/bin/celery -A tasks worker --loglevel=info --concurrency=4 --queues=grading,maintenance
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/grading-app
+
+[Install]
+WantedBy=multi-user.target
