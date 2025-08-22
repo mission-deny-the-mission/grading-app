@@ -1008,10 +1008,16 @@ def batches():
 
     # Get batch templates for creation
     templates = BatchTemplate.query.filter_by(is_public=True).order_by(BatchTemplate.usage_count.desc()).all()
+    
+    # Get saved prompts and marking schemes for batch creation
+    saved_prompts = SavedPrompt.query.order_by(SavedPrompt.name).all()
+    saved_marking_schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()
 
     return render_template('batches.html',
                          batches=[b.to_dict() for b in batches],
                          templates=[t.to_dict() for t in templates],
+                         saved_prompts=[p.to_dict() for p in saved_prompts],
+                         saved_marking_schemes=[s.to_dict() for s in saved_marking_schemes],
                          filter_options={
                              'statuses': [s[0] for s in all_statuses],
                              'priorities': sorted([p[0] for p in all_priorities]),

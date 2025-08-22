@@ -186,6 +186,30 @@
                         <input type="number" class="form-control" id="batchPriority" name="priority" min="1" max="10" value="5">
                     </div>
                     <div class="mb-3">
+                        <label for="batchPrompt" class="form-label">Default Prompt (Optional)</label>
+                        <textarea class="form-control" id="batchPrompt" name="prompt" rows="3" placeholder="Default prompt for all jobs in this batch"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="batchSavedPrompt" class="form-label">Saved Prompt (Optional)</label>
+                            <select class="form-select" id="batchSavedPrompt" name="saved_prompt_id">
+                                <option value="">No saved prompt</option>
+                                {% for prompt in saved_prompts %}
+                                <option value="{{ prompt.id }}">{{ prompt.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="batchSavedMarkingScheme" class="form-label">Saved Marking Scheme (Optional)</label>
+                            <select class="form-select" id="batchSavedMarkingScheme" name="saved_marking_scheme_id">
+                                <option value="">No saved marking scheme</option>
+                                {% for scheme in saved_marking_schemes %}
+                                <option value="{{ scheme.id }}">{{ scheme.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
                         <label for="batchTags" class="form-label">Tags (comma-separated)</label>
                         <input type="text" class="form-control" id="batchTags" name="tags" placeholder="e.g., academic, research">
                     </div>
@@ -238,6 +262,9 @@
             const temperature = parseFloat($('#batchTemperature').val());
             const maxTokens = parseInt($('#batchMaxTokens').val());
             const priority = parseInt($('#batchPriority').val());
+            const prompt = $('#batchPrompt').val();
+            const savedPromptId = $('#batchSavedPrompt').val();
+            const savedMarkingSchemeId = $('#batchSavedMarkingScheme').val();
             const tags = $('#batchTags').val().split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
             const deadline = $('#batchDeadline').val();
             const autoAssignJobs = $('#autoAssignJobs').prop('checked');
@@ -255,6 +282,9 @@
                     temperature: temperature,
                     max_tokens: maxTokens,
                     priority: priority,
+                    prompt: prompt,
+                    saved_prompt_id: savedPromptId,
+                    saved_marking_scheme_id: savedMarkingSchemeId,
                     tags: tags,
                     deadline: deadline,
                     auto_assign_jobs: autoAssignJobs
