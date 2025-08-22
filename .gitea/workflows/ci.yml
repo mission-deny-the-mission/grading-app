@@ -40,13 +40,31 @@ jobs:
 
       - name: Run tests (pytest)
         run: |
-          docker run --rm --name grading-app-test \
-            --network grading-app-ci \
-            -u root \
+          # Sanity check: list files and ensure tests exist
+          docker run --rm \
             -v "$PWD":/workspace \
             -w /workspace \
             grading-app-dev:ci \
-            pytest
+            bash -lc "python -V && pip list | head -n 50 && ls -la && ls -la tests || true"
+
+          # Collect-only to confirm discovery
+          docker run --rm \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            grading-app-dev:ci \
+            pytest --collect-only -q || true
+
+          # Run the test suite explicitly against tests/ and generate coverage
+          docker run --rm --name grading-app-test \
+            --network grading-app-ci \
+            -u root \
+            -e OPENROUTER_API_KEY=dummy \
+            -e CLAUDE_API_KEY=dummy \
+            -e LM_STUDIO_URL=http://localhost:1234/v1 \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            grading-app-dev:ci \
+            pytest -v tests/
 
       - name: Upload coverage artifact
         if: always()
