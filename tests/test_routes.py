@@ -170,26 +170,30 @@ class TestFileUpload:
     @pytest.mark.api
     
     @patch('app.process_job.delay')
+    @patch.dict('os.environ', {'OPENROUTER_API_KEY': ''}, clear=False)
     def test_single_file_upload(self, mock_process_job, client, sample_text_file):
         """Test uploading a single file."""
         mock_process_job.return_value = MagicMock(id='test-task-id')
         
-        with open(sample_text_file, 'rb') as f:
-            response = client.post('/upload', data={
-                'file': (f, 'test_document.txt'),
-                'prompt': 'Please grade this document.',
-                'provider': 'openrouter',
-                'customModel': 'anthropic/claude-3-5-sonnet-20241022'
-            })
-        
-        # The upload will fail because API keys are not configured in test environment
-        assert response.status_code == 400
-        
-        data = json.loads(response.data)
-        assert 'error' in data
-        assert 'API key' in data['error']
+        # Patch the app's OPENROUTER_API_KEY to simulate missing key
+        with patch('app.OPENROUTER_API_KEY', ''):
+            with open(sample_text_file, 'rb') as f:
+                response = client.post('/upload', data={
+                    'file': (f, 'test_document.txt'),
+                    'prompt': 'Please grade this document.',
+                    'provider': 'openrouter',
+                    'customModel': 'anthropic/claude-3-5-sonnet-20241022'
+                })
+            
+            # The upload will fail because API keys are not configured in test environment
+            assert response.status_code == 400
+            
+            data = json.loads(response.data)
+            assert 'error' in data
+            assert 'API key' in data['error']
     
     @patch('app.process_job.delay')
+    @patch.dict('os.environ', {'OPENROUTER_API_KEY': ''}, clear=False)
     def test_file_upload_with_marking_scheme(self, mock_process_job, client, sample_text_file):
         """Test uploading a file with a marking scheme."""
         mock_process_job.return_value = MagicMock(id='test-task-id')
@@ -197,21 +201,23 @@ class TestFileUpload:
         # Create marking scheme content
         marking_scheme_content = "Test marking scheme content"
         
-        with open(sample_text_file, 'rb') as f:
-            response = client.post('/upload', data={
-                'file': (f, 'test_document.txt'),
-                'prompt': 'Please grade this document.',
-                'provider': 'openrouter',
-                'customModel': 'anthropic/claude-3-5-sonnet-20241022',
-                'marking_scheme': (BytesIO(marking_scheme_content.encode()), 'rubric.txt')
-            })
-        
-        # The upload will fail because API keys are not configured in test environment
-        assert response.status_code == 400
-        
-        data = json.loads(response.data)
-        assert 'error' in data
-        assert 'API key' in data['error']
+        # Patch the app's OPENROUTER_API_KEY to simulate missing key
+        with patch('app.OPENROUTER_API_KEY', ''):
+            with open(sample_text_file, 'rb') as f:
+                response = client.post('/upload', data={
+                    'file': (f, 'test_document.txt'),
+                    'prompt': 'Please grade this document.',
+                    'provider': 'openrouter',
+                    'customModel': 'anthropic/claude-3-5-sonnet-20241022',
+                    'marking_scheme': (BytesIO(marking_scheme_content.encode()), 'rubric.txt')
+                })
+            
+            # The upload will fail because API keys are not configured in test environment
+            assert response.status_code == 400
+            
+            data = json.loads(response.data)
+            assert 'error' in data
+            assert 'API key' in data['error']
     
     def test_file_upload_invalid_file(self, client):
         """Test uploading an invalid file."""
@@ -223,15 +229,18 @@ class TestFileUpload:
         
         assert response.status_code == 400
     
+    @patch.dict('os.environ', {'OPENROUTER_API_KEY': ''}, clear=False)
     def test_file_upload_missing_required_fields(self, client, sample_text_file):
         """Test uploading a file with missing required fields."""
-        with open(sample_text_file, 'rb') as f:
-            response = client.post('/upload', data={
-                'file': (f, 'test_document.txt')
-                # Missing prompt and provider
-            })
-        
-        assert response.status_code == 400
+        # Patch the app's OPENROUTER_API_KEY to simulate missing key
+        with patch('app.OPENROUTER_API_KEY', ''):
+            with open(sample_text_file, 'rb') as f:
+                response = client.post('/upload', data={
+                    'file': (f, 'test_document.txt')
+                    # Missing prompt and provider
+                })
+            
+            assert response.status_code == 400
     
     @patch('app.process_batch.delay')
     def test_bulk_upload(self, mock_process_batch, client, sample_text_file):

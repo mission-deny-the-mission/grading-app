@@ -44,7 +44,7 @@
                         <div class="row">
                             <div class="col-6">
                                 <small class="text-muted">Provider</small>
-                                <div class="fw-bold">{{ batch.provider.title() }}</div>
+                                <div class="fw-bold">{{ batch.provider.title() if batch.provider else 'Not set' }}</div>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Model</small>
@@ -126,7 +126,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Jobs in this Batch</h5>
                 <div>
-                    {% if batch.status in ['draft', 'pending', 'paused'] %}
+                    {% if batch.status not in ['failed', 'cancelled', 'archived'] %}
                     <button class="btn btn-sm btn-success me-2" data-bs-toggle="modal" data-bs-target="#createJobModal">
                         <i class="fas fa-plus me-1"></i>Create Job
                     </button>
@@ -180,7 +180,7 @@
                                     <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-sm btn-outline-primary me-1">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    {% if batch.status in ['draft', 'pending', 'paused'] %}
+                                    {% if batch.status not in ['failed', 'cancelled', 'archived'] %}
                                     <button class="btn btn-sm btn-outline-danger" onclick="removeJobFromBatch('{{ job.id }}', '{{ job.job_name }}')">
                                         <i class="fas fa-times"></i>
                                     </button>
@@ -195,7 +195,7 @@
                 <div class="text-center py-4">
                     <i class="fas fa-tasks fa-2x text-muted mb-3"></i>
                     <p class="text-muted">No jobs found in this batch</p>
-                    {% if batch.status in ['draft', 'pending', 'paused'] %}
+                    {% if batch.status not in ['failed', 'cancelled', 'archived'] %}
                     <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#createJobModal">
                         <i class="fas fa-plus me-1"></i>Create Your First Job
                     </button>

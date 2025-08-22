@@ -936,6 +936,8 @@ class JobBatch(db.Model):
 
     def can_add_jobs(self):
         """Check if jobs can be added to this batch."""
+        # Only allow adding jobs to batches that are still in an active state
+        # Draft, pending, and paused batches can accept new jobs
         return self.status in ['draft', 'pending', 'paused']
 
     def remove_job(self, job):

@@ -368,7 +368,7 @@ content %}
                                 <option value="">Loading batches...</option>
                             </select>
                             <div class="form-text">
-                                Choose an existing batch to add this job to. Only active batches are shown.
+                                Choose an existing batch to add this job to. All batches except failed, cancelled, or archived ones are available.
                             </div>
                         </div>
                     </div>
@@ -635,13 +635,13 @@ content %}
                 batchSelect.innerHTML = '<option value="">Select a batch...</option>';
                 
                 if (data.success && data.batches && data.batches.length > 0) {
-                    // Filter to show only active batches (not completed, failed, cancelled, or archived)
-                    const activeBatches = data.batches.filter(batch => 
-                        ['draft', 'pending', 'processing', 'paused'].includes(batch.status)
+                    // Filter to show batches that can accept new jobs (exclude failed, cancelled, archived)
+                    const availableBatches = data.batches.filter(batch => 
+                        !['failed', 'cancelled', 'archived'].includes(batch.status)
                     );
                     
-                    if (activeBatches.length > 0) {
-                        activeBatches.forEach(batch => {
+                    if (availableBatches.length > 0) {
+                        availableBatches.forEach(batch => {
                             const option = document.createElement('option');
                             option.value = batch.id;
                             option.textContent = `${batch.batch_name} (${batch.total_jobs} jobs, ${batch.status})`;
@@ -650,7 +650,7 @@ content %}
                     } else {
                         const option = document.createElement('option');
                         option.value = '';
-                        option.textContent = 'No active batches available';
+                        option.textContent = 'No available batches';
                         batchSelect.appendChild(option);
                     }
                 } else {
