@@ -76,7 +76,7 @@ jobs:
         if: always()
         env:
           GITEA_TOKEN: ${{ github.token }}
-          SERVER_URL: ${{ github.server_url }}
+          SERVER_URL: https://gitea.harryslab.xyz
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         run: |
@@ -101,6 +101,41 @@ PY
             curl -s -X POST "${SERVER_URL}/api/v1/repos/${REPO}/statuses/${SHA}" \
               -H "Authorization: token ${GITEA_TOKEN}" -H "Content-Type: application/json" \
               -d "{\"state\":\"success\",\"description\":\"Coverage: ${pct}%\",\"context\":\"coverage/total\"}" || true
+          fi
+
+      - name: Update coverage badge on main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if [ -f coverage.xml ]; then
+            python - <<'PY'
+import xml.etree.ElementTree as ET, json, os
+def pct_from_xml(path='coverage.xml'):
+    root = ET.parse(path).getroot()
+    if 'line-rate' in root.attrib:
+        return float(root.attrib['line-rate']) * 100.0
+    lc = int(root.attrib.get('lines-covered', 0))
+    lv = int(root.attrib.get('lines-valid', 0))
+    return (lc / lv * 100.0) if lv else 0.0
+pct = round(pct_from_xml())
+color = 'red' if pct < 60 else ('yellow' if pct < 80 else 'green')
+data = {
+  "schemaVersion": 1,
+  "label": "coverage",
+  "message": f"{pct}%",
+  "color": color
+}
+os.makedirs('badges', exist_ok=True)
+with open('badges/coverage.json', 'w') as f:
+    json.dump(data, f)
+print(f"Wrote badges/coverage.json with {pct}% ({color})")
+PY
+            if ! git diff --quiet -- badges/coverage.json 2>/dev/null; then
+              git config user.name "gitea-actions"
+              git config user.email "actions@local"
+              git add badges/coverage.json
+              git commit -m "chore(ci): update coverage badge [skip ci]"
+              git push origin HEAD:main || true
+            fi
           fi
 
       - name: Upload coverage artifact
