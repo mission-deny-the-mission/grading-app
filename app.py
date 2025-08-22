@@ -707,7 +707,8 @@ def create_job():
             max_tokens=data.get('max_tokens', 2000),
             marking_scheme_id=data.get('marking_scheme_id'),
             saved_prompt_id=data.get('saved_prompt_id'),
-            saved_marking_scheme_id=data.get('saved_marking_scheme_id')
+            saved_marking_scheme_id=data.get('saved_marking_scheme_id'),
+            batch_id=data.get('batch_id')
         )
 
         # Increment usage counts for saved configurations
@@ -721,13 +722,34 @@ def create_job():
             if saved_scheme:
                 saved_scheme.increment_usage()
 
+        # Handle batch assignment
+        batch = None
+        if data.get('batch_id'):
+            batch = JobBatch.query.get(data['batch_id'])
+            if not batch:
+                return jsonify({
+                    'success': False,
+                    'error': f'Batch with ID {data["batch_id"]} not found'
+                }), 400
+
         db.session.add(job)
         db.session.commit()
+
+        # Add job to batch if specified
+        if batch:
+            batch.add_job(job)
+            db.session.commit()
+
+        message = 'Job created successfully'
+        if batch:
+            message += f' and added to batch "{batch.batch_name}"'
 
         return jsonify({
             'success': True,
             'job_id': job.id,
-            'message': 'Job created successfully'
+            'message': message,
+            'batch_id': batch.id if batch else None,
+            'batch_name': batch.batch_name if batch else None
         })
 
     except Exception as e:
