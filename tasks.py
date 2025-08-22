@@ -17,7 +17,27 @@ load_dotenv()
 def create_app():
     """Return the main Flask app to share DB/session/config with web routes and tests."""
     # Import here to avoid circular import at module load time
-    from .app import app as flask_app
+    import sys
+    import os
+    
+    # Add the current directory to Python path if not already there
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    
+    try:
+        from .app import app as flask_app
+    except ImportError:
+        try:
+            from app import app as flask_app
+        except ImportError:
+            # Last resort: try importing with explicit path manipulation
+            import importlib.util
+            app_path = os.path.join(current_dir, 'app.py')
+            spec = importlib.util.spec_from_file_location("app", app_path)
+            app_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(app_module)
+            flask_app = app_module.app
     return flask_app
 
 # Initialize Celery
@@ -302,7 +322,7 @@ def process_job(self, job_id):
             #     print(f"Job {job_id} is waiting - job {_currently_processing_job} is currently being processed")
             #     self.retry(countdown=30, max_retries=10)
             #     return False
-            # 
+            #
             # _currently_processing_job = job_id  <-- Remove this
             
             job = db.session.get(GradingJob, job_id)
@@ -315,14 +335,8 @@ def process_job(self, job_id):
             job.status = 'processing'
             db.session.commit()
             
-            # Process each submission sequentially (include failed submissions for retries)
-            pending_submissions = [s for s in job.submissions if s.status in ['pending', 'failed']]
-            
-            # Reset status to pending for retries
-            for submission in pending_submissions:
-                if submission.status == 'failed':
-                    submission.set_status('pending')
-                    db.session.commit()
+            # Process each submission sequentially
+            pending_submissions = [s for s in job.submissions if s.status == 'pending']
             
             if not pending_submissions:
                 job.update_progress()
@@ -343,7 +357,7 @@ def process_job(self, job_id):
             
             print(f"Completed processing job: {job.job_name} (ID: {job_id})")
             return True
-            
+        
         except Exception as e:
             print(f"Error processing job {job_id}: {str(e)}")
             job = db.session.get(GradingJob, job_id)
@@ -351,6 +365,27 @@ def process_job(self, job_id):
                 job.status = 'failed'
                 db.session.commit()
             return False
+
+
+@celery_app.task(bind=True)
+def retry_submission_task(self, submission_id):
+    """
+    Task to retry a single submission.
+    Resets status to 'pending' and re-triggers job processing.
+    """
+    app = create_app()
+    with app.app_context():
+        submission = db.session.get(Submission, submission_id)
+        if not submission:
+            print(f"Retry task: Submission {submission_id} not found.")
+            return
+
+        job_id = submission.job_id
+        submission.set_status('pending')
+        db.session.commit()
+
+        # Re-trigger the main job processing task
+        process_job.delay(job_id)
 
 
 def process_job_sync(job_id):
@@ -368,14 +403,8 @@ def process_job_sync(job_id):
             job.status = 'processing'
             db.session.commit()
             
-            # Process each submission sequentially (include failed submissions for retries)
-            pending_submissions = [s for s in job.submissions if s.status in ['pending', 'failed']]
-            
-            # Reset status to pending for retries
-            for submission in pending_submissions:
-                if submission.status == 'failed':
-                    submission.set_status('pending')
-                    db.session.commit()
+            # Process each submission sequentially
+            pending_submissions = [s for s in job.submissions if s.status == 'pending']
             
             if not pending_submissions:
                 # No pending submissions, check if job should be completed
