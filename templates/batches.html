@@ -92,7 +92,12 @@
                                 <div class="progress-bar {% if batch.status == 'failed' %}bg-danger{% elif batch.status == 'completed' %}bg-success{% elif batch.progress > 0 %}bg-info{% else %}bg-secondary{% endif %}" role="progressbar" style="width: {{ batch.progress }}%;" aria-valuenow="{{ batch.progress }}" aria-valuemin="0" aria-valuemax="100">{{ batch.progress }}%</div>
                             </div>
                         </td>
-                        <td>{{ batch.completed_jobs }}/{{ batch.failed_jobs }}/{{ batch.total_jobs }}</td>
+                        <td>
+                            {{ batch.completed_jobs }}/{{ batch.failed_jobs }}/{{ batch.total_jobs }}
+                            {% if batch.status in ['draft', 'pending', 'paused'] %}
+                            <br><small class="text-success"><i class="fas fa-plus-circle me-1"></i>Can add jobs</small>
+                            {% endif %}
+                        </td>
                         <td>{{ batch.updated_at[:16].replace('T', ' ') if batch.updated_at else 'N/A' }}</td>
                         <td>
                             <div class="d-flex">
@@ -181,6 +186,71 @@
                         <input type="number" class="form-control" id="batchPriority" name="priority" min="1" max="10" value="5">
                     </div>
                     <div class="mb-3">
+                        <label for="batchPrompt" class="form-label">Default Prompt (Optional)</label>
+                        <textarea class="form-control" id="batchPrompt" name="prompt" rows="3" placeholder="Default prompt for all jobs in this batch"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="batchSavedPrompt" class="form-label">Saved Prompt (Optional)</label>
+                            <select class="form-select" id="batchSavedPrompt" name="saved_prompt_id">
+                                <option value="">No saved prompt</option>
+                                {% for prompt in saved_prompts %}
+                                <option value="{{ prompt.id }}">{{ prompt.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="batchSavedMarkingScheme" class="form-label">Saved Marking Scheme (Optional)</label>
+                            <select class="form-select" id="batchSavedMarkingScheme" name="saved_marking_scheme_id">
+                                <option value="">No saved marking scheme</option>
+                                {% for scheme in saved_marking_schemes %}
+                                <option value="{{ scheme.id }}">{{ scheme.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableMultiModelComparison" name="enable_multi_model_comparison">
+                            <label class="form-check-label" for="enableMultiModelComparison">
+                                Enable multi-model comparison for batch
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">When enabled, jobs in this batch will run against multiple AI models for comparison</small>
+                    </div>
+                    
+                    <!-- Multi-model selection section -->
+                    <div id="multiModelSection" style="display: none;" class="mb-3">
+                        <label class="form-label">Select Models to Compare</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted">OpenRouter Models</h6>
+                                <div id="batchPopularModels">
+                                    <!-- Popular models will be loaded here -->
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted">Other Providers</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input model-checkbox" type="checkbox" 
+                                           name="models_to_compare[]" value="claude-3-5-sonnet-20241022" id="batch_claude_direct">
+                                    <label class="form-check-label" for="batch_claude_direct">
+                                        Claude 3.5 Sonnet (Direct API)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input model-checkbox" type="checkbox" 
+                                           name="models_to_compare[]" value="local-model" id="batch_lm_studio">
+                                    <label class="form-check-label" for="batch_lm_studio">
+                                        LM Studio (Local)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Select 2 or more models to enable comparison. Individual jobs can override these settings.</small>
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="batchTags" class="form-label">Tags (comma-separated)</label>
                         <input type="text" class="form-control" id="batchTags" name="tags" placeholder="e.g., academic, research">
                     </div>
@@ -233,9 +303,18 @@
             const temperature = parseFloat($('#batchTemperature').val());
             const maxTokens = parseInt($('#batchMaxTokens').val());
             const priority = parseInt($('#batchPriority').val());
+            const prompt = $('#batchPrompt').val();
+            const savedPromptId = $('#batchSavedPrompt').val();
+            const savedMarkingSchemeId = $('#batchSavedMarkingScheme').val();
             const tags = $('#batchTags').val().split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
             const deadline = $('#batchDeadline').val();
             const autoAssignJobs = $('#autoAssignJobs').prop('checked');
+            
+            // Collect selected models for multi-model comparison
+            const selectedModels = [];
+            $('input[name="models_to_compare[]"]:checked').each(function() {
+                selectedModels.push($(this).val());
+            });
 
             $.ajax({
                 url: '{{ url_for("create_batch") }}',
@@ -250,9 +329,13 @@
                     temperature: temperature,
                     max_tokens: maxTokens,
                     priority: priority,
+                    prompt: prompt,
+                    saved_prompt_id: savedPromptId,
+                    saved_marking_scheme_id: savedMarkingSchemeId,
                     tags: tags,
                     deadline: deadline,
-                    auto_assign_jobs: autoAssignJobs
+                    auto_assign_jobs: autoAssignJobs,
+                    models_to_compare: selectedModels.length > 0 ? selectedModels : null
                 }),
                 success: function(response) {
                     if (response.success) {
@@ -294,6 +377,69 @@
                 $('#batchMaxTokens').val('2000');
             }
         });
+
+        // Handle multi-model comparison toggle
+        $('#enableMultiModelComparison').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#multiModelSection').show();
+                loadBatchPopularModels();
+            } else {
+                $('#multiModelSection').hide();
+                // Uncheck all model selections
+                $('input[name="models_to_compare[]"]').prop('checked', false);
+            }
+        });
+        
+        // Load popular models for batch multi-model comparison
+        function loadBatchPopularModels() {
+            const batchPopularModelsDiv = document.getElementById('batchPopularModels');
+            batchPopularModelsDiv.innerHTML = '<p class="text-muted">Loading models...</p>';
+            
+            fetch('/api/models/openrouter')
+                .then(response => response.json())
+                .then(data => {
+                    batchPopularModelsDiv.innerHTML = '';
+                    
+                    if (data.popular && data.popular.length > 0) {
+                        data.popular.forEach(model => {
+                            const modelId = 'batch_' + model.replace(/[^a-zA-Z0-9]/g, '_');
+                            const displayName = getBatchModelDisplayName(model);
+                            
+                            const div = document.createElement('div');
+                            div.className = 'form-check';
+                            div.innerHTML = `
+                                <input class="form-check-input model-checkbox" type="checkbox" 
+                                       name="models_to_compare[]" value="${model}" id="${modelId}">
+                                <label class="form-check-label" for="${modelId}">
+                                    ${displayName}
+                                </label>
+                            `;
+                            batchPopularModelsDiv.appendChild(div);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading models:', error);
+                    batchPopularModelsDiv.innerHTML = '<p class="text-muted">Error loading models</p>';
+                });
+        }
+        
+        function getBatchModelDisplayName(modelName) {
+            // Create a more readable display name from the model identifier
+            const nameMap = {
+                'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
+                'openai/gpt-4o': 'GPT-4o',
+                'openai/gpt-4o-mini': 'GPT-4o Mini',
+                'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
+                'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
+                'google/gemini-pro-1.5': 'Gemini Pro 1.5',
+                'mistralai/mistral-7b-instruct': 'Mistral 7B',
+                'openai/gpt-4-turbo': 'GPT-4 Turbo',
+                'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku'
+            };
+            
+            return nameMap[modelName] || modelName;
+        }
 
         // Handle batch action buttons (start, pause, resume, cancel, retry, duplicate, delete, archive)
         $('#batches-table-body').on('click', '.start-batch-btn, .pause-batch-btn, .resume-batch-btn, .cancel-batch-btn, .retry-batch-btn, .duplicate-batch-btn, .delete-batch-btn, .archive-batch-btn', function() {

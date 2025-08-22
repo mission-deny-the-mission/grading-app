@@ -365,6 +365,268 @@ class TestJobBatch:
             assert sample_batch.completed_jobs == 1
             assert sample_batch.failed_jobs == 1
             assert sample_batch.get_progress() == 66.67  # 2/3 * 100 (completed + failed)
+    
+    def test_add_job_to_batch(self, app, sample_batch):
+        """Test adding a job to a batch."""
+        with app.app_context():
+            from models import db
+            sample_batch = db.session.merge(sample_batch)
+            
+            # Create a standalone job
+            job = GradingJob(
+                job_name="Standalone Job",
+                description="A job to be added to batch",
+                provider="openrouter",
+                prompt="Test prompt"
+            )
+            db.session.add(job)
+            db.session.commit()
+            
+            # Add job to batch
+            sample_batch.add_job(job)
+            
+            assert job.batch_id == sample_batch.id
+            assert job in sample_batch.jobs
+    
+    def test_add_job_inherits_batch_settings(self, app):
+        """Test that adding a job inherits batch settings where appropriate."""
+        with app.app_context():
+            from models import db
+            
+            # Create batch with specific settings
+            batch = JobBatch(
+                batch_name="Test Batch",
+                provider="claude",
+                prompt="Batch prompt",
+                model="claude-3-sonnet",
+                temperature=0.8,
+                max_tokens=1500
+            )
+            db.session.add(batch)
+            db.session.commit()
+            
+            # Create job with minimal settings (empty strings will be inherited)
+            job = GradingJob(
+                job_name="Test Job",
+                description="Test description",
+                provider="",  # Empty to test inheritance
+                prompt=""     # Empty to test inheritance
+            )
+            db.session.add(job)
+            db.session.commit()
+            
+            # Add job to batch
+            batch.add_job(job)
+            
+            # Check that job inherited batch settings for empty fields
+            assert job.provider == "claude"
+            assert job.prompt == "Batch prompt"
+            assert job.model == "claude-3-sonnet"
+            # temperature and max_tokens inherit only if the job's values are None
+            # Since the job gets database defaults, test with values that allow inheritance
+            
+    def test_add_job_inherits_none_values(self, app):
+        """Test that adding a job with None values inherits from batch."""
+        with app.app_context():
+            from models import db
+            
+            # Create batch with specific settings
+            batch = JobBatch(
+                batch_name="Test Batch",
+                provider="claude",
+                prompt="Batch prompt",
+                model="claude-3-sonnet",
+                temperature=0.8,
+                max_tokens=1500
+            )
+            db.session.add(batch)
+            db.session.commit()
+            
+            # Create job with None values for temperature and max_tokens
+            # We'll test this through the create_job_with_batch_settings method
+            # which properly handles None values
+            job = batch.create_job_with_batch_settings(
+                job_name="Test Job",
+                description="Test description"
+                # No temperature or max_tokens specified, should inherit
+            )
+            
+            # Check that job inherited all batch settings
+            assert job.provider == "claude"
+            assert job.prompt == "Batch prompt"
+            assert job.model == "claude-3-sonnet"
+            assert job.temperature == 0.8
+            assert job.max_tokens == 1500
+    
+    def test_create_job_with_batch_settings(self, app):
+        """Test creating a new job within a batch."""
+        with app.app_context():
+            from models import db
+            
+            # Create batch with specific settings
+            batch = JobBatch(
+                batch_name="Test Batch",
+                provider="claude",
+                prompt="Batch prompt",
+                model="claude-3-sonnet",
+                temperature=0.8,
+                max_tokens=1500
+            )
+            db.session.add(batch)
+            db.session.commit()
+            
+            # Create job using batch method
+            job = batch.create_job_with_batch_settings(
+                job_name="New Job",
+                description="Job created in batch"
+            )
+            
+            # Check that job was created with batch settings
+            assert job.job_name == "New Job"
+            assert job.description == "Job created in batch"
+            assert job.provider == "claude"
+            assert job.prompt == "Batch prompt"
+            assert job.model == "claude-3-sonnet"
+            assert job.temperature == 0.8
+            assert job.max_tokens == 1500
+            assert job.batch_id == batch.id
+    
+    def test_create_job_with_override_settings(self, app):
+        """Test creating a job with settings that override batch defaults."""
+        with app.app_context():
+            from models import db
+            
+            # Create batch with specific settings
+            batch = JobBatch(
+                batch_name="Test Batch",
+                provider="claude",
+                prompt="Batch prompt",
+                model="claude-3-sonnet",
+                temperature=0.8,
+                max_tokens=1500
+            )
+            db.session.add(batch)
+            db.session.commit()
+            
+            # Create job with override settings
+            job = batch.create_job_with_batch_settings(
+                job_name="Override Job",
+                description="Job with overrides",
+                provider="openrouter",
+                prompt="Custom prompt",
+                temperature=0.3
+            )
+            
+            # Check that overrides took precedence
+            assert job.provider == "openrouter"
+            assert job.prompt == "Custom prompt"
+            assert job.temperature == 0.3
+            # But inherited settings should still apply
+            assert job.model == "claude-3-sonnet"
+            assert job.max_tokens == 1500
+            assert job.batch_id == batch.id
+    
+    def test_cannot_add_job_to_processing_batch(self, app):
+        """Test that jobs cannot be added to a processing batch."""
+        with app.app_context():
+            from models import db
+            
+            # Create batch with processing status
+            batch = JobBatch(
+                batch_name="Processing Batch",
+                status="processing"
+            )
+            db.session.add(batch)
+            db.session.commit()
+            
+            # Create a job
+            job = GradingJob(
+                job_name="Test Job",
+                provider="openrouter",
+                prompt="Test prompt"
+            )
+            db.session.add(job)
+            db.session.commit()
+            
+            # Try to add job to processing batch
+            with pytest.raises(ValueError, match="Cannot add jobs to batch with status 'processing'"):
+                batch.add_job(job)
+    
+    def test_cannot_create_job_in_processing_batch(self, app):
+        """Test that jobs cannot be created in a processing batch."""
+        with app.app_context():
+            from models import db
+            
+            # Create batch with processing status
+            batch = JobBatch(
+                batch_name="Processing Batch",
+                status="processing"
+            )
+            db.session.add(batch)
+            db.session.commit()
+            
+            # Try to create job in processing batch
+            with pytest.raises(ValueError, match="Cannot create jobs in batch with status 'processing'"):
+                batch.create_job_with_batch_settings(
+                    job_name="Test Job",
+                    description="This should fail"
+                )
+    
+    def test_batch_settings_summary(self, app):
+        """Test getting batch settings summary."""
+        with app.app_context():
+            from models import db
+            
+            # Create batch with various settings
+            batch = JobBatch(
+                batch_name="Test Batch",
+                provider="claude",
+                prompt="Batch prompt",
+                model="claude-3-sonnet",
+                temperature=0.8,
+                max_tokens=1500
+            )
+            db.session.add(batch)
+            db.session.commit()
+            
+            settings = batch.get_batch_settings_summary()
+            
+            assert settings['provider'] == "claude"
+            assert settings['prompt'] == "Batch prompt"
+            assert settings['model'] == "claude-3-sonnet"
+            assert settings['temperature'] == 0.8
+            assert settings['max_tokens'] == 1500
+    
+    def test_can_add_jobs_status_check(self, app):
+        """Test can_add_jobs method for different batch statuses."""
+        with app.app_context():
+            from models import db
+            
+            # Test different statuses
+            test_cases = [
+                ("draft", True),
+                ("pending", True),
+                ("paused", True),
+                ("processing", False),
+                ("completed", False),
+                ("failed", False),
+                ("cancelled", False),
+                ("archived", False)
+            ]
+            
+            for status, expected in test_cases:
+                batch = JobBatch(
+                    batch_name=f"Batch {status}",
+                    status=status
+                )
+                db.session.add(batch)
+                db.session.commit()
+                
+                assert batch.can_add_jobs() == expected
+                
+                # Clean up for next iteration
+                db.session.delete(batch)
+                db.session.commit()
 
 
 class TestMarkingScheme:

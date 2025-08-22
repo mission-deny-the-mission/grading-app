@@ -66,6 +66,11 @@
                         <div class="small text-muted">
                             <div><i class="fas fa-robot me-1"></i>{{ job.provider.title() }}</div>
                             <div><i class="fas fa-clock me-1"></i>{{ job.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                            {% if job.batch_id %}
+                            <div><i class="fas fa-layer-group me-1"></i>In batch: <a href="/batches/{{ job.batch_id }}" class="text-decoration-none">{{ job.batch.batch_name if job.batch else 'Unknown' }}</a></div>
+                            {% else %}
+                            <div class="text-success"><i class="fas fa-plus-circle me-1"></i>Available for batch</div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="card-footer">

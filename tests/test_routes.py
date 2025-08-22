@@ -170,26 +170,30 @@ class TestFileUpload:
     @pytest.mark.api
     
     @patch('app.process_job.delay')
+    @patch.dict('os.environ', {'OPENROUTER_API_KEY': ''}, clear=False)
     def test_single_file_upload(self, mock_process_job, client, sample_text_file):
         """Test uploading a single file."""
         mock_process_job.return_value = MagicMock(id='test-task-id')
         
-        with open(sample_text_file, 'rb') as f:
-            response = client.post('/upload', data={
-                'file': (f, 'test_document.txt'),
-                'prompt': 'Please grade this document.',
-                'provider': 'openrouter',
-                'customModel': 'anthropic/claude-3-5-sonnet-20241022'
-            })
-        
-        # The upload will fail because API keys are not configured in test environment
-        assert response.status_code == 400
-        
-        data = json.loads(response.data)
-        assert 'error' in data
-        assert 'API key' in data['error']
+        # Patch the app's OPENROUTER_API_KEY to simulate missing key
+        with patch('app.OPENROUTER_API_KEY', ''):
+            with open(sample_text_file, 'rb') as f:
+                response = client.post('/upload', data={
+                    'file': (f, 'test_document.txt'),
+                    'prompt': 'Please grade this document.',
+                    'provider': 'openrouter',
+                    'customModel': 'anthropic/claude-3-5-sonnet-20241022'
+                })
+            
+            # The upload will fail because API keys are not configured in test environment
+            assert response.status_code == 400
+            
+            data = json.loads(response.data)
+            assert 'error' in data
+            assert 'API key' in data['error']
     
     @patch('app.process_job.delay')
+    @patch.dict('os.environ', {'OPENROUTER_API_KEY': ''}, clear=False)
     def test_file_upload_with_marking_scheme(self, mock_process_job, client, sample_text_file):
         """Test uploading a file with a marking scheme."""
         mock_process_job.return_value = MagicMock(id='test-task-id')
@@ -197,21 +201,23 @@ class TestFileUpload:
         # Create marking scheme content
         marking_scheme_content = "Test marking scheme content"
         
-        with open(sample_text_file, 'rb') as f:
-            response = client.post('/upload', data={
-                'file': (f, 'test_document.txt'),
-                'prompt': 'Please grade this document.',
-                'provider': 'openrouter',
-                'customModel': 'anthropic/claude-3-5-sonnet-20241022',
-                'marking_scheme': (BytesIO(marking_scheme_content.encode()), 'rubric.txt')
-            })
-        
-        # The upload will fail because API keys are not configured in test environment
-        assert response.status_code == 400
-        
-        data = json.loads(response.data)
-        assert 'error' in data
-        assert 'API key' in data['error']
+        # Patch the app's OPENROUTER_API_KEY to simulate missing key
+        with patch('app.OPENROUTER_API_KEY', ''):
+            with open(sample_text_file, 'rb') as f:
+                response = client.post('/upload', data={
+                    'file': (f, 'test_document.txt'),
+                    'prompt': 'Please grade this document.',
+                    'provider': 'openrouter',
+                    'customModel': 'anthropic/claude-3-5-sonnet-20241022',
+                    'marking_scheme': (BytesIO(marking_scheme_content.encode()), 'rubric.txt')
+                })
+            
+            # The upload will fail because API keys are not configured in test environment
+            assert response.status_code == 400
+            
+            data = json.loads(response.data)
+            assert 'error' in data
+            assert 'API key' in data['error']
     
     def test_file_upload_invalid_file(self, client):
         """Test uploading an invalid file."""
@@ -223,15 +229,18 @@ class TestFileUpload:
         
         assert response.status_code == 400
     
+    @patch.dict('os.environ', {'OPENROUTER_API_KEY': ''}, clear=False)
     def test_file_upload_missing_required_fields(self, client, sample_text_file):
         """Test uploading a file with missing required fields."""
-        with open(sample_text_file, 'rb') as f:
-            response = client.post('/upload', data={
-                'file': (f, 'test_document.txt')
-                # Missing prompt and provider
-            })
-        
-        assert response.status_code == 400
+        # Patch the app's OPENROUTER_API_KEY to simulate missing key
+        with patch('app.OPENROUTER_API_KEY', ''):
+            with open(sample_text_file, 'rb') as f:
+                response = client.post('/upload', data={
+                    'file': (f, 'test_document.txt')
+                    # Missing prompt and provider
+                })
+            
+            assert response.status_code == 400
     
     @patch('app.process_batch.delay')
     def test_bulk_upload(self, mock_process_batch, client, sample_text_file):
@@ -376,6 +385,144 @@ class TestBatchManagement:
         
         data = json.loads(response.data)
         assert data['success'] == True
+    
+    def test_add_jobs_to_batch(self, client, sample_batch, sample_job):
+        """Test adding existing jobs to a batch."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs', json={
+            'job_ids': [sample_job.id]
+        })
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'added_jobs' in data
+        assert len(data['added_jobs']) == 1
+        assert data['added_jobs'][0]['id'] == sample_job.id
+    
+    def test_add_jobs_to_batch_no_job_ids(self, client, sample_batch):
+        """Test adding jobs to batch with no job IDs provided."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs', json={})
+        
+        assert response.status_code == 400
+        
+        data = json.loads(response.data)
+        assert data['success'] == False
+        assert 'No job IDs provided' in data['error']
+    
+    def test_create_job_in_batch(self, client, sample_batch):
+        """Test creating a new job within a batch."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs/create', json={
+            'job_name': 'New Batch Job',
+            'description': 'A job created in the batch',
+            'provider': 'openrouter',
+            'prompt': 'Custom prompt'
+        })
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'job' in data
+        assert data['job']['job_name'] == 'New Batch Job'
+        assert data['job']['description'] == 'A job created in the batch'
+        assert data['job']['provider'] == 'openrouter'
+        assert data['job']['prompt'] == 'Custom prompt'
+    
+    def test_create_job_in_batch_no_name(self, client, sample_batch):
+        """Test creating a job in batch without job name."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs/create', json={
+            'description': 'A job without name'
+        })
+        
+        assert response.status_code == 400
+        
+        data = json.loads(response.data)
+        assert data['success'] == False
+        assert 'Job name is required' in data['error']
+    
+    def test_get_available_jobs_for_batch(self, client, sample_batch):
+        """Test getting available jobs that can be added to a batch."""
+        # Create a standalone job (not in any batch)
+        from models import GradingJob, db
+        with client.application.app_context():
+            standalone_job = GradingJob(
+                job_name="Standalone Job",
+                provider="openrouter",
+                prompt="Test prompt"
+            )
+            db.session.add(standalone_job)
+            db.session.commit()
+            standalone_job_id = standalone_job.id
+        
+        response = client.get(f'/api/batches/{sample_batch.id}/available-jobs')
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'available_jobs' in data
+        assert 'pagination' in data
+        
+        # Check that the standalone job is in the available jobs
+        job_ids = [job['id'] for job in data['available_jobs']]
+        assert standalone_job_id in job_ids
+    
+    def test_get_batch_settings(self, client, sample_batch):
+        """Test getting batch settings summary."""
+        response = client.get(f'/api/batches/{sample_batch.id}/settings')
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'settings' in data
+        settings = data['settings']
+        assert 'can_add_jobs' in settings
+        assert 'batch_name' in settings
+        assert 'batch_status' in settings
+    
+    def test_remove_job_from_batch(self, client, sample_batch):
+        """Test removing a job from a batch."""
+        # First create and add a job to the batch
+        from models import GradingJob, db
+        with client.application.app_context():
+            job = GradingJob(
+                job_name="Job to Remove",
+                provider="openrouter",
+                prompt="Test prompt"
+            )
+            db.session.add(job)
+            db.session.commit()
+            
+            # Add job to batch
+            sample_batch = db.session.merge(sample_batch)
+            sample_batch.add_job(job)
+            job_id = job.id
+        
+        # Remove job from batch
+        response = client.delete(f'/api/batches/{sample_batch.id}/jobs/{job_id}')
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'message' in data
+    
+    def test_batch_analytics(self, client, sample_batch):
+        """Test getting batch analytics."""
+        response = client.get(f'/api/batches/{sample_batch.id}/analytics')
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'analytics' in data
+        analytics = data['analytics']
+        assert 'overview' in analytics
+        assert 'job_status_breakdown' in analytics
+        assert 'provider_breakdown' in analytics
+        assert 'timeline' in analytics
 
 
 class TestSavedConfigurations:
@@ -468,8 +615,8 @@ class TestErrorHandling:
     
     def test_413_error(self, client):
         """Test 413 error handling for large files."""
-        # Create a large file content
-        large_content = b'x' * (17 * 1024 * 1024)  # 17MB
+        # Create a large file content (101MB, over the 100MB limit)
+        large_content = b'x' * (101 * 1024 * 1024)  # 101MB
         
         response = client.post('/upload', data={
             'file': (BytesIO(large_content), 'large_file.txt'),
@@ -486,3 +633,436 @@ class TestErrorHandling:
                              content_type='application/json')
         
         assert response.status_code == 400
+
+
+class TestBatchJobCreationWithFiles:
+    """Test cases for batch job creation with file uploads."""
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_create_job_with_files_success(self, mock_process_job, client, sample_batch, sample_text_file):
+        """Test successful job creation with file upload in batch."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files', 
+                                 data={
+                                     'job_name': 'Test Job with Files',
+                                     'description': 'A test job with file uploads',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert data['job']['job_name'] == 'Test Job with Files'
+        assert data['uploaded_files'] == 1
+        assert 'job' in data
+        assert 'batch' in data
+        
+        # Verify the background task was queued
+        mock_process_job.assert_called_once()
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_create_job_with_multiple_files(self, mock_process_job, client, sample_batch, sample_text_file, sample_docx_file):
+        """Test job creation with multiple files."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        with open(sample_text_file, 'rb') as f1, open(sample_docx_file, 'rb') as f2:
+            response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Multi-File Test Job',
+                                     'files[]': [
+                                         (f1, 'document1.txt'),
+                                         (f2, 'document2.docx')
+                                     ]
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert data['uploaded_files'] == 2
+        
+        # Verify the background task was queued
+        mock_process_job.assert_called_once()
+    
+    @pytest.mark.api
+    def test_create_job_with_files_missing_job_name(self, client, sample_batch, sample_text_file):
+        """Test job creation fails without job name."""
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                                 data={
+                                     'description': 'Missing job name',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert data['success'] == False
+        assert 'Job name is required' in data['error']
+    
+    @pytest.mark.api
+    def test_create_job_with_files_missing_files(self, client, sample_batch):
+        """Test job creation fails without files."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                             data={'job_name': 'Job Without Files'})
+        
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert data['success'] == False
+        assert 'No files provided' in data['error']
+    
+    @pytest.mark.api
+    def test_create_job_with_files_invalid_batch(self, client, sample_text_file):
+        """Test job creation fails with invalid batch ID."""
+        with open(sample_text_file, 'rb') as f:
+            response = client.post('/api/batches/99999/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Test Job',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        # Flask might return 400 for certain invalid ID formats
+        assert response.status_code in [400, 404]
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_create_job_with_files_inherits_batch_settings(self, mock_process_job, client, app, sample_text_file):
+        """Test that job creation inherits batch settings correctly."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        with app.app_context():
+            from models import JobBatch, db
+            # Create a batch with specific settings
+            batch = JobBatch(
+                batch_name="Batch with Settings",
+                provider="claude",
+                model="claude-3-sonnet",
+                temperature=0.8,
+                max_tokens=1500,
+                prompt="Custom batch prompt"
+            )
+            db.session.add(batch)
+            db.session.commit()
+            batch_id = batch.id
+        
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{batch_id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Inheritance Test Job',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Check that job inherited batch settings
+        job = data['job']
+        assert job['provider'] == 'claude'
+        assert job['model'] == 'claude-3-sonnet'
+        assert job['temperature'] == 0.8
+        assert job['max_tokens'] == 1500
+        assert job['prompt'] == 'Custom batch prompt'
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_create_job_with_files_override_batch_settings(self, mock_process_job, client, app, sample_text_file):
+        """Test that job creation can override batch settings."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        with app.app_context():
+            from models import JobBatch, db
+            # Create a batch with default settings
+            batch = JobBatch(
+                batch_name="Default Batch",
+                provider="openrouter",
+                temperature=0.3
+            )
+            db.session.add(batch)
+            db.session.commit()
+            batch_id = batch.id
+        
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{batch_id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Override Test Job',
+                                     'provider': 'claude',  # Override batch setting
+                                     'temperature': '0.9',  # Override batch setting
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Check that job used override settings
+        job = data['job']
+        assert job['provider'] == 'claude'
+        assert job['temperature'] == 0.9
+    
+    @pytest.mark.api
+    def test_create_job_with_unsupported_files(self, client, sample_batch):
+        """Test job creation with unsupported file types."""
+        # Create a fake image file
+        image_content = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89'
+        
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                             data={
+                                 'job_name': 'Unsupported File Test',
+                                 'files[]': (BytesIO(image_content), 'test_image.png')
+                             })
+        
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert data['success'] == False
+        assert 'No valid files were uploaded' in data['error']
+    
+    @pytest.mark.api
+    def test_create_job_with_large_files_under_limit(self, client, sample_batch):
+        """Test job creation with files under the 100MB limit."""
+        # Create a 50MB file (under limit)
+        large_content = b'x' * (50 * 1024 * 1024)
+        
+        with patch('tasks.process_job.delay') as mock_process_job:
+            mock_process_job.return_value = MagicMock(id='test-task-id')
+            
+            response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Large File Test',
+                                     'files[]': (BytesIO(large_content), 'large_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert data['uploaded_files'] == 1
+    
+    @pytest.mark.api
+    def test_create_job_with_files_over_limit(self, client, sample_batch):
+        """Test job creation fails with files over 100MB limit."""
+        # Create a 101MB file (over limit)
+        large_content = b'x' * (101 * 1024 * 1024)
+        
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                             data={
+                                 'job_name': 'Oversized File Test',
+                                 'files[]': (BytesIO(large_content), 'oversized_document.txt')
+                             })
+        
+        # The request might be rejected at different levels
+        # Either 413 (Flask level) or 400 (our endpoint level) is acceptable
+        assert response.status_code in [400, 413]
+        
+        if response.status_code == 400:
+            # If it's a 400, make sure it's due to file size
+            data = json.loads(response.data)
+            assert not data['success']
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_create_job_with_files_database_persistence(self, mock_process_job, client, app, sample_batch, sample_text_file):
+        """Test that job and submissions are properly persisted to database."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Persistence Test Job',
+                                     'description': 'Testing database persistence',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        job_id = data['job']['id']
+        
+        # Verify job was persisted to database
+        with app.app_context():
+            from models import GradingJob, db
+            job = db.session.get(GradingJob, job_id)
+            assert job is not None
+            assert job.job_name == 'Persistence Test Job'
+            assert job.description == 'Testing database persistence'
+            assert job.batch_id == sample_batch.id
+            assert len(job.submissions) == 1
+            
+            # Verify submission was created
+            submission = job.submissions[0]
+            assert submission.original_filename == 'test_document.txt'
+            assert submission.file_type == 'txt'
+            assert submission.status == 'pending'
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_create_job_with_files_updates_batch_progress(self, mock_process_job, client, app, sample_batch, sample_text_file):
+        """Test that creating a job updates batch progress."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Progress Test Job',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        
+        # Check that batch information is updated
+        batch_data = data['batch']
+        assert batch_data['total_jobs'] >= 1
+        assert 'progress' in batch_data
+    
+    @pytest.mark.api
+    @patch('werkzeug.datastructures.FileStorage.save')
+    def test_create_job_with_files_handles_file_processing_errors(self, mock_save, client, sample_batch, sample_text_file):
+        """Test that file processing errors are handled gracefully."""
+        # Mock file save to simulate errors
+        mock_save.side_effect = OSError("Cannot save file")
+        
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{sample_batch.id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Error Handling Test',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        # Should return error status
+        assert response.status_code == 400
+
+
+class TestBatchMultiModelComparison:
+    """Test cases for batch multi-model comparison functionality."""
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_create_batch_with_multi_model_comparison(self, mock_process_job, client, app):
+        """Test creating a batch with multi-model comparison enabled."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        models_to_compare = ['anthropic/claude-3-5-sonnet-20241022', 'openai/gpt-4o']
+        
+        response = client.post('/create_batch', json={
+            'batch_name': 'Multi-Model Test Batch',
+            'description': 'A batch with multi-model comparison',
+            'provider': 'openrouter',
+            'models_to_compare': models_to_compare,
+            'priority': 5
+        })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        
+        # Verify batch was created with multi-model settings
+        with app.app_context():
+            from models import JobBatch, db
+            batch = db.session.get(JobBatch, data['batch_id'])
+            assert batch is not None
+            assert batch.models_to_compare == models_to_compare
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_batch_job_inherits_multi_model_settings(self, mock_process_job, client, app, sample_text_file):
+        """Test that jobs created in multi-model batch inherit the multi-model settings."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        models_to_compare = ['anthropic/claude-3-5-sonnet-20241022', 'openai/gpt-4o']
+        
+        with app.app_context():
+            from models import JobBatch, db
+            # Create batch with multi-model comparison
+            batch = JobBatch(
+                batch_name="Multi-Model Batch",
+                provider="openrouter",
+                models_to_compare=models_to_compare
+            )
+            db.session.add(batch)
+            db.session.commit()
+            batch_id = batch.id
+        
+        # Create job with files in the batch
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{batch_id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Multi-Model Inheritance Test',
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        
+        # Verify job inherited multi-model settings
+        job = data['job']
+        assert job['models_to_compare'] == models_to_compare
+    
+    @pytest.mark.api
+    @patch('tasks.process_job.delay')
+    def test_batch_job_override_multi_model_settings(self, mock_process_job, client, app, sample_text_file):
+        """Test that jobs can override batch multi-model settings."""
+        mock_process_job.return_value = MagicMock(id='test-task-id')
+        
+        batch_models = ['anthropic/claude-3-5-sonnet-20241022', 'openai/gpt-4o']
+        job_models = ['openai/gpt-4o', 'meta-llama/llama-3.1-70b-instruct']
+        
+        with app.app_context():
+            from models import JobBatch, db
+            # Create batch with multi-model comparison
+            batch = JobBatch(
+                batch_name="Multi-Model Batch",
+                provider="openrouter",
+                models_to_compare=batch_models
+            )
+            db.session.add(batch)
+            db.session.commit()
+            batch_id = batch.id
+        
+        # Create job with different models
+        with open(sample_text_file, 'rb') as f:
+            response = client.post(f'/api/batches/{batch_id}/jobs/create-with-files',
+                                 data={
+                                     'job_name': 'Override Test',
+                                     'models_to_compare[]': job_models,
+                                     'files[]': (f, 'test_document.txt')
+                                 })
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['success'] == True
+        
+        # Verify job used override models
+        job = data['job']
+        assert job['models_to_compare'] == job_models
+        assert job['models_to_compare'] != batch_models
+    
+    @pytest.mark.api  
+    def test_batch_displays_multi_model_info(self, client, app):
+        """Test that batch detail page displays multi-model comparison information."""
+        models_to_compare = ['anthropic/claude-3-5-sonnet-20241022', 'openai/gpt-4o', 'claude-3-5-sonnet-20241022']
+        
+        with app.app_context():
+            from models import JobBatch, db
+            # Create batch with multi-model comparison
+            batch = JobBatch(
+                batch_name="Display Test Batch",
+                description="Testing multi-model display",
+                provider="openrouter",
+                models_to_compare=models_to_compare
+            )
+            db.session.add(batch)
+            db.session.commit()
+            batch_id = batch.id
+        
+        # Get batch detail page
+        response = client.get(f'/batches/{batch_id}')
+        assert response.status_code == 200
+        
+        # Check that multi-model information is displayed
+        html_content = response.data.decode('utf-8')
+        assert 'Multi-Model Comparison' in html_content
+        assert f'Enabled ({len(models_to_compare)} models)' in html_content
+        
+        # Check that individual models are displayed
+        for model in models_to_compare:
+            assert model in html_content

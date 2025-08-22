@@ -105,8 +105,17 @@ def extract_text_from_pdf(file_path):
 def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Grade document using OpenRouter API."""
     try:
+        # Re-check environment each call to satisfy tests that clear env
+        openrouter_key = os.getenv('OPENROUTER_API_KEY')
+        if not openrouter_key:
+            return {
+                'success': False,
+                'error': "OpenRouter API authentication failed. Please check your API key configuration.",
+                'provider': 'OpenRouter'
+            }
+        
         # Configure OpenAI for OpenRouter
-        openai.api_key = OPENROUTER_API_KEY
+        openai.api_key = openrouter_key
         openai.api_base = "https://openrouter.ai/api/v1"
 
         # Prepare the grading prompt with marking scheme if provided

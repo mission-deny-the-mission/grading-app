@@ -837,6 +837,10 @@ class JobBatch(db.Model):
 
     def add_job(self, job):
         """Add a job to this batch."""
+        # Check if batch can accept new jobs
+        if not self.can_add_jobs():
+            raise ValueError(f"Cannot add jobs to batch with status '{self.status}'")
+        
         job.batch_id = self.id
         
         # Apply batch defaults to job if not set
@@ -853,8 +857,88 @@ class JobBatch(db.Model):
         if job.max_tokens is None and self.max_tokens is not None:
             job.max_tokens = self.max_tokens
         
+        # Apply saved configurations if batch has them and job doesn't
+        if not job.saved_prompt_id and self.saved_prompt_id:
+            job.saved_prompt_id = self.saved_prompt_id
+        if not job.saved_marking_scheme_id and self.saved_marking_scheme_id:
+            job.saved_marking_scheme_id = self.saved_marking_scheme_id
+        
         db.session.commit()
         self.update_progress()
+
+    def create_job_with_batch_settings(self, job_name, description=None, **kwargs):
+        """Create a new job within this batch, inheriting batch settings."""
+        from models import GradingJob  # Import here to avoid circular imports
+        
+        # Check if batch can accept new jobs
+        if not self.can_add_jobs():
+            raise ValueError(f"Cannot create jobs in batch with status '{self.status}'")
+        
+        # Create job with batch defaults
+        job_data = {
+            'job_name': job_name,
+            'description': description or '',
+            'provider': kwargs.get('provider') or self.provider or 'openrouter',
+            'prompt': kwargs.get('prompt') or self.prompt or 'Please grade this document.',
+            'model': kwargs.get('model') or self.model,
+            'models_to_compare': kwargs.get('models_to_compare') or self.models_to_compare,
+            'temperature': kwargs.get('temperature') if kwargs.get('temperature') is not None else self.temperature,
+            'max_tokens': kwargs.get('max_tokens') if kwargs.get('max_tokens') is not None else self.max_tokens,
+            'priority': kwargs.get('priority', 5),
+            'saved_prompt_id': kwargs.get('saved_prompt_id') or self.saved_prompt_id,
+            'saved_marking_scheme_id': kwargs.get('saved_marking_scheme_id') or self.saved_marking_scheme_id,
+            'batch_id': self.id
+        }
+        
+        # Remove None values
+        job_data = {k: v for k, v in job_data.items() if v is not None}
+        
+        # Create the job
+        job = GradingJob(**job_data)
+        db.session.add(job)
+        db.session.commit()
+        
+        # Update batch progress
+        self.update_progress()
+        
+        return job
+
+    def get_batch_settings_summary(self):
+        """Get a summary of batch settings for display/inheritance."""
+        try:
+            saved_prompt_name = None
+            if self.saved_prompt_id:
+                saved_prompt = db.session.get(SavedPrompt, self.saved_prompt_id)
+                saved_prompt_name = saved_prompt.name if saved_prompt else None
+        except:
+            saved_prompt_name = None
+            
+        try:
+            saved_marking_scheme_name = None
+            if self.saved_marking_scheme_id:
+                saved_marking_scheme = db.session.get(SavedMarkingScheme, self.saved_marking_scheme_id)
+                saved_marking_scheme_name = saved_marking_scheme.name if saved_marking_scheme else None
+        except:
+            saved_marking_scheme_name = None
+            
+        return {
+            'provider': self.provider,
+            'prompt': self.prompt,
+            'model': self.model,
+            'models_to_compare': self.models_to_compare,
+            'temperature': self.temperature,
+            'max_tokens': self.max_tokens,
+            'saved_prompt_id': self.saved_prompt_id,
+            'saved_marking_scheme_id': self.saved_marking_scheme_id,
+            'saved_prompt_name': saved_prompt_name,
+            'saved_marking_scheme_name': saved_marking_scheme_name
+        }
+
+    def can_add_jobs(self):
+        """Check if jobs can be added to this batch."""
+        # Only allow adding jobs to batches that are still in an active state
+        # Draft, pending, and paused batches can accept new jobs
+        return self.status in ['draft', 'pending', 'paused']
 
     def remove_job(self, job):
         """Remove a job from this batch."""
