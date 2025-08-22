@@ -5,223 +5,12 @@ from celery import Celery
 from flask import Flask
 from dotenv import load_dotenv
 
-# Add module-level LLM client imports so tests can patch tasks.openai and tasks.anthropic
-import openai
-from anthropic import Anthropic
-
+from utils.llm_providers import get_llm_provider, grade_with_openrouter, grade_with_claude, grade_with_lm_studio
 from models import db, GradingJob, Submission, MarkingScheme, SavedMarkingScheme, JobBatch, BatchTemplate
-from utils.llm_providers import grade_with_openrouter, grade_with_claude, grade_with_lm_studio
 from utils.text_extraction import extract_text_from_docx, extract_text_from_pdf, extract_text_by_file_type
 from utils.file_utils import cleanup_file
 
-# Ensure a module-level anthropic variable exists for tests to patch
-anthropic = None
-
-# Provide local wrapper functions so tests can patch module-level clients (tasks.openai/tasks.anthropic)
-def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Wrapper to grade via OpenRouter using module-level openai so tests can patch tasks.openai."""
-    try:
-        openrouter_key = os.getenv('OPENROUTER_API_KEY')
-        if not openrouter_key:
-            return {
-                'success': False,
-                'error': "OpenRouter API authentication failed. Please check your API key configuration.",
-                'provider': 'OpenRouter'
-            }
-        # Configure module-level openai
-        openai.api_key = openrouter_key
-        openai.api_base = "https://openrouter.ai/api/v1"
-
-        if marking_scheme_content:
-            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
-        else:
-            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-
-        response = openai.ChatCompletion.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
-                {"role": "user", "content": enhanced_prompt}
-            ],
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-
-        return {
-            'success': True,
-            'grade': getattr(response.choices[0].message, 'content', None) or str(response.choices[0]),
-            'model': model,
-            'provider': 'OpenRouter',
-            'usage': getattr(response, 'usage', None)
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"OpenRouter API error: {str(e)}",
-            'provider': 'OpenRouter'
-        }
-
-def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Wrapper to grade via Claude using module-level anthropic so tests can patch tasks.anthropic."""
-    claude_key = os.getenv('CLAUDE_API_KEY')
-    if not claude_key:
-        return {
-            'success': False,
-            'error': "Claude API not configured or failed to initialize",
-            'provider': 'Claude'
-        }
-
-    # Use the module-level anthropic if available (tests patch this), else create a client
-    client = anthropic if anthropic is not None else None
-    if client is None:
-        try:
-            client = Anthropic(api_key=claude_key)
-        except Exception:
-            return {
-                'success': False,
-                'error': "Claude API not configured or failed to initialize",
-                'provider': 'Claude'
-            }
-
-    try:
-        if marking_scheme_content:
-            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
-        else:
-            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-
-        response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
-            messages=[{"role": "user", "content": enhanced_prompt}]
-        )
-
-        # Some clients return content differently; normalize
-        grade_text = None
-        if hasattr(response, 'content') and getattr(response, 'content'):
-            # response.content may be a list-like
-            try:
-                grade_text = response.content[0].text
-            except Exception:
-                grade_text = str(response.content)
-        elif hasattr(response, 'text'):
-            grade_text = response.text
-        else:
-            grade_text = str(response)
-
-        usage = None
-        if hasattr(response, 'usage'):
-            try:
-                usage = response.usage.dict() if hasattr(response.usage, 'dict') else response.usage
-            except Exception:
-                usage = response.usage
-
-        return {
-            'success': True,
-            'grade': grade_text,
-            'model': 'claude-3-5-sonnet-20241022',
-            'provider': 'Claude',
-            'usage': usage
-        }
-    except Exception as e:
-        error_msg = str(e)
-        if "authentication" in error_msg.lower() or "api_key" in error_msg.lower():
-            return {
-                'success': False,
-                'error': "Claude API authentication failed. Please check your API key.",
-                'provider': 'Claude'
-            }
-        elif "rate" in error_msg.lower() or "limit" in error_msg.lower():
-            return {
-                'success': False,
-                'error': "Claude API rate limit exceeded. Please try again later.",
-                'provider': 'Claude'
-            }
-        elif "timeout" in error_msg.lower():
-            return {
-                'success': False,
-                'error': "Claude API request timed out. Please try again.",
-                'provider': 'Claude'
-            }
-        else:
-            return {
-                'success': False,
-                'error': f"Claude API error: {error_msg}",
-                'provider': 'Claude'
-            }
-
-def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Wrapper for LM Studio that uses module-level requests so tests can patch tasks.requests."""
-    lm_studio_url = os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1')
-
-    try:
-        if marking_scheme_content:
-            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
-        else:
-            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-
-        response = requests.post(
-            f"{lm_studio_url}/chat/completions",
-            json={
-                "model": "local-model",
-                "messages": [
-                    {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
-                    {"role": "user", "content": enhanced_prompt}
-                ],
-                "temperature": temperature,
-                "max_tokens": max_tokens
-            },
-            headers={"Content-Type": "application/json"},
-            timeout=120
-        )
-
-        if response.status_code == 200:
-            result = response.json()
-            return {
-                'success': True,
-                'grade': result['choices'][0]['message']['content'],
-                'model': 'local-model',
-                'provider': 'LM Studio',
-                'usage': result.get('usage')
-            }
-        elif response.status_code == 404:
-            return {
-                'success': False,
-                'error': "LM Studio endpoint not found. Please check if LM Studio is running and the URL is correct.",
-                'provider': 'LM Studio'
-            }
-        elif response.status_code == 500:
-            return {
-                'success': False,
-                'error': "LM Studio internal server error. Please check LM Studio logs.",
-                'provider': 'LM Studio'
-            }
-        else:
-            return {
-                'success': False,
-                'error': f"LM Studio API error: {response.status_code} - {response.text}",
-                'provider': 'LM Studio'
-            }
-    except requests.exceptions.ConnectionError:
-        return {
-            'success': False,
-            'error': f"Could not connect to LM Studio at {lm_studio_url}. Please check if LM Studio is running.",
-            'provider': 'LM Studio'
-        }
-    except requests.exceptions.Timeout:
-        return {
-            'success': False,
-            'error': "LM Studio request timed out. Please try again.",
-            'provider': 'LM Studio'
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"LM Studio API error: {str(e)}",
-            'provider': 'LM Studio'
-        }
-
+anthropic = None # Keep for compatibility, though not directly used now
 
 # Load environment variables from .env file
 load_dotenv()
@@ -410,16 +199,12 @@ def process_submission_sync(submission_id):
 
             # Grade the document
             job = submission.job
-            try:
-                print(f"DBG: UPLOAD_FOLDER={app.config.get('UPLOAD_FOLDER')}, filename={submission.filename}")
-                print(f"DBG: Job provider before validation: {getattr(job, 'provider', None)}")
-            except Exception:
-                pass
+
 
             # Validate provider early so tests expecting provider errors don't fail due to missing file
-            supported_providers = {'openrouter', 'claude', 'lm_studio'}
+            supported_providers = {'openrouter', 'claude', 'lm_studio', 'ollama', 'OpenRouter', 'Claude', 'LM Studio', 'Ollama'}
             if job.provider not in supported_providers:
-                submission.set_status('failed', f'Unsupported provider: {job.provider}. Supported providers are: openrouter, claude, lm_studio')
+                submission.set_status('failed', f'Unsupported provider: {job.provider}. Supported providers are: {", ".join(supported_providers)}')
                 return False
 
             # Extract text from file
@@ -445,7 +230,7 @@ def process_submission_sync(submission_id):
                 models_to_grade = job.models_to_compare
             else:
                 # Fallback to single model (backward compatibility)
-                if job.provider == 'openrouter':
+                if job.provider == 'OpenRouter':
                     models_to_grade = [job.model if job.model else "anthropic/claude-3-5-sonnet-20241022"]
                 else:
                     models_to_grade = [job.model if job.model else "default"]
@@ -467,43 +252,59 @@ def process_submission_sync(submission_id):
                 if uploaded_scheme:
                     marking_scheme_content = uploaded_scheme.content
             
-            # Grade with each model
+            # Grade with each model using the new provider system
             for model in models_to_grade:
-                # Check if provider is properly configured
-                if job.provider == 'openrouter':
-                    # Allow grading path to proceed in tests because grade function is mocked
-                    result = grade_with_openrouter(text, job.prompt, model, marking_scheme_content, job.temperature, job.max_tokens)
-                elif job.provider == 'claude':
-                    # Allow grading path; function handles env checks
-                    result = grade_with_claude(text, job.prompt, marking_scheme_content, job.temperature, job.max_tokens)
-                elif job.provider == 'lm_studio':
-                    result = grade_with_lm_studio(text, job.prompt, marking_scheme_content, job.temperature, job.max_tokens)
-                else:
-                    submission.set_status('failed', f'Unsupported provider: {job.provider}. Supported providers are: openrouter, claude, lm_studio')
+                try:
+                    # Get the LLM provider instance (map provider name)
+                    provider_mapping = {
+                        'openrouter': 'OpenRouter',
+                        'claude': 'Claude',
+                        'lm_studio': 'LM Studio', 
+                        'ollama': 'Ollama'
+                    }
+                    provider_name = provider_mapping.get(job.provider, job.provider)
+                    llm_provider = get_llm_provider(provider_name)
+                    
+                    # For OpenRouter and Ollama, pass the model parameter
+                    if job.provider.lower() in ['openrouter', 'ollama']:
+                        result = llm_provider.grade_document(
+                            text, job.prompt, model, marking_scheme_content, 
+                            job.temperature, job.max_tokens
+                        )
+                    else:
+                        # For Claude and LM Studio, model is handled internally
+                        result = llm_provider.grade_document(
+                            text, job.prompt, marking_scheme_content, 
+                            job.temperature, job.max_tokens
+                        )
+                except ValueError as e:
+                    # Provider not found
+                    submission.set_status('failed', f'Unsupported provider: {job.provider}. Error: {str(e)}')
+                    return False
+                except Exception as e:
+                    # Other errors during grading
+                    submission.set_status('failed', f'Grading error: {str(e)}')
                     return False
                 
                 # Store individual grade result
                 if result['success']:
                     submission.add_grade_result(
                         grade=result['grade'],
-                        provider=result.get('provider', job.provider or 'openrouter'),
+                        provider=result.get('provider', job.provider or 'OpenRouter'),
                         model=result.get('model', model),
                         status='completed',
                         metadata={
-                            'provider': result.get('provider', job.provider or 'openrouter'),
+                            'provider': result.get('provider', job.provider or 'OpenRouter'),
                             'model': result.get('model', model),
                             'usage': result.get('usage')
                         }
                     )
-                    try:
-                        print("DBG: Grading success path executed")
-                    except Exception:
-                        pass
+
                     successful_results.append(result)
                 else:
                     submission.add_grade_result(
                         grade='',
-                        provider=result.get('provider', job.provider or 'openrouter'),
+                        provider=result.get('provider', job.provider or 'OpenRouter'),
                         model=result.get('model', model),
                         status='failed',
                         error_message=result['error'],
@@ -518,7 +319,7 @@ def process_submission_sync(submission_id):
                 primary_result = successful_results[0]
                 submission.grade = primary_result['grade']
                 submission.grade_metadata = {
-                    'provider': primary_result.get('provider', job.provider or 'openrouter'),
+                    'provider': primary_result.get('provider', job.provider or 'OpenRouter'),
                     'model': primary_result.get('model', models_to_grade[0] if models_to_grade else 'default'),
                     'usage': primary_result.get('usage'),
                     'total_models': len(models_to_grade),
@@ -545,6 +346,7 @@ def process_submission_sync(submission_id):
             if submission:
                 submission.set_status('failed', str(e))
             return False
+
 
 @celery_app.task(bind=True)
 def process_batch(self, batch_id, priority_override=None):
@@ -596,6 +398,7 @@ def process_batch(self, batch_id, priority_override=None):
                 db.session.commit()
             return False
 
+
 @celery_app.task
 def process_batch_with_priority():
     """Process batches in priority order."""
@@ -612,6 +415,7 @@ def process_batch_with_priority():
                     
         except Exception as e:
             print(f"Error in priority batch processing: {str(e)}")
+
 
 @celery_app.task
 def retry_batch_failed_jobs(batch_id):
@@ -637,6 +441,7 @@ def retry_batch_failed_jobs(batch_id):
             print(f"Error retrying batch {batch_id}: {str(e)}")
             return 0
 
+
 @celery_app.task
 def pause_batch_processing(batch_id):
     """Pause batch processing."""
@@ -657,6 +462,7 @@ def pause_batch_processing(batch_id):
         except Exception as e:
             print(f"Error pausing batch {batch_id}: {str(e)}")
             return False
+
 
 @celery_app.task
 def resume_batch_processing(batch_id):
@@ -679,6 +485,7 @@ def resume_batch_processing(batch_id):
             print(f"Error resuming batch {batch_id}: {str(e)}")
             return False
 
+
 @celery_app.task
 def cancel_batch_processing(batch_id):
     """Cancel batch processing."""
@@ -700,6 +507,7 @@ def cancel_batch_processing(batch_id):
             print(f"Error cancelling batch {batch_id}: {str(e)}")
             return False
 
+
 @celery_app.task
 def update_batch_progress(batch_id):
     """Update batch progress and status."""
@@ -716,6 +524,7 @@ def update_batch_progress(batch_id):
         except Exception as e:
             print(f"Error updating batch progress {batch_id}: {str(e)}")
             return False
+
 
 @celery_app.task
 def cleanup_completed_batches():
@@ -745,6 +554,7 @@ def cleanup_completed_batches():
             print(f"Error in batch cleanup: {str(e)}")
             return 0
 
+
 @celery_app.task
 def cleanup_old_files():
     """Clean up old uploaded files."""
@@ -771,5 +581,4 @@ def cleanup_old_files():
                             os.remove(file_path)
                         except:
                             pass  # Don't fail if cleanup fails
-
 

@@ -47,6 +47,17 @@ DEFAULT_MODELS = {
             'qwen/qwen3-4b-thinking-2507',
             'deepseek/deepseek-r1-0528-qwen3-8b'
         ]
+    },
+    'ollama': {
+        'default': 'llama2',
+        'popular': [
+            'llama2',
+            'llama3',
+            'codellama',
+            'mistral',
+            'gemma',
+            'phi'
+        ]
     }
 }
 

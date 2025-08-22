@@ -5,7 +5,7 @@ Handles file uploads, marking scheme uploads, and bulk uploads.
 from flask import Blueprint, render_template, request, jsonify, session
 from werkzeug.utils import secure_filename
 from models import db, GradingJob, Submission, MarkingScheme
-from utils.llm_providers import grade_with_openrouter, grade_with_claude, grade_with_lm_studio
+from utils.llm_providers import get_llm_provider
 from utils.text_extraction import extract_marking_scheme_content, extract_text_by_file_type
 from utils.file_utils import determine_file_type, validate_file_upload, cleanup_file
 import os
@@ -47,6 +47,17 @@ DEFAULT_MODELS = {
             'google/gemma-3-27b',
             'qwen/qwen3-4b-thinking-2507',
             'deepseek/deepseek-r1-0528-qwen3-8b'
+        ]
+    },
+    'ollama': {
+        'default': 'llama2',
+        'popular': [
+            'llama2',
+            'llama3',
+            'codellama',
+            'mistral',
+            'gemma',
+            'phi'
         ]
     }
 }
@@ -128,18 +139,36 @@ def upload_file():
 
         # Grade with each selected model
         for model in models_to_compare:
-            if provider == 'openrouter':
-                if not os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENROUTER_API_KEY') == 'sk-or-your-key-here':
-                    return jsonify({'error': 'OpenRouter API key not configured. Please configure your API key in the settings.'}), 400
-                result = grade_with_openrouter(text, prompt, model, marking_scheme_content, temperature, max_tokens)
-            elif provider == 'claude':
-                if not os.getenv('CLAUDE_API_KEY') or os.getenv('CLAUDE_API_KEY') == 'sk-ant-your-key-here':
-                    return jsonify({'error': 'Claude API key not configured. Please configure your API key in the settings.'}), 400
-                result = grade_with_claude(text, prompt, marking_scheme_content, temperature, max_tokens)
-            elif provider == 'lm_studio':
-                result = grade_with_lm_studio(text, prompt, marking_scheme_content, temperature, max_tokens)
-            else:
-                return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, lm_studio'}), 400
+            try:
+                # Get the LLM provider instance (map provider name)
+                provider_mapping = {
+                    'openrouter': 'OpenRouter',
+                    'claude': 'Claude',
+                    'lm_studio': 'LM Studio', 
+                    'ollama': 'Ollama'
+                }
+                provider_name = provider_mapping.get(provider, provider.title())
+                if provider_name == 'Lm Studio':
+                    provider_name = 'LM Studio'
+                llm_provider = get_llm_provider(provider_name)
+                
+                # Check API key configuration for providers that need it
+                if provider == 'openrouter':
+                    if not os.getenv('OPENROUTER_API_KEY') or os.getenv('OPENROUTER_API_KEY') == 'sk-or-your-key-here':
+                        return jsonify({'error': 'OpenRouter API key not configured. Please configure your API key in the settings.'}), 400
+                    result = llm_provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
+                elif provider == 'claude':
+                    if not os.getenv('CLAUDE_API_KEY') or os.getenv('CLAUDE_API_KEY') == 'sk-ant-your-key-here':
+                        return jsonify({'error': 'Claude API key not configured. Please configure your API key in the settings.'}), 400
+                    result = llm_provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
+                elif provider == 'lm_studio':
+                    result = llm_provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
+                elif provider == 'ollama':
+                    result = llm_provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
+                else:
+                    return jsonify({'error': f'Unsupported provider: {provider}. Supported providers are: openrouter, claude, lm_studio, ollama'}), 400
+            except ValueError as e:
+                return jsonify({'error': f'Provider error: {str(e)}'}), 400
 
             results.append(result)
             if not result.get('success', False):

@@ -28,6 +28,7 @@ def config():
         'openrouter_api_key': os.getenv('OPENROUTER_API_KEY', ''),
         'claude_api_key': os.getenv('CLAUDE_API_KEY', ''),
         'lm_studio_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
+        'ollama_url': os.getenv('OLLAMA_URL', 'http://localhost:11434/api/generate'),
         'default_prompt': session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
     }
     return render_template('config.html', config=config_data)

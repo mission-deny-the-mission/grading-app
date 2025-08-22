@@ -8,54 +8,43 @@ import os
 import tempfile
 from tasks import (
     process_submission_sync, process_job_sync,
-    grade_with_openrouter, grade_with_claude, grade_with_lm_studio,
     retry_batch_failed_jobs, pause_batch_processing,
     resume_batch_processing, cancel_batch_processing
 )
+from utils.llm_providers import get_llm_provider, grade_with_claude, grade_with_lm_studio
 
 
 class TestGradingFunctions:
     """Test cases for grading functions."""
     
-    @patch('tasks.openai.ChatCompletion.create')
-    def test_grade_with_openrouter_success(self, mock_openai, app):
-        """Test successful grading with OpenRouter."""
+    @patch('utils.llm_providers.openai.ChatCompletion.create')
+    def test_openrouter_provider_success(self, mock_openai, app):
+        """Test successful grading with OpenRouter provider."""
         mock_openai.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="Excellent work! Grade: A"))]
+            choices=[MagicMock(message=MagicMock(content="Excellent work! Grade: A"))],
+            usage=MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
         )
         
         with app.app_context():
-            result = grade_with_openrouter(
-                "This is a test document.",
-                "Please grade this document.",
-                temperature=0.7,
-                max_tokens=2000
-            )
-            
-            assert result['success'] == True
-            assert 'grade' in result
-            assert 'Excellent work!' in result['grade']
+            with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'test-key'}):
+                provider = get_llm_provider('OpenRouter')
+                result = provider.grade_document(
+                    "This is a test document.",
+                    "Please grade this document.",
+                    temperature=0.7,
+                    max_tokens=2000
+                )
+                
+                assert result['success'] == True
+                assert 'grade' in result
+                assert 'Excellent work!' in result['grade']
     
-    @patch('tasks.openai.ChatCompletion.create')
-    def test_grade_with_openrouter_failure(self, mock_openai, app):
-        """Test failed grading with OpenRouter."""
-        mock_openai.side_effect = Exception("API Error")
-        
-        with app.app_context():
-            result = grade_with_openrouter(
-                "This is a test document.",
-                "Please grade this document."
-            )
-            
-            assert result['success'] == False
-            assert 'error' in result
-            assert 'API Error' in result['error']
-    
-    def test_grade_with_openrouter_no_api_key(self, app):
-        """Test OpenRouter grading without API key."""
+    def test_openrouter_provider_no_api_key(self, app):
+        """Test OpenRouter provider without API key."""
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
-                result = grade_with_openrouter(
+                provider = get_llm_provider('OpenRouter')
+                result = provider.grade_document(
                     "This is a test document.",
                     "Please grade this document."
                 )
@@ -64,15 +53,17 @@ class TestGradingFunctions:
                 assert 'error' in result
                 assert 'authentication' in result['error'].lower()
     
-    @patch('tasks.anthropic')
-    def test_grade_with_claude_success(self, mock_anthropic, app):
+    @patch('utils.llm_providers.Anthropic')
+    def test_grade_with_claude_success(self, mock_anthropic_class, app):
         """Test successful grading with Claude."""
-        # Ensure env is present since tasks.grade_with_claude checks env
-        with patch.dict(os.environ, {'CLAUDE_API_KEY': 'test-claude-key'}, clear=True):
-            mock_anthropic.messages.create.return_value = MagicMock(
+        # Setup mock instance
+        mock_client = MagicMock()
+        mock_anthropic_class.return_value = mock_client
+        mock_client.messages.create.return_value = MagicMock(
             content=[MagicMock(text="Great essay! Grade: B+")]
-            )
-            
+        )
+        
+        with patch.dict(os.environ, {'CLAUDE_API_KEY': 'test-claude-key'}, clear=True):
             with app.app_context():
                 result = grade_with_claude(
                     "This is a test document.",
@@ -85,10 +76,13 @@ class TestGradingFunctions:
                 assert 'grade' in result
                 assert 'Great essay!' in result['grade']
     
-    @patch('tasks.anthropic')
-    def test_grade_with_claude_failure(self, mock_anthropic, app):
+    @patch('utils.llm_providers.Anthropic')
+    def test_grade_with_claude_failure(self, mock_anthropic_class, app):
         """Test failed grading with Claude."""
-        mock_anthropic.messages.create.side_effect = Exception("API Error")
+        # Setup mock instance to raise exception
+        mock_client = MagicMock()
+        mock_anthropic_class.return_value = mock_client
+        mock_client.messages.create.side_effect = Exception("API Error")
         
         with patch.dict(os.environ, {'CLAUDE_API_KEY': 'test-claude-key'}, clear=True):
             with app.app_context():
@@ -114,7 +108,7 @@ class TestGradingFunctions:
                 assert 'error' in result
                 assert 'not configured' in result['error'].lower()
     
-    @patch('tasks.requests.post')
+    @patch('utils.llm_providers.requests.post')
     def test_grade_with_lm_studio_success(self, mock_requests, app):
         """Test successful grading with LM Studio."""
         mock_response = MagicMock()
@@ -136,7 +130,7 @@ class TestGradingFunctions:
             assert 'grade' in result
             assert 'Good work!' in result['grade']
     
-    @patch('tasks.requests.post')
+    @patch('utils.llm_providers.requests.post')
     def test_grade_with_lm_studio_failure(self, mock_requests, app):
         """Test failed grading with LM Studio."""
         mock_requests.side_effect = Exception("Connection Error")
@@ -168,13 +162,19 @@ class TestGradingFunctions:
 class TestProcessSubmission:
     """Test cases for process_submission task."""
     
-    @patch('tasks.grade_with_openrouter')
-    def test_process_submission_success(self, mock_grade, app, sample_job, sample_submission):
+    @patch('tasks.get_llm_provider')
+    def test_process_submission_success(self, mock_get_provider, app, sample_job, sample_submission):
         """Test successful submission processing."""
-        mock_grade.return_value = {
+        # Mock the provider instance
+        mock_provider = MagicMock()
+        mock_provider.grade_document.return_value = {
             'success': True,
-            'grade': 'Excellent work! Grade: A'
+            'grade': 'Excellent work! Grade: A',
+            'model': 'test-model',
+            'provider': 'OpenRouter',
+            'usage': {'tokens': 100}
         }
+        mock_get_provider.return_value = mock_provider
         
         with app.app_context():
             # Ensure objects are in the current session
@@ -197,13 +197,17 @@ class TestProcessSubmission:
             assert persisted.grade == "Excellent work! Grade: A"
             assert persisted.error_message is None
     
-    @patch('tasks.grade_with_openrouter')
-    def test_process_submission_failure(self, mock_grade, app, sample_job, sample_submission):
+    @patch('tasks.get_llm_provider')
+    def test_process_submission_failure(self, mock_get_provider, app, sample_job, sample_submission):
         """Test failed submission processing."""
-        mock_grade.return_value = {
+        # Mock the provider instance
+        mock_provider = MagicMock()
+        mock_provider.grade_document.return_value = {
             'success': False,
-            'error': 'API Error'
+            'error': 'API Error',
+            'provider': 'OpenRouter'
         }
+        mock_get_provider.return_value = mock_provider
         
         with app.app_context():
             # Create a test file
@@ -514,8 +518,11 @@ class TestErrorHandling:
     
     def test_task_with_api_timeout(self, app, sample_job, sample_submission):
         """Test task behavior with API timeout."""
-        with patch('tasks.grade_with_openrouter') as mock_grade:
-            mock_grade.side_effect = Exception("Timeout")
+        with patch('tasks.get_llm_provider') as mock_get_provider:
+            # Mock the provider instance  
+            mock_provider = MagicMock()
+            mock_provider.grade_document.side_effect = Exception("Timeout")
+            mock_get_provider.return_value = mock_provider
             
             with app.app_context():
                 # Objects are already persisted by fixtures
@@ -668,13 +675,16 @@ class TestFileProcessingAndCleanup:
             db.session.commit()
             
             # Mock successful grading
-            with patch('tasks.grade_with_openrouter') as mock_grade:
-                mock_grade.return_value = {
+            with patch('tasks.get_llm_provider') as mock_get_provider:
+                # Mock the provider instance
+                mock_provider = MagicMock()
+                mock_provider.grade_document.return_value = {
                     'success': True,
                     'grade': 'This is a test grade.',
                     'model': 'test-model',
                     'provider': 'openrouter'
                 }
+                mock_get_provider.return_value = mock_provider
                 
                 # File should exist before processing
                 assert os.path.exists(final_path)
@@ -723,12 +733,15 @@ class TestFileProcessingAndCleanup:
             db.session.commit()
             
             # Mock failed grading
-            with patch('tasks.grade_with_openrouter') as mock_grade:
-                mock_grade.return_value = {
+            with patch('tasks.get_llm_provider') as mock_get_provider:
+                # Mock the provider instance
+                mock_provider = MagicMock()
+                mock_provider.grade_document.return_value = {
                     'success': False,
                     'error': 'Grading failed for testing',
                     'provider': 'openrouter'
                 }
+                mock_get_provider.return_value = mock_provider
                 
                 # File should exist before processing
                 assert os.path.exists(final_path)
@@ -836,13 +849,16 @@ class TestFileProcessingAndCleanup:
             db.session.commit()
             
             # Mock successful grading for all files
-            with patch('tasks.grade_with_openrouter') as mock_grade:
-                mock_grade.return_value = {
+            with patch('tasks.get_llm_provider') as mock_get_provider:
+                # Mock the provider instance
+                mock_provider = MagicMock()
+                mock_provider.grade_document.return_value = {
                     'success': True,
                     'grade': 'This is a test grade.',
                     'model': 'test-model',
                     'provider': 'openrouter'
                 }
+                mock_get_provider.return_value = mock_provider
                 
                 # All files should exist before processing
                 for file_path in files_created:
@@ -893,13 +909,16 @@ class TestFileProcessingAndCleanup:
             db.session.commit()
             
             # Mock successful grading
-            with patch('tasks.grade_with_openrouter') as mock_grade:
-                mock_grade.return_value = {
+            with patch('tasks.get_llm_provider') as mock_get_provider:
+                # Mock the provider instance
+                mock_provider = MagicMock()
+                mock_provider.grade_document.return_value = {
                     'success': True,
                     'grade': 'Successfully graded large document.',
                     'model': 'test-model',
                     'provider': 'openrouter'
                 }
+                mock_get_provider.return_value = mock_provider
                 
                 # File should exist before processing
                 assert os.path.exists(final_path)
