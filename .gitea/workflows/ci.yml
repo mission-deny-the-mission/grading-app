@@ -72,6 +72,37 @@ jobs:
           rm -rf htmlcov || true
           docker cp grading-app-test:/workspace/htmlcov ./htmlcov || true
 
+      - name: Publish coverage in commit status and job summary
+        if: always()
+        env:
+          GITEA_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ -f coverage.xml ]; then
+            pct=$(python - <<'PY'
+import xml.etree.ElementTree as ET
+try:
+    root = ET.parse('coverage.xml').getroot()
+    pct = None
+    if 'line-rate' in root.attrib:
+        pct = float(root.attrib['line-rate']) * 100.0
+    else:
+        lc = int(root.attrib.get('lines-covered', 0))
+        lv = int(root.attrib.get('lines-valid', 0))
+        pct = (lc / lv * 100.0) if lv else 0.0
+    print(f"{pct:.0f}")
+except Exception:
+    print("0")
+PY
+)
+            echo "Coverage: ${pct}%" >> "$GITHUB_STEP_SUMMARY" || true
+            curl -s -X POST "${SERVER_URL}/api/v1/repos/${REPO}/statuses/${SHA}" \
+              -H "Authorization: token ${GITEA_TOKEN}" -H "Content-Type: application/json" \
+              -d "{\"state\":\"success\",\"description\":\"Coverage: ${pct}%\",\"context\":\"coverage/total\"}" || true
+          fi
+
       - name: Upload coverage artifact
         if: always()
         uses: actions/upload-artifact@v3
