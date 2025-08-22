@@ -13,6 +13,11 @@ else
     echo "ℹ️  grader user already exists"
 fi
 
+# Fix permissions on grading-app directory
+echo "🔐 Fixing permissions on grading-app directory..."
+sudo chown -R grader:grader /opt/grading-app
+sudo chmod -R 755 /opt/grading-app
+
 # Create log directory
 echo "📁 Creating log directories..."
 sudo mkdir -p /var/log/grading-app
