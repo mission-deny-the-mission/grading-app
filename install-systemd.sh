@@ -4,14 +4,23 @@
 
 echo "🔧 Installing Document Grading App systemd services..."
 
+# Create grader user if it doesn't exist
+echo "👤 Creating grader user..."
+if ! id "grader" &>/dev/null; then
+    sudo useradd --system --home-dir /opt/grading-app --shell /bin/false grader
+    echo "✅ Created grader user"
+else
+    echo "ℹ️  grader user already exists"
+fi
+
 # Create log directory
 echo "📁 Creating log directories..."
 sudo mkdir -p /var/log/grading-app
-sudo chown www-data:www-data /var/log/grading-app
+sudo chown grader:grader /var/log/grading-app
 
 # Create run directory
 sudo mkdir -p /var/run/grading-app
-sudo chown www-data:www-data /var/run/grading-app
+sudo chown grader:grader /var/run/grading-app
 
 # Copy systemd unit files
 echo "📋 Installing systemd unit files..."
@@ -21,7 +30,7 @@ sudo cp grading-app-celery-beat.service /etc/systemd/system/
 
 # Set proper ownership and permissions
 echo "🔐 Setting permissions..."
-sudo chown -R www-data:www-data /opt/grading-app
+sudo chown -R grader:grader /opt/grading-app
 sudo chmod +x /opt/grading-app/start_production.sh
 
 # Reload systemd

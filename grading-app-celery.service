@@ -5,8 +5,8 @@ Wants=redis.service valkey.service
 
 [Service]
 Type=simple
-User=www-data
-Group=www-data
+User=grader
+Group=grader
 WorkingDirectory=/opt/grading-app
 Environment=PATH=/opt/grading-app/venv/bin
 ExecStart=/opt/grading-app/venv/bin/celery -A tasks worker --loglevel=info --concurrency=4 --queues=grading,maintenance

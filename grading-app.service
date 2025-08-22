@@ -6,8 +6,8 @@ Requires=grading-app-celery.service
 
 [Service]
 Type=notify
-User=www-data
-Group=www-data
+User=grader
+Group=grader
 RuntimeDirectory=grading-app
 WorkingDirectory=/opt/grading-app
 Environment=PATH=/opt/grading-app/venv/bin
