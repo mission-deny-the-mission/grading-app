@@ -2,110 +2,25 @@ import os
 import json
 import requests
 from celery import Celery
-from docx import Document
-import PyPDF2
-import openai
-from anthropic import Anthropic
 from flask import Flask
 from dotenv import load_dotenv
+
+# Add module-level LLM client imports so tests can patch tasks.openai and tasks.anthropic
+import openai
+from anthropic import Anthropic
+
 from models import db, GradingJob, Submission, MarkingScheme, SavedMarkingScheme, JobBatch, BatchTemplate
+from utils.llm_providers import grade_with_openrouter, grade_with_claude, grade_with_lm_studio
+from utils.text_extraction import extract_text_from_docx, extract_text_from_pdf, extract_text_by_file_type
+from utils.file_utils import cleanup_file
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Create Flask app for Celery
-def create_app():
-    """Return the main Flask app to share DB/session/config with web routes and tests."""
-    # Import here to avoid circular import at module load time
-    import sys
-    import os
-    
-    # Add the current directory to Python path if not already there
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    if current_dir not in sys.path:
-        sys.path.insert(0, current_dir)
-    
-    try:
-        from .app import app as flask_app
-    except ImportError:
-        try:
-            from app import app as flask_app
-        except ImportError:
-            # Last resort: try importing with explicit path manipulation
-            import importlib.util
-            app_path = os.path.join(current_dir, 'app.py')
-            spec = importlib.util.spec_from_file_location("app", app_path)
-            app_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(app_module)
-            flask_app = app_module.app
-    return flask_app
-
-# Initialize Celery
-celery_app = Celery('grading_tasks')
-celery_app.config_from_object('celeryconfig')
-
-# API configurations
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-CLAUDE_API_KEY = os.getenv('CLAUDE_API_KEY')
-LM_STUDIO_URL = os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1')
-
-# Initialize API clients
-if OPENROUTER_API_KEY:
-    openai.api_key = OPENROUTER_API_KEY
-    openai.api_base = "https://openrouter.ai/api/v1"
-
+# Ensure a module-level anthropic variable exists for tests to patch
 anthropic = None
-if CLAUDE_API_KEY:
-    try:
-        anthropic = Anthropic(api_key=CLAUDE_API_KEY)
-    except Exception as e:
-        print(f"Warning: Failed to initialize Anthropic client: {e}")
-        anthropic = None
 
-def extract_text_from_docx(file_path):
-    """Extract text from a Word document."""
-    try:
-        doc = Document(file_path)
-        text = []
-        for paragraph in doc.paragraphs:
-            text.append(paragraph.text)
-        extracted_text = '\n'.join(text)
-        
-        if not extracted_text.strip():
-            return "Error reading Word document: Document appears to be empty or contains no readable text."
-        
-        return extracted_text
-    except Exception as e:
-        return f"Error reading Word document: {str(e)}"
-
-def extract_text_from_pdf(file_path):
-    """Extract text from a PDF file."""
-    try:
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            
-            if len(pdf_reader.pages) == 0:
-                return "Error reading PDF: Document appears to be empty or corrupted."
-            
-            text = []
-            for page in pdf_reader.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text.append(page_text)
-            
-            extracted_text = '\n'.join(text)
-            
-            if not extracted_text.strip():
-                return "Error reading PDF: Document appears to be empty or contains no readable text."
-            
-            return extracted_text
-    except Exception as e:
-        return f"Error reading PDF: {str(e)}"
-
+# Provide local wrapper functions so tests can patch module-level clients (tasks.openai/tasks.anthropic)
 def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Grade document using OpenRouter API."""
+    """Wrapper to grade via OpenRouter using module-level openai so tests can patch tasks.openai."""
     try:
-        # Re-check environment each call to satisfy tests that clear env
         openrouter_key = os.getenv('OPENROUTER_API_KEY')
         if not openrouter_key:
             return {
@@ -113,12 +28,10 @@ def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241
                 'error': "OpenRouter API authentication failed. Please check your API key configuration.",
                 'provider': 'OpenRouter'
             }
-        
-        # Configure OpenAI for OpenRouter
+        # Configure module-level openai
         openai.api_key = openrouter_key
         openai.api_base = "https://openrouter.ai/api/v1"
 
-        # Prepare the grading prompt with marking scheme if provided
         if marking_scheme_content:
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
@@ -133,42 +46,23 @@ def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241
             temperature=temperature,
             max_tokens=max_tokens
         )
-        
+
         return {
             'success': True,
-            'grade': response.choices[0].message.content,
+            'grade': getattr(response.choices[0].message, 'content', None) or str(response.choices[0]),
             'model': model,
             'provider': 'OpenRouter',
-            'usage': response.usage
+            'usage': getattr(response, 'usage', None)
         }
-    except openai.error.AuthenticationError:
-        return {
-            'success': False,
-            'error': "OpenRouter API authentication failed. Please check your API key.",
-            'provider': 'OpenRouter'
-        }
-    except openai.error.RateLimitError:
-        return {
-            'success': False,
-            'error': "OpenRouter API rate limit exceeded. Please try again later.",
-            'provider': 'OpenRouter'
-        }
-    except openai.error.APIError as e:
+    except Exception as e:
         return {
             'success': False,
             'error': f"OpenRouter API error: {str(e)}",
             'provider': 'OpenRouter'
         }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"Unexpected error with OpenRouter API: {str(e)}",
-            'provider': 'OpenRouter'
-        }
 
 def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Grade document using Claude API."""
-    # Re-check environment each call to satisfy tests that clear env
+    """Wrapper to grade via Claude using module-level anthropic so tests can patch tasks.anthropic."""
     claude_key = os.getenv('CLAUDE_API_KEY')
     if not claude_key:
         return {
@@ -176,11 +70,12 @@ def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3
             'error': "Claude API not configured or failed to initialize",
             'provider': 'Claude'
         }
-    # Ensure client exists when key is present
-    global anthropic
-    if anthropic is None:
+
+    # Use the module-level anthropic if available (tests patch this), else create a client
+    client = anthropic if anthropic is not None else None
+    if client is None:
         try:
-            anthropic = Anthropic(api_key=claude_key)
+            client = Anthropic(api_key=claude_key)
         except Exception:
             return {
                 'success': False,
@@ -189,31 +84,45 @@ def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3
             }
 
     try:
-        # Prepare the grading prompt with marking scheme if provided
         if marking_scheme_content:
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
             enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
 
-        response = anthropic.messages.create(
+        response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=max_tokens,
             temperature=temperature,
             system="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
-            messages=[
-                {
-                    "role": "user",
-                    "content": enhanced_prompt
-                }
-            ]
+            messages=[{"role": "user", "content": enhanced_prompt}]
         )
-        
+
+        # Some clients return content differently; normalize
+        grade_text = None
+        if hasattr(response, 'content') and getattr(response, 'content'):
+            # response.content may be a list-like
+            try:
+                grade_text = response.content[0].text
+            except Exception:
+                grade_text = str(response.content)
+        elif hasattr(response, 'text'):
+            grade_text = response.text
+        else:
+            grade_text = str(response)
+
+        usage = None
+        if hasattr(response, 'usage'):
+            try:
+                usage = response.usage.dict() if hasattr(response.usage, 'dict') else response.usage
+            except Exception:
+                usage = response.usage
+
         return {
             'success': True,
-            'grade': response.content[0].text,
+            'grade': grade_text,
             'model': 'claude-3-5-sonnet-20241022',
             'provider': 'Claude',
-            'usage': response.usage.dict() if response.usage else None
+            'usage': usage
         }
     except Exception as e:
         error_msg = str(e)
@@ -243,12 +152,10 @@ def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3
             }
 
 def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Grade document using LM Studio API."""
-    # Get URL from environment variable, don't use cached module-level variable for testing
+    """Wrapper for LM Studio that uses module-level requests so tests can patch tasks.requests."""
     lm_studio_url = os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1')
-    
+
     try:
-        # Prepare the grading prompt with marking scheme if provided
         if marking_scheme_content:
             enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
         else:
@@ -268,7 +175,7 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=
             headers={"Content-Type": "application/json"},
             timeout=120
         )
-        
+
         if response.status_code == 200:
             result = response.json()
             return {
@@ -314,6 +221,47 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=
             'error': f"LM Studio API error: {str(e)}",
             'provider': 'LM Studio'
         }
+
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Create Flask app for Celery
+def create_app():
+    """Return the main Flask app to share DB/session/config with web routes and tests."""
+    # Import here to avoid circular import at module load time
+    import sys
+    import os
+    
+    # Add the current directory to Python path if not already there
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    
+    try:
+        from .app import app as flask_app
+    except ImportError:
+        try:
+            from app import app as flask_app
+        except ImportError:
+            # Last resort: try importing with explicit path manipulation
+            import importlib.util
+            app_path = os.path.join(current_dir, 'app.py')
+            spec = importlib.util.spec_from_file_location("app", app_path)
+            app_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(app_module)
+            flask_app = app_module.app
+    return flask_app
+
+# Initialize Celery
+celery_app = Celery('grading_tasks')
+celery_app.config_from_object('celeryconfig')
+
+
+
+
+
+
 
 
 
@@ -482,21 +430,7 @@ def process_submission_sync(submission_id):
                 return False
             
             # Extract text based on file type
-            if submission.file_type == 'docx':
-                text = extract_text_from_docx(file_path)
-            elif submission.file_type == 'pdf':
-                text = extract_text_from_pdf(file_path)
-            elif submission.file_type == 'txt':
-                # Read text file directly
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        text = f.read()
-                except Exception as e:
-                    submission.set_status('failed', f'Error reading text file: {str(e)}')
-                    return False
-            else:
-                submission.set_status('failed', 'Unsupported file type')
-                return False
+            text = extract_text_by_file_type(file_path, submission.file_type)
             
             if text.startswith('Error reading'):
                 submission.set_status('failed', text)
@@ -593,10 +527,7 @@ def process_submission_sync(submission_id):
                 submission.set_status('completed')
                 
                 # Clean up file only on successful completion
-                try:
-                    os.remove(file_path)
-                except:
-                    pass  # Don't fail if file cleanup fails
+                cleanup_file(file_path)
                 # Return True to indicate successful completion
                 return True
             else:

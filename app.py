@@ -2,18 +2,25 @@ import os
 import json
 import requests
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge, NotFound
 import openai
 from anthropic import Anthropic
-from docx import Document
-import PyPDF2
-import io
 from dotenv import load_dotenv
 from models import db, GradingJob, Submission, JobBatch, MarkingScheme, SavedPrompt, SavedMarkingScheme, BatchTemplate
 from tasks import (process_job, process_batch, retry_batch_failed_jobs, pause_batch_processing,
                    resume_batch_processing, cancel_batch_processing, update_batch_progress)
 from datetime import datetime, timezone
+
+# Add missing imports used by app-level functions
+from werkzeug.utils import secure_filename
+from docx import Document
+import PyPDF2
+
+# Import route blueprints
+from routes.main import main_bp
+from routes.upload import upload_bp
+from routes.api import api_bp
+from routes.batches import batches_bp
 
 load_dotenv()
 
@@ -27,6 +34,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize database
 db.init_app(app)
+
+# Register blueprints
+app.register_blueprint(main_bp)
+app.register_blueprint(upload_bp)
+app.register_blueprint(api_bp)
+app.register_blueprint(batches_bp)
 
 # Configure upload folder
 UPLOAD_FOLDER = 'uploads'
@@ -1278,7 +1291,7 @@ def create_saved_marking_scheme():
             generated_filename = f"{timestamp}_scheme.txt"
 
             scheme = SavedMarkingScheme(
-                name=data.get('name', 'Untitled Marking Scheme'),
+                name=data['name'],
                 description=data.get('description', ''),
                 category=data.get('category', ''),
                 filename=generated_filename,
