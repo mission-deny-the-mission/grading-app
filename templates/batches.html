@@ -92,7 +92,12 @@
                                 <div class="progress-bar {% if batch.status == 'failed' %}bg-danger{% elif batch.status == 'completed' %}bg-success{% elif batch.progress > 0 %}bg-info{% else %}bg-secondary{% endif %}" role="progressbar" style="width: {{ batch.progress }}%;" aria-valuenow="{{ batch.progress }}" aria-valuemin="0" aria-valuemax="100">{{ batch.progress }}%</div>
                             </div>
                         </td>
-                        <td>{{ batch.completed_jobs }}/{{ batch.failed_jobs }}/{{ batch.total_jobs }}</td>
+                        <td>
+                            {{ batch.completed_jobs }}/{{ batch.failed_jobs }}/{{ batch.total_jobs }}
+                            {% if batch.status in ['draft', 'pending', 'paused'] %}
+                            <br><small class="text-success"><i class="fas fa-plus-circle me-1"></i>Can add jobs</small>
+                            {% endif %}
+                        </td>
                         <td>{{ batch.updated_at[:16].replace('T', ' ') if batch.updated_at else 'N/A' }}</td>
                         <td>
                             <div class="d-flex">

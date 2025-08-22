@@ -85,10 +85,56 @@
             </div>
         </div>
 
+        <!-- Batch Settings Summary -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Batch Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <small class="text-muted">Provider</small>
+                        <div class="fw-bold">{{ batch.provider or 'Mixed' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Model</small>
+                        <div class="fw-bold">{{ batch.model or 'Mixed' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Temperature</small>
+                        <div class="fw-bold">{{ batch.temperature or 'Default' }}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Max Tokens</small>
+                        <div class="fw-bold">{{ batch.max_tokens or 'Default' }}</div>
+                    </div>
+                </div>
+                {% if batch.prompt %}
+                <hr>
+                <div>
+                    <small class="text-muted">Default Prompt</small>
+                    <div class="bg-light p-2 rounded" style="max-height: 100px; overflow-y: auto;">
+                        <small>{{ batch.prompt }}</small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- Jobs in this Batch -->
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Jobs in this Batch</h5>
+                <div>
+                    {% if batch.status in ['draft', 'pending', 'paused'] %}
+                    <button class="btn btn-sm btn-success me-2" data-bs-toggle="modal" data-bs-target="#createJobModal">
+                        <i class="fas fa-plus me-1"></i>Create Job
+                    </button>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addJobsModal">
+                        <i class="fas fa-plus-circle me-1"></i>Add Existing Jobs
+                    </button>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
                 {% if batch.jobs %}
@@ -97,6 +143,7 @@
                         <thead>
                             <tr>
                                 <th>Job Name</th>
+                                <th>Provider</th>
                                 <th>Status</th>
                                 <th>Progress</th>
                                 <th>Created</th>
@@ -113,6 +160,9 @@
                                     {% endif %}
                                 </td>
                                 <td>
+                                    <small class="text-muted">{{ job.provider }}</small>
+                                </td>
+                                <td>
                                     <span class="badge bg-{{ 'success' if job.status == 'completed' else 'warning' if job.status == 'processing' else 'danger' if job.status == 'failed' else 'secondary' }}">
                                         {{ job.status.title() }}
                                     </span>
@@ -127,9 +177,14 @@
                                     <small class="text-muted">{{ job.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-sm btn-outline-primary me-1">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    {% if batch.status in ['draft', 'pending', 'paused'] %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="removeJobFromBatch('{{ job.id }}', '{{ job.job_name }}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -140,10 +195,310 @@
                 <div class="text-center py-4">
                     <i class="fas fa-tasks fa-2x text-muted mb-3"></i>
                     <p class="text-muted">No jobs found in this batch</p>
+                    {% if batch.status in ['draft', 'pending', 'paused'] %}
+                    <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#createJobModal">
+                        <i class="fas fa-plus me-1"></i>Create Your First Job
+                    </button>
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addJobsModal">
+                        <i class="fas fa-plus-circle me-1"></i>Add Existing Jobs
+                    </button>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<!-- Create Job Modal -->
+<div class="modal fade" id="createJobModal" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Create New Job in Batch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createJobForm">
+                    <div class="mb-3">
+                        <label for="jobName" class="form-label">Job Name *</label>
+                        <input type="text" class="form-control" id="jobName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="jobDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="jobDescription" rows="3"></textarea>
+                    </div>
+                    
+                    <!-- Settings Override Section -->
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Settings (Override Batch Defaults)
+                                <small class="text-muted">Leave empty to inherit from batch</small>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="jobProvider" class="form-label">Provider</label>
+                                    <select class="form-control" id="jobProvider">
+                                        <option value="">Inherit from batch ({{ batch.provider or 'Default' }})</option>
+                                        <option value="openrouter">OpenRouter</option>
+                                        <option value="claude">Claude</option>
+                                        <option value="lm_studio">LM Studio</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="jobModel" class="form-label">Model</label>
+                                    <input type="text" class="form-control" id="jobModel" placeholder="Inherit from batch ({{ batch.model or 'Default' }})">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label for="jobTemperature" class="form-label">Temperature</label>
+                                    <input type="number" class="form-control" id="jobTemperature" step="0.1" min="0" max="2" placeholder="Inherit from batch ({{ batch.temperature or 'Default' }})">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="jobMaxTokens" class="form-label">Max Tokens</label>
+                                    <input type="number" class="form-control" id="jobMaxTokens" min="1" placeholder="Inherit from batch ({{ batch.max_tokens or 'Default' }})">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label for="jobPrompt" class="form-label">Custom Prompt</label>
+                                <textarea class="form-control" id="jobPrompt" rows="4" placeholder="Inherit from batch{% if batch.prompt %}: {{ batch.prompt[:50] }}...{% endif %}"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="createJob()">Create Job</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Existing Jobs Modal -->
+<div class="modal fade" id="addJobsModal" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add Existing Jobs to Batch</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="jobSearch" placeholder="Search jobs..." onkeyup="searchAvailableJobs()">
+                </div>
+                <div id="availableJobsList">
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2">Loading available jobs...</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Only jobs not currently assigned to any batch are shown. Selected jobs will inherit this batch's settings.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addSelectedJobs()" id="addJobsBtn" disabled>
+                    Add Selected Jobs (<span id="selectedCount">0</span>)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedJobs = [];
+let availableJobs = [];
+
+// Load available jobs when modal opens
+$('#addJobsModal').on('show.bs.modal', function() {
+    loadAvailableJobs();
+});
+
+// Create a new job in the batch
+function createJob() {
+    const formData = {
+        job_name: $('#jobName').val(),
+        description: $('#jobDescription').val() || undefined,
+        provider: $('#jobProvider').val() || undefined,
+        model: $('#jobModel').val() || undefined,
+        temperature: $('#jobTemperature').val() ? parseFloat($('#jobTemperature').val()) : undefined,
+        max_tokens: $('#jobMaxTokens').val() ? parseInt($('#jobMaxTokens').val()) : undefined,
+        prompt: $('#jobPrompt').val() || undefined
+    };
+
+    if (!formData.job_name) {
+        alert('Job name is required');
+        return;
+    }
+
+    $.ajax({
+        url: `/api/batches/{{ batch.id }}/jobs/create`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(formData),
+        success: function(response) {
+            if (response.success) {
+                alert('Job created successfully!');
+                location.reload();
+            } else {
+                alert('Error creating job: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            const response = JSON.parse(xhr.responseText);
+            alert('Error creating job: ' + response.error);
+        }
+    });
+}
+
+// Load available jobs
+function loadAvailableJobs() {
+    $.ajax({
+        url: `/api/batches/{{ batch.id }}/available-jobs`,
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                availableJobs = response.available_jobs;
+                displayAvailableJobs(availableJobs);
+            } else {
+                $('#availableJobsList').html(`
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
+                        <p class="text-muted">Error loading jobs: ${response.error}</p>
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr) {
+            $('#availableJobsList').html(`
+                <div class="text-center py-4">
+                    <i class="fas fa-exclamation-triangle fa-2x text-danger mb-3"></i>
+                    <p class="text-muted">Failed to load available jobs</p>
+                </div>
+            `);
+        }
+    });
+}
+
+// Display available jobs
+function displayAvailableJobs(jobs) {
+    if (jobs.length === 0) {
+        $('#availableJobsList').html(`
+            <div class="text-center py-4">
+                <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                <p class="text-muted">No available jobs found. All jobs are already assigned to batches.</p>
+            </div>
+        `);
+        return;
+    }
+
+    let html = '<div class="list-group" style="max-height: 400px; overflow-y: auto;">';
+    jobs.forEach(job => {
+        html += `
+            <div class="list-group-item">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${job.id}" id="job_${job.id}" onchange="toggleJobSelection('${job.id}')">
+                    <label class="form-check-label" for="job_${job.id}">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="mb-1">${job.job_name}</h6>
+                                <p class="mb-1 text-muted small">${job.description || 'No description'}</p>
+                                <small class="text-muted">Provider: ${job.provider} | Created: ${new Date(job.created_at).toLocaleDateString()}</small>
+                            </div>
+                            <span class="badge bg-${job.status === 'completed' ? 'success' : job.status === 'failed' ? 'danger' : 'secondary'}">${job.status}</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    $('#availableJobsList').html(html);
+}
+
+// Search available jobs
+function searchAvailableJobs() {
+    const searchTerm = $('#jobSearch').val().toLowerCase();
+    const filteredJobs = availableJobs.filter(job => 
+        job.job_name.toLowerCase().includes(searchTerm) || 
+        (job.description && job.description.toLowerCase().includes(searchTerm))
+    );
+    displayAvailableJobs(filteredJobs);
+}
+
+// Toggle job selection
+function toggleJobSelection(jobId) {
+    if (selectedJobs.includes(jobId)) {
+        selectedJobs = selectedJobs.filter(id => id !== jobId);
+    } else {
+        selectedJobs.push(jobId);
+    }
+    
+    $('#selectedCount').text(selectedJobs.length);
+    $('#addJobsBtn').prop('disabled', selectedJobs.length === 0);
+}
+
+// Add selected jobs to batch
+function addSelectedJobs() {
+    if (selectedJobs.length === 0) return;
+
+    $.ajax({
+        url: `/api/batches/{{ batch.id }}/jobs`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ job_ids: selectedJobs }),
+        success: function(response) {
+            if (response.success) {
+                alert(`Successfully added ${response.added_jobs.length} jobs to the batch!`);
+                if (response.skipped_jobs && response.skipped_jobs.length > 0) {
+                    alert(`Note: ${response.skipped_jobs.length} jobs were skipped (already assigned or not found).`);
+                }
+                location.reload();
+            } else {
+                alert('Error adding jobs: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            const response = JSON.parse(xhr.responseText);
+            alert('Error adding jobs: ' + response.error);
+        }
+    });
+}
+
+// Remove job from batch
+function removeJobFromBatch(jobId, jobName) {
+    if (!confirm(`Are you sure you want to remove "${jobName}" from this batch?`)) {
+        return;
+    }
+
+    $.ajax({
+        url: `/api/batches/{{ batch.id }}/jobs/${jobId}`,
+        type: 'DELETE',
+        success: function(response) {
+            if (response.success) {
+                alert('Job removed from batch successfully!');
+                location.reload();
+            } else {
+                alert('Error removing job: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            const response = JSON.parse(xhr.responseText);
+            alert('Error removing job: ' + response.error);
+        }
+    });
+}
+</script>
+
 {% endblock %}
