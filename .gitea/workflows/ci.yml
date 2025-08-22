@@ -15,22 +15,38 @@ jobs:
 
       - name: Build dev image
         run: |
-          docker compose -f docker-compose.dev.yml build
+          docker build -f Dockerfile.dev -t grading-app-dev:ci .
 
-      - name: Start services
+      - name: Create CI network
         run: |
-          docker compose -f docker-compose.dev.yml up -d redis app
+          docker network create grading-app-ci || true
+
+      - name: Start Redis
+        run: |
+          docker run -d --name grading-app-redis-ci \
+            --network grading-app-ci \
+            --health-cmd 'redis-cli ping || exit 1' \
+            --health-interval 2s --health-timeout 5s --health-retries 30 \
+            redis:7-alpine
 
       - name: Wait for Redis healthy
         run: |
-          set -e
-          for i in $(seq 1 30); do
-            if [ "$(docker inspect -f '{{.State.Health.Status}}' grading-app-redis-dev)" = "healthy" ]; then
-              echo "Redis is healthy"; break; fi; sleep 2; done
+          for i in $(seq 1 60); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' grading-app-redis-ci 2>/dev/null || echo 'starting')
+            if [ "$status" = "healthy" ]; then echo "Redis is healthy"; exit 0; fi
+            echo "Waiting for Redis... ($i) status=$status"; sleep 2;
+          done
+          echo "Redis did not become healthy in time"; docker logs grading-app-redis-ci; exit 1
 
       - name: Run tests (pytest)
         run: |
-          docker compose -f docker-compose.dev.yml exec -T app pytest
+          docker run --rm --name grading-app-test \
+            --network grading-app-ci \
+            -u root \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            grading-app-dev:ci \
+            pytest
 
       - name: Upload coverage artifact
         if: always()
@@ -44,11 +60,12 @@ jobs:
       - name: Dump service logs on failure
         if: failure()
         run: |
-          docker compose -f docker-compose.dev.yml logs | sed -e 's/\x1b\[[0-9;]*m//g'
+          docker logs grading-app-redis-ci | sed -e 's/\x1b\[[0-9;]*m//g' || true
 
-      - name: Shutdown services
+      - name: Cleanup
         if: always()
         run: |
-          docker compose -f docker-compose.dev.yml down -v --remove-orphans
+          docker rm -f grading-app-redis-ci || true
+          docker network rm grading-app-ci || true
 
 
