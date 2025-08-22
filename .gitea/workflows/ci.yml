@@ -81,22 +81,8 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           if [ -f coverage.xml ]; then
-            pct=$(python - <<'PY'
-import xml.etree.ElementTree as ET
-try:
-    root = ET.parse('coverage.xml').getroot()
-    pct = None
-    if 'line-rate' in root.attrib:
-        pct = float(root.attrib['line-rate']) * 100.0
-    else:
-        lc = int(root.attrib.get('lines-covered', 0))
-        lv = int(root.attrib.get('lines-valid', 0))
-        pct = (lc / lv * 100.0) if lv else 0.0
-    print(f"{pct:.0f}")
-except Exception:
-    print("0")
-PY
-)
+            pct=$(grep -o 'line-rate="[^"]*"' coverage.xml | head -1 | sed -E 's/.*="([0-9.]+)"/\1/' | awk '{printf "%.0f", $1*100}')
+            [ -z "$pct" ] && pct=0
             echo "Coverage: ${pct}%" >> "$GITHUB_STEP_SUMMARY" || true
             curl -s -X POST "${SERVER_URL}/api/v1/repos/${REPO}/statuses/${SHA}" \
               -H "Authorization: token ${GITEA_TOKEN}" -H "Content-Type: application/json" \
@@ -107,28 +93,11 @@ PY
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           if [ -f coverage.xml ]; then
-            python - <<'PY'
-import xml.etree.ElementTree as ET, json, os
-def pct_from_xml(path='coverage.xml'):
-    root = ET.parse(path).getroot()
-    if 'line-rate' in root.attrib:
-        return float(root.attrib['line-rate']) * 100.0
-    lc = int(root.attrib.get('lines-covered', 0))
-    lv = int(root.attrib.get('lines-valid', 0))
-    return (lc / lv * 100.0) if lv else 0.0
-pct = round(pct_from_xml())
-color = 'red' if pct < 60 else ('yellow' if pct < 80 else 'green')
-data = {
-  "schemaVersion": 1,
-  "label": "coverage",
-  "message": f"{pct}%",
-  "color": color
-}
-os.makedirs('badges', exist_ok=True)
-with open('badges/coverage.json', 'w') as f:
-    json.dump(data, f)
-print(f"Wrote badges/coverage.json with {pct}% ({color})")
-PY
+            pct=$(grep -o 'line-rate="[^"]*"' coverage.xml | head -1 | sed -E 's/.*="([0-9.]+)"/\1/' | awk '{printf "%.0f", $1*100}')
+            [ -z "$pct" ] && pct=0
+            if [ "$pct" -lt 60 ]; then color=red; elif [ "$pct" -lt 80 ]; then color=yellow; else color=green; fi
+            mkdir -p badges
+            printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"%s"}\n' "$pct" "$color" > badges/coverage.json
             if ! git diff --quiet -- badges/coverage.json 2>/dev/null; then
               git config user.name "gitea-actions"
               git config user.email "actions@local"
