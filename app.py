@@ -16,6 +16,18 @@ from werkzeug.utils import secure_filename
 from docx import Document
 import PyPDF2
 
+# Delegate core logic to utils modules (refactor shims)
+from utils.text_extraction import (
+    extract_text_from_docx as _utils_extract_text_from_docx,
+    extract_text_from_pdf as _utils_extract_text_from_pdf,
+    extract_marking_scheme_content as _utils_extract_marking_scheme_content,
+)
+from utils.llm_providers import (
+    grade_with_openrouter as _utils_grade_with_openrouter,
+    grade_with_claude as _utils_grade_with_claude,
+    grade_with_lm_studio as _utils_grade_with_lm_studio,
+)
+
 # Import route blueprints
 from routes.main import main_bp
 from routes.upload import upload_bp
@@ -102,165 +114,28 @@ if CLAUDE_API_KEY:
         anthropic = None
 
 def extract_text_from_docx(file_path):
-    """Extract text from a Word document."""
-    try:
-        doc = Document(file_path)
-        text = []
-        for paragraph in doc.paragraphs:
-            text.append(paragraph.text)
-        return '\n'.join(text)
-    except Exception as e:
-        return f"Error reading Word document: {str(e)}"
+    """Shim: delegate DOCX extraction to utils.text_extraction."""
+    return _utils_extract_text_from_docx(file_path)
 
 def extract_text_from_pdf(file_path):
-    """Extract text from a PDF file."""
-    try:
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            text = []
-            for page in pdf_reader.pages:
-                text.append(page.extract_text())
-        return '\n'.join(text)
-    except Exception as e:
-        return f"Error reading PDF: {str(e)}"
+    """Shim: delegate PDF extraction to utils.text_extraction."""
+    return _utils_extract_text_from_pdf(file_path)
 
 def extract_marking_scheme_content(file_path, file_type):
-    """Extract content from marking scheme file."""
-    try:
-        if file_type == 'docx':
-            return extract_text_from_docx(file_path)
-        elif file_type == 'pdf':
-            return extract_text_from_pdf(file_path)
-        elif file_type == 'txt':
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return f.read()
-        else:
-            return f"Unsupported file type: {file_type}"
-    except Exception as e:
-        return f"Error reading marking scheme file: {str(e)}"
+    """Shim: delegate marking scheme extraction to utils.text_extraction."""
+    return _utils_extract_marking_scheme_content(file_path, file_type)
 
 def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Grade document using OpenRouter API."""
-    try:
-        # Configure OpenAI for OpenRouter
-        openai.api_key = OPENROUTER_API_KEY
-        openai.api_base = "https://openrouter.ai/api/v1"
-
-        # Prepare the grading prompt with marking scheme if provided
-        if marking_scheme_content:
-            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
-        else:
-            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-
-        response = openai.ChatCompletion.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
-                {"role": "user", "content": enhanced_prompt}
-            ],
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-
-        return {
-            'success': True,
-            'grade': response.choices[0].message.content,
-            'model': model,
-            'provider': 'OpenRouter'
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"OpenRouter API error: {str(e)}",
-            'provider': 'OpenRouter'
-        }
+    """Shim: delegate OpenRouter grading to utils.llm_providers."""
+    return _utils_grade_with_openrouter(text, prompt, model, marking_scheme_content, temperature, max_tokens)
 
 def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Grade document using Claude API."""
-    if not anthropic:
-        return {
-            'success': False,
-            'error': "Claude API not configured or failed to initialize",
-            'provider': 'Claude'
-        }
-
-    try:
-        # Prepare the grading prompt with marking scheme if provided
-        if marking_scheme_content:
-            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
-        else:
-            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-
-        response = anthropic.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
-            messages=[
-                {
-                    "role": "user",
-                    "content": enhanced_prompt
-                }
-            ]
-        )
-
-        return {
-            'success': True,
-            'grade': response.content[0].text,
-            'model': 'claude-3-5-sonnet-20241022',
-            'provider': 'Claude'
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"Claude API error: {str(e)}",
-            'provider': 'Claude'
-        }
+    """Shim: delegate Claude grading to utils.llm_providers."""
+    return _utils_grade_with_claude(text, prompt, marking_scheme_content, temperature, max_tokens)
 
 def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Grade document using LM Studio API."""
-    try:
-        # Prepare the grading prompt with marking scheme if provided
-        if marking_scheme_content:
-            enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
-        else:
-            enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
-
-        response = requests.post(
-            f"{LM_STUDIO_URL}/chat/completions",
-            json={
-                "model": "local-model",
-                "messages": [
-                    {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
-                    {"role": "user", "content": enhanced_prompt}
-                ],
-                "temperature": temperature,
-                "max_tokens": max_tokens
-            },
-            headers={"Content-Type": "application/json"},
-            timeout=120
-        )
-
-        if response.status_code == 200:
-            result = response.json()
-            return {
-                'success': True,
-                'grade': result['choices'][0]['message']['content'],
-                'model': 'local-model',
-                'provider': 'LM Studio'
-            }
-        else:
-            return {
-                'success': False,
-                'error': f"LM Studio API error: {response.status_code} - {response.text}",
-                'provider': 'LM Studio'
-            }
-    except Exception as e:
-        return {
-            'success': False,
-            'error': f"LM Studio API error: {str(e)}",
-            'provider': 'LM Studio'
-        }
+    """Shim: delegate LM Studio grading to utils.llm_providers."""
+    return _utils_grade_with_lm_studio(text, prompt, marking_scheme_content, temperature, max_tokens)
 
 @app.route('/')
 def index():
@@ -2267,3 +2142,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True, host='0.0.0.0', port=5000)
+
+# Optional app factory for external consumers (keeps compatibility with tests importing app)
+def create_app():
+    return app
