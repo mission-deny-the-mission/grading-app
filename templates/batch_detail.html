@@ -250,6 +250,14 @@
                         <label for="jobDescription" class="form-label">Description</label>
                         <textarea class="form-control" id="jobDescription" rows="3"></textarea>
                     </div>
+
+                    <!-- File Upload Section -->
+                    <div class="mb-3">
+                        <label for="jobFiles" class="form-label">Upload Documents to Grade *</label>
+                        <input type="file" class="form-control" id="jobFiles" multiple accept=".docx,.pdf,.txt" required>
+                        <div class="form-text">Select one or more documents (.docx, .pdf, .txt) to be graded. Maximum 100MB per file.</div>
+                        <div id="fileList" class="mt-2"></div>
+                    </div>
                     
                     <!-- Settings Override Section -->
                     <div class="card bg-light">
@@ -341,45 +349,153 @@
 <script>
 let selectedJobs = [];
 let availableJobs = [];
+let selectedFiles = [];
 
 // Load available jobs when modal opens
 $('#addJobsModal').on('show.bs.modal', function() {
     loadAvailableJobs();
 });
 
+// Handle file selection and display
+$('#jobFiles').on('change', function() {
+    selectedFiles = Array.from(this.files);
+    displaySelectedFiles();
+});
+
+// Display selected files
+function displaySelectedFiles() {
+    const fileListDiv = $('#fileList');
+    
+    if (selectedFiles.length === 0) {
+        fileListDiv.html('');
+        return;
+    }
+    
+    let html = '<div class="border rounded p-2"><small class="text-muted fw-bold">Selected Files:</small><ul class="mb-0 mt-1">';
+    selectedFiles.forEach((file, index) => {
+        const fileSize = (file.size / 1024 / 1024).toFixed(2);
+        html += `<li class="small">
+            ${file.name} <span class="text-muted">(${fileSize} MB)</span>
+            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="removeFile(${index})">
+                <i class="fas fa-times"></i>
+            </button>
+        </li>`;
+    });
+    html += '</ul></div>';
+    fileListDiv.html(html);
+}
+
+// Remove a file from selection
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    
+    // Update the file input
+    const dt = new DataTransfer();
+    selectedFiles.forEach(file => dt.items.add(file));
+    $('#jobFiles')[0].files = dt.files;
+    
+    displaySelectedFiles();
+}
+
+// Reset the create job form
+function resetCreateJobForm() {
+    $('#createJobForm')[0].reset();
+    selectedFiles = [];
+    $('#fileList').html('');
+}
+
+// Reset form when modal is closed
+$('#createJobModal').on('hidden.bs.modal', function() {
+    resetCreateJobForm();
+});
+
 // Create a new job in the batch
 function createJob() {
-    const formData = {
-        job_name: $('#jobName').val(),
-        description: $('#jobDescription').val() || undefined,
-        provider: $('#jobProvider').val() || undefined,
-        model: $('#jobModel').val() || undefined,
-        temperature: $('#jobTemperature').val() ? parseFloat($('#jobTemperature').val()) : undefined,
-        max_tokens: $('#jobMaxTokens').val() ? parseInt($('#jobMaxTokens').val()) : undefined,
-        prompt: $('#jobPrompt').val() || undefined
-    };
-
-    if (!formData.job_name) {
+    const jobName = $('#jobName').val();
+    const files = $('#jobFiles')[0].files;
+    
+    if (!jobName) {
         alert('Job name is required');
         return;
     }
+    
+    if (files.length === 0) {
+        alert('Please select at least one file to grade');
+        return;
+    }
+    
+    // Validate file sizes
+    for (let file of files) {
+        if (file.size > 100 * 1024 * 1024) { // 100MB limit
+            alert(`File "${file.name}" is too large. Maximum size is 100MB.`);
+            return;
+        }
+    }
+
+    // Create FormData for file upload
+    const formData = new FormData();
+    
+    // Add job metadata
+    formData.append('job_name', jobName);
+    if ($('#jobDescription').val()) {
+        formData.append('description', $('#jobDescription').val());
+    }
+    if ($('#jobProvider').val()) {
+        formData.append('provider', $('#jobProvider').val());
+    }
+    if ($('#jobModel').val()) {
+        formData.append('model', $('#jobModel').val());
+    }
+    if ($('#jobTemperature').val()) {
+        formData.append('temperature', $('#jobTemperature').val());
+    }
+    if ($('#jobMaxTokens').val()) {
+        formData.append('max_tokens', $('#jobMaxTokens').val());
+    }
+    if ($('#jobPrompt').val()) {
+        formData.append('prompt', $('#jobPrompt').val());
+    }
+    
+    // Add files
+    for (let file of files) {
+        formData.append('files[]', file);
+    }
+
+    // Show loading state
+    const createBtn = $('.btn-success[onclick="createJob()"]');
+    const originalText = createBtn.text();
+    createBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Creating...');
 
     $.ajax({
-        url: `/api/batches/{{ batch.id }}/jobs/create`,
+        url: `/api/batches/{{ batch.id }}/jobs/create-with-files`,
         type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(formData),
+        data: formData,
+        processData: false,
+        contentType: false,
+        timeout: 300000, // 5 minutes timeout for large uploads
         success: function(response) {
             if (response.success) {
-                alert('Job created successfully!');
+                alert(`Job "${response.job.job_name}" created successfully with ${response.uploaded_files} file(s)!`);
                 location.reload();
             } else {
                 alert('Error creating job: ' + response.error);
+                createBtn.prop('disabled', false).text(originalText);
             }
         },
         error: function(xhr) {
-            const response = JSON.parse(xhr.responseText);
-            alert('Error creating job: ' + response.error);
+            let errorMessage = 'Unknown error occurred';
+            try {
+                const response = JSON.parse(xhr.responseText);
+                errorMessage = response.error || errorMessage;
+            } catch (e) {
+                if (xhr.status === 413) {
+                    errorMessage = 'One or more files are too large. Maximum size is 100MB per file.';
+                } else if (xhr.status === 0) {
+                    errorMessage = 'Request timeout. Please try with smaller files or fewer files.';
+                }
+            }
+            alert('Error creating job: ' + errorMessage);
+            createBtn.prop('disabled', false).text(originalText);
         }
     });
 }

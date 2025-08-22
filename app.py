@@ -19,7 +19,7 @@ load_dotenv()
 
 app = Flask(__name__, template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///grading_app.db')
@@ -1826,6 +1826,131 @@ def api_create_job_in_batch(batch_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/api/batches/<batch_id>/jobs/create-with-files', methods=['POST'])
+def api_create_job_in_batch_with_files(batch_id):
+    """Create a new job within a batch with file uploads, inheriting batch settings."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        # Validate required fields
+        job_name = request.form.get('job_name')
+        if not job_name:
+            return jsonify({
+                'success': False,
+                'error': 'Job name is required'
+            }), 400
+
+        # Check if files were uploaded
+        if 'files[]' not in request.files:
+            return jsonify({
+                'success': False,
+                'error': 'No files provided'
+            }), 400
+
+        files = request.files.getlist('files[]')
+        if not files or len(files) == 0:
+            return jsonify({
+                'success': False,
+                'error': 'At least one file is required'
+            }), 400
+
+        # Create job with batch settings first
+        job_data = {
+            'job_name': job_name,
+            'description': request.form.get('description'),
+            'provider': request.form.get('provider'),
+            'prompt': request.form.get('prompt'),
+            'model': request.form.get('model'),
+            'temperature': float(request.form.get('temperature')) if request.form.get('temperature') else None,
+            'max_tokens': int(request.form.get('max_tokens')) if request.form.get('max_tokens') else None,
+            'priority': 5  # Default priority
+        }
+        
+        # Create job with batch settings
+        job = batch.create_job_with_batch_settings(**job_data)
+
+        # Handle file uploads and create submissions
+        uploaded_files = []
+        for file in files:
+            if file.filename == '':
+                continue
+
+            if file:
+                filename = secure_filename(file.filename)
+                
+                # Add timestamp to avoid conflicts
+                from datetime import datetime
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"{timestamp}_{filename}"
+                
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+
+                # Determine file type
+                original_filename = file.filename
+                if original_filename.lower().endswith('.docx'):
+                    file_type = 'docx'
+                elif original_filename.lower().endswith('.pdf'):
+                    file_type = 'pdf'
+                elif original_filename.lower().endswith('.txt'):
+                    file_type = 'txt'
+                else:
+                    # Clean up the file we just saved
+                    try:
+                        os.remove(file_path)
+                    except:
+                        pass
+                    continue  # Skip unsupported files
+
+                # Create submission without extracting text - let the background task do this
+                submission = Submission(
+                    filename=filename,
+                    original_filename=original_filename,
+                    file_size=os.path.getsize(file_path),
+                    file_type=file_type,
+                    job_id=job.id
+                )
+
+                db.session.add(submission)
+                uploaded_files.append(submission)
+
+                # Don't delete the file yet - the background task will need it and handle cleanup
+
+        if len(uploaded_files) == 0:
+            # If no valid files were uploaded, delete the job
+            db.session.delete(job)
+            db.session.commit()
+            return jsonify({
+                'success': False,
+                'error': 'No valid files were uploaded. Supported formats: .docx, .pdf, .txt'
+            }), 400
+
+        # Commit submissions and update job
+        db.session.commit()
+
+        # Update job with submission count
+        job.total_submissions = len(uploaded_files)
+        db.session.commit()
+
+        # Update batch progress
+        batch.update_progress()
+
+        # Start processing job
+        from tasks import process_job
+        process_job.delay(job.id)
+
+        return jsonify({
+            'success': True,
+            'message': f'Job "{job.job_name}" created successfully in batch "{batch.batch_name}"',
+            'job': job.to_dict(),
+            'batch': batch.to_dict(),
+            'uploaded_files': len(uploaded_files)
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 @app.route('/api/batches/<batch_id>/available-jobs', methods=['GET'])
 def api_get_available_jobs_for_batch(batch_id):
     """Get jobs that can be added to this batch (unassigned jobs)."""
@@ -2113,7 +2238,7 @@ def api_get_batch_template(template_id):
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(e):
-    return jsonify({'error': 'File too large. Maximum size is 16MB.'}), 413
+    return jsonify({'error': 'File too large. Maximum size is 100MB.'}), 413
 
 @app.cli.command("init-db")
 def init_db():
