@@ -33,22 +33,34 @@ The application features a modern, gradient-based design with:
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - pip (Python package installer)
 
 ### Setup
 
 1. **Clone or download the project**
    ```bash
-   cd "grading app"
+   git clone <your-repo>
+   cd grading-app
    ```
 
-2. **Install dependencies**
+2. **Create and activate a virtual environment**
+   ```bash
+   python -m venv venv
+   # Linux/macOS (bash)
+   source venv/bin/activate
+   # fish shell
+   source venv/bin/activate.fish
+   # Windows (PowerShell)
+   venv\\Scripts\\Activate.ps1
+   ```
+
+3. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Set up Redis** (required for background processing)
+4. **Set up Redis** (required for background processing)
    ```bash
    # Ubuntu/Debian
    sudo apt-get install redis-server
@@ -62,7 +74,7 @@ The application features a modern, gradient-based design with:
    redis-server
    ```
 
-4. **Set up environment variables** (optional)
+5. **Set up environment variables** (optional)
    Create a `.env` file in the project root:
    ```env
    OPENROUTER_API_KEY=your_openrouter_api_key_here
@@ -72,7 +84,7 @@ The application features a modern, gradient-based design with:
    DATABASE_URL=sqlite:///grading_app.db
    ```
 
-5. **Run the application**
+6. **Run the application**
    
    **Option A: Full services (recommended)**
    ```bash
@@ -84,7 +96,7 @@ The application features a modern, gradient-based design with:
    python app.py
    ```
 
-6. **Access the web interface**
+7. **Access the web interface**
    Open your browser and go to: `http://localhost:5000`
 
 ## Configuration
@@ -114,7 +126,7 @@ The application features a modern, gradient-based design with:
 
 ### Basic Grading (Single Upload)
 
-1. **Upload Document**: Select a .docx or .pdf file (max 16MB)
+1. **Upload Document**: Select a .docx or .pdf file (max 100MB)
 2. **Upload Marking Scheme** (Optional): Select a .docx, .pdf, or .txt file with grading criteria
 3. **Choose AI Provider**: Select from OpenRouter, Claude, or LM Studio
 4. **Customize Prompt**: Modify grading instructions or use sample prompts
@@ -197,25 +209,29 @@ C (70-79): Satisfactory work
 ## File Structure
 
 ```
-grading app/
-├── app.py                 # Main Flask application
+grading-app/
+├── app.py                 # Flask app initialization, blueprint registration, shims
+├── routes/                # Route blueprints (moved from app.py)
+│   ├── main.py            # UI pages: index, config, jobs, bulk upload
+│   ├── upload.py          # Upload endpoints (single, marking scheme, bulk)
+│   ├── api.py             # REST API endpoints (jobs, submissions, saved configs, batches)
+│   └── batches.py         # Batch UI pages and creation endpoint
+├── utils/                 # Helper modules
+│   ├── text_extraction.py # DOCX/PDF/TXT extraction helpers
+│   └── llm_providers.py   # OpenRouter/Claude/LM Studio integrations
 ├── models.py              # Database models
 ├── tasks.py               # Celery background tasks
 ├── celeryconfig.py        # Celery configuration
 ├── requirements.txt       # Python dependencies
 ├── start_services.sh      # Full service startup script
 ├── run.sh                 # Basic startup script
-├── README.md             # This file
-├── templates/            # HTML templates
-│   ├── base.html         # Base template with styling
-│   ├── index.html        # Single upload interface
-│   ├── bulk_upload.html  # Bulk upload interface
-│   ├── jobs.html         # Job management interface
-│   ├── job_detail.html   # Job details and submissions view
-│   └── config.html       # Configuration page
-├── uploads/              # Temporary file storage
-└── grading_app.db        # SQLite database (auto-created)
+├── templates/             # HTML templates
+└── uploads/               # Temporary file storage
 ```
+
+Notes:
+- API routes now live under `routes/api.py` via a Flask blueprint. Legacy `url_for` usages like `url_for('create_batch')` remain supported via app-level aliases.
+- Provider calls and text extraction logic are centralized in `utils/`.
 
 ## API Integration Details
 
@@ -237,7 +253,7 @@ grading app/
 
 ## Security Features
 
-- File size limits (16MB max)
+- File size limits (100MB max)
 - Secure filename handling
 - Temporary file cleanup
 - API key protection
@@ -280,10 +296,10 @@ grading app/
 
 To add a new LLM provider:
 
-1. Add provider function in `app.py`
-2. Update provider selection in templates
-3. Add configuration options
-4. Test integration
+1. Implement provider functions in `utils/llm_providers.py`
+2. Use them from upload routes in `routes/upload.py`
+3. Update provider selection in templates and `DEFAULT_MODELS` if applicable
+4. Add configuration options (env vars) and tests
 
 ### Customizing Styles
 

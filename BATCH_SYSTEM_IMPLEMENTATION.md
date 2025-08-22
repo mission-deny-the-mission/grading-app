@@ -23,9 +23,10 @@ I have successfully designed and implemented a comprehensive batch system for th
 - **Template Integration**: Link batches to reusable templates
 - **Ownership & Sharing**: User identification and permission management
 
-### 2. Comprehensive API Routes
+### 2. Comprehensive API Routes (Blueprint)
 
 #### **Batch CRUD Operations**
+- Implemented in `routes/api.py` under the `api` blueprint
 - `GET /api/batches` - List batches with filtering and pagination
 - `GET /api/batches/{id}` - Get specific batch details
 - `PUT /api/batches/{id}` - Update batch configuration

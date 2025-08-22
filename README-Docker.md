@@ -48,7 +48,7 @@ This document provides instructions for setting up and running the Grading App u
    ```bash
    # In the dev container terminal
    flask init-db
-   python app.py
+   python app.py  # app registers blueprints from routes/
    ```
 
 4. **Start background services (in separate terminals):**
