@@ -1,7 +1,7 @@
 # Document Grading Web App
 
 [![CI](https://gitea.harryslab.xyz/mission-deny-the-mission/grading-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://gitea.harryslab.xyz/mission-deny-the-mission/grading-app/actions/workflows/ci.yml)
-[![coverage](https://img.shields.io/endpoint?url=https://gitea.harryslab.xyz/mission-deny-the-mission/grading-app/raw/branch/main/badges/coverage.json)](https://gitea.harryslab.xyz/mission-deny-the-mission/grading-app/src/branch/main/htmlcov)
+[![coverage](https://img.shields.io/endpoint?url=https://gitea.harryslab.xyz/mission-deny-the-mission/grading-app/raw/branch/main/badges/coverage.json)](https://gitea.harryslab.xyz/mission-deny-the-mission/grading-app/actions)
 
 A modern Python web application that uses AI to grade documents. Supports multiple LLM providers including OpenRouter, Claude API, and LM Studio for local inference.
 
