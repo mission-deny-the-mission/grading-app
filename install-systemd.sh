@@ -31,7 +31,7 @@ sudo cp grading-app-celery-beat.service /etc/systemd/system/
 # Setup virtual environment
 echo "🐍 Setting up virtual environment..."
 if [ ! -d "/opt/grading-app/venv" ]; then
-    sudo -u grader python -m venv /opt/grading-app/venv
+    sudo -u grader python3 -m venv /opt/grading-app/venv
     echo "✅ Created virtual environment"
 else
     echo "ℹ️  Virtual environment already exists"
