@@ -28,6 +28,36 @@ sudo cp grading-app.service /etc/systemd/system/
 sudo cp grading-app-celery.service /etc/systemd/system/
 sudo cp grading-app-celery-beat.service /etc/systemd/system/
 
+# Setup virtual environment
+echo "🐍 Setting up virtual environment..."
+if [ ! -d "/opt/grading-app/venv" ]; then
+    sudo -u grader python -m venv /opt/grading-app/venv
+    echo "✅ Created virtual environment"
+else
+    echo "ℹ️  Virtual environment already exists"
+fi
+
+# Install dependencies
+echo "📥 Installing dependencies..."
+sudo -u grader /opt/grading-app/venv/bin/pip install --upgrade pip
+if [ -f "/opt/grading-app/requirements.txt" ]; then
+    sudo -u grader /opt/grading-app/venv/bin/pip install -r /opt/grading-app/requirements.txt
+    echo "✅ Installed Python dependencies"
+else
+    echo "⚠️  requirements.txt not found, skipping dependency installation"
+fi
+
+# Install Gunicorn
+echo "📦 Installing Gunicorn..."
+sudo -u grader /opt/grading-app/venv/bin/pip install gunicorn
+echo "✅ Installed Gunicorn"
+
+# Initialize database
+echo "🗄️  Initializing database..."
+cd /opt/grading-app
+sudo -u grader /opt/grading-app/venv/bin/flask init-db
+echo "✅ Database initialized"
+
 # Set proper ownership and permissions
 echo "🔐 Setting permissions..."
 sudo chown -R grader:grader /opt/grading-app
