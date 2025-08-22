@@ -376,6 +376,144 @@ class TestBatchManagement:
         
         data = json.loads(response.data)
         assert data['success'] == True
+    
+    def test_add_jobs_to_batch(self, client, sample_batch, sample_job):
+        """Test adding existing jobs to a batch."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs', json={
+            'job_ids': [sample_job.id]
+        })
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'added_jobs' in data
+        assert len(data['added_jobs']) == 1
+        assert data['added_jobs'][0]['id'] == sample_job.id
+    
+    def test_add_jobs_to_batch_no_job_ids(self, client, sample_batch):
+        """Test adding jobs to batch with no job IDs provided."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs', json={})
+        
+        assert response.status_code == 400
+        
+        data = json.loads(response.data)
+        assert data['success'] == False
+        assert 'No job IDs provided' in data['error']
+    
+    def test_create_job_in_batch(self, client, sample_batch):
+        """Test creating a new job within a batch."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs/create', json={
+            'job_name': 'New Batch Job',
+            'description': 'A job created in the batch',
+            'provider': 'openrouter',
+            'prompt': 'Custom prompt'
+        })
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'job' in data
+        assert data['job']['job_name'] == 'New Batch Job'
+        assert data['job']['description'] == 'A job created in the batch'
+        assert data['job']['provider'] == 'openrouter'
+        assert data['job']['prompt'] == 'Custom prompt'
+    
+    def test_create_job_in_batch_no_name(self, client, sample_batch):
+        """Test creating a job in batch without job name."""
+        response = client.post(f'/api/batches/{sample_batch.id}/jobs/create', json={
+            'description': 'A job without name'
+        })
+        
+        assert response.status_code == 400
+        
+        data = json.loads(response.data)
+        assert data['success'] == False
+        assert 'Job name is required' in data['error']
+    
+    def test_get_available_jobs_for_batch(self, client, sample_batch):
+        """Test getting available jobs that can be added to a batch."""
+        # Create a standalone job (not in any batch)
+        from models import GradingJob, db
+        with client.application.app_context():
+            standalone_job = GradingJob(
+                job_name="Standalone Job",
+                provider="openrouter",
+                prompt="Test prompt"
+            )
+            db.session.add(standalone_job)
+            db.session.commit()
+            standalone_job_id = standalone_job.id
+        
+        response = client.get(f'/api/batches/{sample_batch.id}/available-jobs')
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'available_jobs' in data
+        assert 'pagination' in data
+        
+        # Check that the standalone job is in the available jobs
+        job_ids = [job['id'] for job in data['available_jobs']]
+        assert standalone_job_id in job_ids
+    
+    def test_get_batch_settings(self, client, sample_batch):
+        """Test getting batch settings summary."""
+        response = client.get(f'/api/batches/{sample_batch.id}/settings')
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'settings' in data
+        settings = data['settings']
+        assert 'can_add_jobs' in settings
+        assert 'batch_name' in settings
+        assert 'batch_status' in settings
+    
+    def test_remove_job_from_batch(self, client, sample_batch):
+        """Test removing a job from a batch."""
+        # First create and add a job to the batch
+        from models import GradingJob, db
+        with client.application.app_context():
+            job = GradingJob(
+                job_name="Job to Remove",
+                provider="openrouter",
+                prompt="Test prompt"
+            )
+            db.session.add(job)
+            db.session.commit()
+            
+            # Add job to batch
+            sample_batch = db.session.merge(sample_batch)
+            sample_batch.add_job(job)
+            job_id = job.id
+        
+        # Remove job from batch
+        response = client.delete(f'/api/batches/{sample_batch.id}/jobs/{job_id}')
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'message' in data
+    
+    def test_batch_analytics(self, client, sample_batch):
+        """Test getting batch analytics."""
+        response = client.get(f'/api/batches/{sample_batch.id}/analytics')
+        
+        assert response.status_code == 200
+        
+        data = json.loads(response.data)
+        assert data['success'] == True
+        assert 'analytics' in data
+        analytics = data['analytics']
+        assert 'overview' in analytics
+        assert 'job_status_breakdown' in analytics
+        assert 'provider_breakdown' in analytics
+        assert 'timeline' in analytics
 
 
 class TestSavedConfigurations:

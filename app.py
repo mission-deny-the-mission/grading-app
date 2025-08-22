@@ -1700,7 +1700,7 @@ def api_get_batch_jobs(batch_id):
 
 @app.route('/api/batches/<batch_id>/jobs', methods=['POST'])
 def api_add_jobs_to_batch(batch_id):
-    """Add jobs to a batch."""
+    """Add existing jobs to a batch."""
     try:
         batch = JobBatch.query.get_or_404(batch_id)
         data = request.get_json()
@@ -1713,20 +1713,150 @@ def api_add_jobs_to_batch(batch_id):
             }), 400
 
         added_jobs = []
+        skipped_jobs = []
+        
         for job_id in job_ids:
             job = db.session.get(GradingJob, job_id)
-            if job and not job.batch_id:  # Only add unassigned jobs
-                batch.add_job(job)
-                added_jobs.append(job.to_dict())
+            if job:
+                if not job.batch_id:  # Only add unassigned jobs
+                    batch.add_job(job)
+                    added_jobs.append(job.to_dict())
+                else:
+                    skipped_jobs.append({
+                        'job_id': job_id,
+                        'job_name': job.job_name,
+                        'reason': f'Already assigned to batch {job.batch_id}'
+                    })
+            else:
+                skipped_jobs.append({
+                    'job_id': job_id,
+                    'reason': 'Job not found'
+                })
+
+        message = f'Added {len(added_jobs)} jobs to batch "{batch.batch_name}"'
+        if skipped_jobs:
+            message += f'. Skipped {len(skipped_jobs)} jobs.'
 
         return jsonify({
             'success': True,
-            'message': f'Added {len(added_jobs)} jobs to batch "{batch.batch_name}"',
+            'message': message,
             'batch': batch.to_dict(),
-            'added_jobs': added_jobs
+            'added_jobs': added_jobs,
+            'skipped_jobs': skipped_jobs
         })
     except Exception as e:
         db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/jobs/create', methods=['POST'])
+def api_create_job_in_batch(batch_id):
+    """Create a new job within a batch, inheriting batch settings."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('job_name'):
+            return jsonify({
+                'success': False,
+                'error': 'Job name is required'
+            }), 400
+
+        # Create job with batch settings
+        job = batch.create_job_with_batch_settings(
+            job_name=data['job_name'],
+            description=data.get('description'),
+            provider=data.get('provider'),
+            prompt=data.get('prompt'),
+            model=data.get('model'),
+            models_to_compare=data.get('models_to_compare'),
+            temperature=data.get('temperature'),
+            max_tokens=data.get('max_tokens'),
+            priority=data.get('priority'),
+            saved_prompt_id=data.get('saved_prompt_id'),
+            saved_marking_scheme_id=data.get('saved_marking_scheme_id')
+        )
+
+        # Increment usage counts for saved configurations if they were inherited from batch
+        if job.saved_prompt_id and not data.get('saved_prompt_id'):
+            saved_prompt = db.session.get(SavedPrompt, job.saved_prompt_id)
+            if saved_prompt:
+                saved_prompt.increment_usage()
+
+        if job.saved_marking_scheme_id and not data.get('saved_marking_scheme_id'):
+            saved_scheme = db.session.get(SavedMarkingScheme, job.saved_marking_scheme_id)
+            if saved_scheme:
+                saved_scheme.increment_usage()
+
+        return jsonify({
+            'success': True,
+            'message': f'Job "{job.job_name}" created successfully in batch "{batch.batch_name}"',
+            'job': job.to_dict(),
+            'batch': batch.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/available-jobs', methods=['GET'])
+def api_get_available_jobs_for_batch(batch_id):
+    """Get jobs that can be added to this batch (unassigned jobs)."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        # Get pagination parameters
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+        search = request.args.get('search', '').strip()
+        
+        # Query for unassigned jobs
+        query = GradingJob.query.filter_by(batch_id=None)
+        
+        # Apply search filter if provided
+        if search:
+            query = query.filter(
+                GradingJob.job_name.contains(search) |
+                GradingJob.description.contains(search)
+            )
+        
+        # Paginate
+        paginated = query.order_by(GradingJob.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        return jsonify({
+            'success': True,
+            'batch_id': batch_id,
+            'available_jobs': [job.to_dict() for job in paginated.items],
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': paginated.total,
+                'pages': paginated.pages,
+                'has_next': paginated.has_next,
+                'has_prev': paginated.has_prev
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/batches/<batch_id>/settings', methods=['GET'])
+def api_get_batch_settings(batch_id):
+    """Get batch settings summary for job creation/inheritance."""
+    try:
+        batch = JobBatch.query.get_or_404(batch_id)
+        
+        settings = batch.get_batch_settings_summary()
+        settings['can_add_jobs'] = batch.can_add_jobs()
+        settings['batch_name'] = batch.batch_name
+        settings['batch_status'] = batch.status
+        
+        return jsonify({
+            'success': True,
+            'batch_id': batch_id,
+            'settings': settings
+        })
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/api/batches/<batch_id>/jobs/<job_id>', methods=['DELETE'])
