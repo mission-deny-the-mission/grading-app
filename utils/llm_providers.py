@@ -5,6 +5,7 @@ This module consolidates all LLM provider logic to eliminate redundancy.
 import os
 import requests
 import openai
+from openai import OpenAI
 from anthropic import Anthropic
 import google.generativeai as genai
 from abc import ABC, abstractmethod
@@ -434,7 +435,7 @@ class OpenAILLMProvider(LLMProvider):
                 }
             
             # Create OpenAI client with new SDK
-            client = openai.OpenAI(api_key=openai_key)
+            client = OpenAI(api_key=openai_key)
             
             # Prepare the grading prompt with marking scheme if provided
             if marking_scheme_content:
@@ -482,11 +483,19 @@ class OpenAILLMProvider(LLMProvider):
                 'provider': 'OpenAI'
             }
         except Exception as e:
-            return {
-                'success': False,
-                'error': f"Unexpected error with OpenAI API: {str(e)}",
-                'provider': 'OpenAI'
-            }
+            error_msg = str(e)
+            if 'auth' in error_msg.lower() or 'key' in error_msg.lower():
+                return {
+                    'success': False,
+                    'error': "OpenAI API authentication failed. Please check your API key.",
+                    'provider': 'OpenAI'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f"Unexpected error with OpenAI API: {error_msg}",
+                    'provider': 'OpenAI'
+                }
 
 
 def get_llm_provider(provider_name):

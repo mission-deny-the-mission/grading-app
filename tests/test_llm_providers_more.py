@@ -8,7 +8,6 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from utils import llm_providers as lp
-from types import SimpleNamespace
 
 
 class TestFactory:
@@ -33,14 +32,8 @@ class TestOpenRouterProvider:
             assert res['success'] is False and 'authentication' in res['error'].lower()
 
     def test_generic_exception(self):
-        fake_error_ns = SimpleNamespace(
-            AuthenticationError=type('AuthenticationError', (Exception,), {}),
-            RateLimitError=type('RateLimitError', (Exception,), {}),
-            APIError=type('APIError', (Exception,), {})
-        )
         with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'x'}), \
-             patch('utils.llm_providers.openai.error', fake_error_ns, create=True), \
-             patch('utils.llm_providers.openai.ChatCompletion.create', side_effect=Exception('boom')):
+             patch('utils.llm_providers.requests.post', side_effect=Exception('boom')):
             provider = lp.OpenRouterLLMProvider()
             res = provider.grade_document('t', 'p')
             assert res['success'] is False and 'Unexpected error' in res['error']
@@ -133,14 +126,8 @@ class TestOpenAIProvider:
             assert res['success'] is False and 'authentication' in res['error'].lower()
 
     def test_generic_exception(self):
-        fake_error_ns = SimpleNamespace(
-            AuthenticationError=type('AuthenticationError', (Exception,), {}),
-            RateLimitError=type('RateLimitError', (Exception,), {}),
-            APIError=type('APIError', (Exception,), {})
-        )
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'x'}), \
-             patch('utils.llm_providers.openai.error', fake_error_ns, create=True), \
-             patch('utils.llm_providers.openai.OpenAI') as mock_openai:
+             patch('utils.llm_providers.OpenAI') as mock_openai:
             client = MagicMock()
             client.chat.completions.create.side_effect = Exception('API blew up')
             mock_openai.return_value = client

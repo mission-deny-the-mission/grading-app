@@ -18,13 +18,16 @@ from utils.llm_providers import get_llm_provider, grade_with_claude, grade_with_
 class TestGradingFunctions:
     """Test cases for grading functions."""
     
-    @patch('utils.llm_providers.openai.ChatCompletion.create')
-    def test_openrouter_provider_success(self, mock_openai, app):
+    @patch('utils.llm_providers.requests.post')
+    def test_openrouter_provider_success(self, mock_requests_post, app):
         """Test successful grading with OpenRouter provider."""
-        mock_openai.return_value = MagicMock(
-            choices=[MagicMock(message=MagicMock(content="Excellent work! Grade: A"))],
-            usage=MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
-        )
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'choices': [{'message': {'content': "Excellent work! Grade: A"}}],
+            'usage': {'prompt_tokens': 10, 'completion_tokens': 5, 'total_tokens': 15}
+        }
+        mock_requests_post.return_value = mock_response
         
         with app.app_context():
             with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'test-key'}):
@@ -224,7 +227,7 @@ class TestGradingFunctions:
                 assert 'error' in result
                 assert 'authentication' in result['error'].lower()
     
-    @patch('utils.llm_providers.openai.OpenAI')
+    @patch('utils.llm_providers.OpenAI')
     def test_grade_with_openai_success(self, mock_openai_class, app):
         """Test successful grading with OpenAI."""
         # Setup mock client
@@ -258,7 +261,7 @@ class TestGradingFunctions:
                 assert result['model'] == 'gpt-4o'
                 mock_openai_class.assert_called_once_with(api_key='test-openai-key')
     
-    @patch('utils.llm_providers.openai.OpenAI')
+    @patch('utils.llm_providers.OpenAI')
     def test_grade_with_openai_auth_error(self, mock_openai_class, app):
         """Test OpenAI authentication error."""
         # Setup mock client to raise auth error
