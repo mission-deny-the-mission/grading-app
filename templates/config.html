@@ -55,6 +55,27 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="openrouter_default_model_select" class="form-label">Default Model</label>
+                                <select class="form-select" id="openrouter_default_model_select" onchange="toggleCustomOpenRouterModel()">
+                                    <option value="">Use System Default</option>
+                                    <option value="openai/gpt-5">GPT-5</option>
+                                    <option value="anthropic/claude-4-sonnet">Claude 4 Sonnet</option>
+                                    <option value="anthropic/claude-4-opus">Claude 4 Opus</option>
+                                    <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                    <option value="openai/gpt-4o">GPT-4o</option>
+                                    <option value="google/gemini-pro">Gemini Pro</option>
+                                    <option value="custom">Custom Model...</option>
+                                </select>
+                                <input type="text" class="form-control mt-2" id="openrouter_default_model" name="openrouter_default_model" 
+                                       placeholder="Enter custom model name (e.g., anthropic/claude-4-sonnet)"
+                                       style="display: none;" disabled>
+                                <div class="form-text">
+                                    Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Claude API Configuration -->
@@ -86,6 +107,21 @@
                                     <button type="button" class="btn btn-outline-success" onclick="testAPIKey('claude')">
                                         <i class="fas fa-check"></i> Test Key
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="claude_default_model" class="form-label">Default Model</label>
+                                <select class="form-select" id="claude_default_model" name="claude_default_model">
+                                    <option value="">Use System Default</option>
+                                    <option value="claude-4-sonnet">Claude 4 Sonnet</option>
+                                    <option value="claude-4-opus">Claude 4 Opus</option>
+                                    <option value="claude-4-haiku">Claude 4 Haiku</option>
+                                    <option value="claude-3.5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                                </select>
+                                <div class="form-text">
+                                    Default model to use when "Use Default Model" is selected for this provider
                                 </div>
                             </div>
                         </div>
@@ -123,6 +159,20 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="gemini_default_model" class="form-label">Default Model</label>
+                                <select class="form-select" id="gemini_default_model" name="gemini_default_model">
+                                    <option value="">Use System Default</option>
+                                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                                    <option value="gemini-pro">Gemini Pro</option>
+                                    <option value="gemini-pro-vision">Gemini Pro Vision</option>
+                                </select>
+                                <div class="form-text">
+                                    Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- OpenAI Configuration -->
@@ -157,6 +207,22 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="openai_default_model" class="form-label">Default Model</label>
+                                <select class="form-select" id="openai_default_model" name="openai_default_model">
+                                    <option value="">Use System Default</option>
+                                    <option value="gpt-5">GPT-5</option>
+                                    <option value="gpt-5-mini">GPT-5 Mini</option>
+                                    <option value="gpt-4o">GPT-4o</option>
+                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                </select>
+                                <div class="form-text">
+                                    Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- LM Studio Configuration -->
@@ -182,6 +248,17 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="lm_studio_default_model" class="form-label">Default Model</label>
+                                <input type="text" class="form-control" id="lm_studio_default_model" 
+                                       name="lm_studio_default_model" placeholder="local-model"
+                                       value="{{ config.lm_studio_default_model if config else '' }}">
+                                <div class="form-text">
+                                    Default model name for LM Studio (e.g., "local-model")
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Ollama Configuration -->
@@ -204,6 +281,27 @@
                                     <button type="button" class="btn btn-outline-secondary" onclick="testOllama()">
                                         <i class="fas fa-plug"></i> Test Connection
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="ollama_default_model_select" class="form-label">Default Model</label>
+                                <select class="form-select" id="ollama_default_model_select" onchange="toggleCustomOllamaModel()">
+                                    <option value="">Use System Default</option>
+                                    <option value="llama2">Llama 2</option>
+                                    <option value="llama3">Llama 3</option>
+                                    <option value="codellama">Code Llama</option>
+                                    <option value="mistral">Mistral</option>
+                                    <option value="gemma">Gemma</option>
+                                    <option value="phi">Phi</option>
+                                    <option value="custom">Custom Model...</option>
+                                </select>
+                                <input type="text" class="form-control mt-2" id="ollama_default_model" name="ollama_default_model" 
+                                       placeholder="Enter custom model name (e.g., llama3:8b)"
+                                       style="display: none;" disabled>
+                                <div class="form-text">
+                                    Default model to use when "Use Default Model" is selected for this provider
                                 </div>
                             </div>
                         </div>
@@ -454,6 +552,80 @@ function togglePassword(fieldId) {
     }
 }
 
+function toggleCustomOpenRouterModel() {
+    const select = document.getElementById('openrouter_default_model_select');
+    const customInput = document.getElementById('openrouter_default_model');
+    
+    if (select.value === 'custom') {
+        customInput.style.display = 'block';
+        customInput.disabled = false;
+        customInput.name = 'openrouter_default_model';
+    } else {
+        customInput.style.display = 'none';
+        customInput.disabled = true;
+        customInput.value = select.value;
+        customInput.name = 'openrouter_default_model';
+    }
+}
+
+function toggleCustomOllamaModel() {
+    const select = document.getElementById('ollama_default_model_select');
+    const customInput = document.getElementById('ollama_default_model');
+    
+    if (select.value === 'custom') {
+        customInput.style.display = 'block';
+        customInput.disabled = false;
+        customInput.name = 'ollama_default_model';
+    } else {
+        customInput.style.display = 'none';
+        customInput.disabled = true;
+        customInput.value = select.value;
+        customInput.name = 'ollama_default_model';
+    }
+}
+
+function setOpenRouterDefaultModel(value) {
+    const select = document.getElementById('openrouter_default_model_select');
+    const customInput = document.getElementById('openrouter_default_model');
+    
+    // Check if value is one of the predefined options
+    const predefinedOptions = ['', 'openai/gpt-5', 'anthropic/claude-4-sonnet', 'anthropic/claude-4-opus', 'google/gemini-2.5-pro', 'openai/gpt-4o', 'google/gemini-pro'];
+    
+    if (predefinedOptions.includes(value)) {
+        select.value = value;
+        customInput.style.display = 'none';
+        customInput.disabled = true;
+        customInput.value = value;
+    } else {
+        select.value = 'custom';
+        customInput.style.display = 'block';
+        customInput.disabled = false;
+        customInput.value = value;
+    }
+    customInput.name = 'openrouter_default_model';
+}
+
+function setOllamaDefaultModel(value) {
+    const select = document.getElementById('ollama_default_model_select');
+    const customInput = document.getElementById('ollama_default_model');
+    
+    // Check if value is one of the predefined options
+    const predefinedOptions = ['', 'llama2', 'llama3', 'codellama', 'mistral', 'gemma', 'phi'];
+    
+    if (predefinedOptions.includes(value)) {
+        select.value = value;
+        customInput.style.display = 'none';
+        customInput.disabled = true;
+        customInput.value = value;
+    } else {
+        select.value = 'custom';
+        customInput.style.display = 'block';
+        customInput.disabled = false;
+        customInput.value = value;
+    }
+    customInput.name = 'ollama_default_model';
+}
+
 function showStatus(message, type = 'success') {
     const statusDiv = document.getElementById('statusMessage');
     statusDiv.className = `alert alert-${type}`;
@@ -506,7 +678,16 @@ function loadFromEnv() {
             document.getElementById('lm_studio_url').value = data.lm_studio_url || 'http://localhost:1234/v1';
             document.getElementById('ollama_url').value = data.ollama_url || 'http://localhost:11434/api/generate';
             document.getElementById('default_prompt').value = data.default_prompt || '';
-            showStatus('Configuration loaded from environment variables', 'success');
+            
+            // Load default model configurations
+            setOpenRouterDefaultModel(data.openrouter_default_model || '');
+            document.getElementById('claude_default_model').value = data.claude_default_model || '';
+            document.getElementById('gemini_default_model').value = data.gemini_default_model || '';
+            document.getElementById('openai_default_model').value = data.openai_default_model || '';
+            document.getElementById('lm_studio_default_model').value = data.lm_studio_default_model || '';
+            setOllamaDefaultModel(data.ollama_default_model || '');
+            
+            showStatus('Configuration loaded successfully', 'success');
         })
         .catch(error => {
             showStatus('Failed to load configuration: ' + error.message, 'danger');

@@ -3,7 +3,7 @@ Main page routes for the grading application.
 Handles index, jobs, config, and other main navigation routes.
 """
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
-from models import db, GradingJob, JobBatch, SavedPrompt, SavedMarkingScheme, BatchTemplate
+from models import db, GradingJob, JobBatch, SavedPrompt, SavedMarkingScheme, BatchTemplate, Config
 import os
 from dotenv import load_dotenv
 import openai
@@ -23,112 +23,97 @@ def index():
 @main_bp.route('/config')
 def config():
     """Configuration page for API keys and settings."""
-    # Load current configuration from environment variables
-    config_data = {
-        'openrouter_api_key': os.getenv('OPENROUTER_API_KEY', ''),
-        'claude_api_key': os.getenv('CLAUDE_API_KEY', ''),
-        'gemini_api_key': os.getenv('GEMINI_API_KEY', ''),
-        'openai_api_key': os.getenv('OPENAI_API_KEY', ''),
-        'lm_studio_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
-        'ollama_url': os.getenv('OLLAMA_URL', 'http://localhost:11434/api/generate'),
-        'default_prompt': session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
-    }
-    return render_template('config.html', config=config_data)
+    try:
+        # Get config from database
+        config = Config.get_or_create()
+        return render_template('config.html', config=config)
+    except Exception as e:
+        # Fallback to empty config if database fails
+        return render_template('config.html', config=None)
 
 
 @main_bp.route('/save_config', methods=['POST'])
 def save_config():
     """Save configuration settings."""
     try:
-        config_data = {
-            'openrouter_api_key': request.form.get('openrouter_api_key', ''),
-            'claude_api_key': request.form.get('claude_api_key', ''),
-            'gemini_api_key': request.form.get('gemini_api_key', ''),
-            'openai_api_key': request.form.get('openai_api_key', ''),
-            'lm_studio_url': request.form.get('lm_studio_url', 'http://localhost:1234/v1'),
-            'ollama_url': request.form.get('ollama_url', 'http://localhost:11434/api/generate'),
-            'default_prompt': request.form.get('default_prompt', 'Please grade this document and provide detailed feedback.')
-        }
+        # Get or create config record
+        config = Config.get_or_create()
+        
+        # Update all fields from form
+        config.openrouter_api_key = request.form.get('openrouter_api_key', '').strip() or None
+        config.claude_api_key = request.form.get('claude_api_key', '').strip() or None
+        config.gemini_api_key = request.form.get('gemini_api_key', '').strip() or None
+        config.openai_api_key = request.form.get('openai_api_key', '').strip() or None
+        config.lm_studio_url = request.form.get('lm_studio_url', 'http://localhost:1234/v1').strip()
+        config.ollama_url = request.form.get('ollama_url', 'http://localhost:11434/api/generate').strip()
+        config.default_prompt = request.form.get('default_prompt', '').strip() or None
+        
+        # Update default model configurations
+        config.openrouter_default_model = request.form.get('openrouter_default_model', '').strip() or None
+        config.claude_default_model = request.form.get('claude_default_model', '').strip() or None
+        config.gemini_default_model = request.form.get('gemini_default_model', '').strip() or None
+        config.openai_default_model = request.form.get('openai_default_model', '').strip() or None
+        config.lm_studio_default_model = request.form.get('lm_studio_default_model', '').strip() or None
+        config.ollama_default_model = request.form.get('ollama_default_model', '').strip() or None
+        
+        # Save to database
+        db.session.commit()
 
-        # Save to session for immediate use
-        session['config'] = config_data
-        session['default_prompt'] = config_data['default_prompt']
-
-        # Save to .env file for persistence
-        env_file_path = '.env'
-        env_content = []
-
-        # Read existing .env file if it exists
-        if os.path.exists(env_file_path):
-            with open(env_file_path, 'r') as f:
-                existing_lines = f.readlines()
-                existing_vars = {}
-                for line in existing_lines:
-                    if '=' in line and not line.strip().startswith('#'):
-                        key, value = line.strip().split('=', 1)
-                        existing_vars[key] = value
-
-                # Update with new values
-                if config_data['openrouter_api_key']:
-                    existing_vars['OPENROUTER_API_KEY'] = config_data['openrouter_api_key']
-                if config_data['claude_api_key']:
-                    existing_vars['CLAUDE_API_KEY'] = config_data['claude_api_key']
-                if config_data['gemini_api_key']:
-                    existing_vars['GEMINI_API_KEY'] = config_data['gemini_api_key']
-                if config_data['openai_api_key']:
-                    existing_vars['OPENAI_API_KEY'] = config_data['openai_api_key']
-                if config_data['lm_studio_url']:
-                    existing_vars['LM_STUDIO_URL'] = config_data['lm_studio_url']
-                if config_data['ollama_url']:
-                    existing_vars['OLLAMA_URL'] = config_data['ollama_url']
-
-                # Write back to file
-                with open(env_file_path, 'w') as f:
-                    for key, value in existing_vars.items():
-                        f.write(f"{key}={value}\n")
-        else:
-            # Create new .env file
-            with open(env_file_path, 'w') as f:
-                if config_data['openrouter_api_key']:
-                    f.write(f"OPENROUTER_API_KEY={config_data['openrouter_api_key']}\n")
-                if config_data['claude_api_key']:
-                    f.write(f"CLAUDE_API_KEY={config_data['claude_api_key']}\n")
-                if config_data['gemini_api_key']:
-                    f.write(f"GEMINI_API_KEY={config_data['gemini_api_key']}\n")
-                if config_data['openai_api_key']:
-                    f.write(f"OPENAI_API_KEY={config_data['openai_api_key']}\n")
-                if config_data['lm_studio_url']:
-                    f.write(f"LM_STUDIO_URL={config_data['lm_studio_url']}\n")
-                if config_data['ollama_url']:
-                    f.write(f"OLLAMA_URL={config_data['ollama_url']}\n")
-
-        # Reload environment variables
-        load_dotenv(override=True)
-
-        # Update global variables in the main app (this needs to be handled in app.py)
-        from flask import current_app
-        with current_app.app_context():
-            # These will be handled by the main app after import
-            pass
+        # Save to session for immediate use (backward compatibility)
+        session['default_prompt'] = config.default_prompt
 
         return jsonify({'success': True, 'message': 'Configuration saved successfully'})
     except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'message': f'Failed to save configuration: {str(e)}'})
 
 
 @main_bp.route('/load_config', methods=['GET'])
 def load_config():
-    """Load current configuration from environment variables."""
-    config_data = {
-        'openrouter_api_key': os.getenv('OPENROUTER_API_KEY', ''),
-        'claude_api_key': os.getenv('CLAUDE_API_KEY', ''),
-        'gemini_api_key': os.getenv('GEMINI_API_KEY', ''),
-        'openai_api_key': os.getenv('OPENAI_API_KEY', ''),
-        'lm_studio_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
-        'ollama_url': os.getenv('OLLAMA_URL', 'http://localhost:11434/api/generate'),
-        'default_prompt': session.get('default_prompt', 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.')
-    }
-    return jsonify(config_data)
+    """Load current configuration from database with environment variable fallback."""
+    try:
+        # Get config from database
+        config = Config.get_or_create()
+        
+        # Use database values with environment variable fallbacks
+        config_data = {
+            'openrouter_api_key': config.openrouter_api_key or os.getenv('OPENROUTER_API_KEY', ''),
+            'claude_api_key': config.claude_api_key or os.getenv('CLAUDE_API_KEY', ''),
+            'gemini_api_key': config.gemini_api_key or os.getenv('GEMINI_API_KEY', ''),
+            'openai_api_key': config.openai_api_key or os.getenv('OPENAI_API_KEY', ''),
+            'lm_studio_url': config.lm_studio_url or os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
+            'ollama_url': config.ollama_url or os.getenv('OLLAMA_URL', 'http://localhost:11434/api/generate'),
+            'default_prompt': config.default_prompt or 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.',
+            
+            # Default model configurations
+            'openrouter_default_model': config.openrouter_default_model or '',
+            'claude_default_model': config.claude_default_model or '',
+            'gemini_default_model': config.gemini_default_model or '',
+            'openai_default_model': config.openai_default_model or '',
+            'lm_studio_default_model': config.lm_studio_default_model or '',
+            'ollama_default_model': config.ollama_default_model or ''
+        }
+        return jsonify(config_data)
+    except Exception as e:
+        # Fallback to environment variables if database fails
+        config_data = {
+            'openrouter_api_key': os.getenv('OPENROUTER_API_KEY', ''),
+            'claude_api_key': os.getenv('CLAUDE_API_KEY', ''),
+            'gemini_api_key': os.getenv('GEMINI_API_KEY', ''),
+            'openai_api_key': os.getenv('OPENAI_API_KEY', ''),
+            'lm_studio_url': os.getenv('LM_STUDIO_URL', 'http://localhost:1234/v1'),
+            'ollama_url': os.getenv('OLLAMA_URL', 'http://localhost:11434/api/generate'),
+            'default_prompt': 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.',
+            
+            # Default model configurations (empty for fallback)
+            'openrouter_default_model': '',
+            'claude_default_model': '',
+            'gemini_default_model': '',
+            'openai_default_model': '',
+            'lm_studio_default_model': '',
+            'ollama_default_model': ''
+        }
+        return jsonify(config_data)
 
 
 @main_bp.route('/test_api_key', methods=['POST'])

@@ -89,14 +89,28 @@ content %}
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="customModel" class="form-label fw-bold"
-                                >Custom Model (Optional)</label
+                            <label for="modelSelect" class="form-label fw-bold"
+                                >Model Selection</label
                             >
+                            <select class="form-select" id="modelSelect" name="modelSelect" onchange="toggleCustomModelBulk()">
+                                <option value="default">Use Default Model</option>
+                                <option value="openai/gpt-5">GPT-5</option>
+                                <option value="openai/gpt-5-mini">GPT-5 Mini</option>
+                                <option value="anthropic/claude-4-sonnet">Claude 4 Sonnet</option>
+                                <option value="anthropic/claude-4-opus">Claude 4 Opus</option>
+                                <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                <option value="openai/gpt-4o">GPT-4o</option>
+                                <option value="google/gemini-pro">Gemini Pro</option>
+                                <option value="custom">Custom Model...</option>
+                            </select>
                             <input
                                 type="text"
-                                class="form-control"
+                                class="form-control mt-2"
                                 id="customModel"
+                                name="customModel"
                                 placeholder="Enter custom model name"
+                                style="display: none;" 
+                                disabled
                             />
                         </div>
                     </div>
@@ -584,6 +598,20 @@ content %}
         document.getElementById('temperatureValue').textContent = value;
     }
 
+    function toggleCustomModelBulk() {
+        const modelSelect = document.getElementById('modelSelect');
+        const customModelInput = document.getElementById('customModel');
+        
+        if (modelSelect.value === 'custom') {
+            customModelInput.style.display = 'block';
+            customModelInput.disabled = false;
+        } else {
+            customModelInput.style.display = 'none';
+            customModelInput.disabled = true;
+            customModelInput.value = '';
+        }
+    }
+
     function resetForm() {
         document.getElementById('jobForm').reset();
         document.getElementById('uploadForm').reset();
@@ -595,6 +623,8 @@ content %}
 
         // Reset model selection
         document.getElementById('enableComparison').checked = false;
+        document.getElementById('modelSelect').value = 'default';
+        toggleCustomModelBulk();
         document.getElementById('modelSelection').style.display = 'none';
         // Clear custom model inputs
         document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
@@ -1005,11 +1035,34 @@ content %}
             return;
         }
 
-        const name = prompt('Enter a name for this prompt:');
-        if (!name) return;
+        // Clear previous modal data
+        document.getElementById('promptName').value = '';
+        document.getElementById('promptDescription').value = '';
+        document.getElementById('promptCategory').value = '';
 
-        const description = prompt('Enter a description (optional):');
-        const category = prompt('Enter a category (optional, e.g., essay, report):');
+        // Show the modal
+        new bootstrap.Modal(document.getElementById('savePromptModal')).show();
+    }
+
+    function submitPromptSave() {
+        const name = document.getElementById('promptName').value.trim();
+        const description = document.getElementById('promptDescription').value.trim();
+        const category = document.getElementById('promptCategory').value.trim();
+        const promptText = document.getElementById('prompt').value;
+        const saveBtn = document.getElementById('savePromptBtn');
+
+        if (!name) {
+            document.getElementById('promptName').classList.add('is-invalid');
+            document.getElementById('promptName').focus();
+            return;
+        }
+
+        // Clear validation state
+        document.getElementById('promptName').classList.remove('is-invalid');
+
+        // Show loading state
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
 
         // Do not save model or provider as part of the saved prompt; model/provider selection is configured per job separately.
         const formData = {
@@ -1029,13 +1082,37 @@ content %}
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Prompt saved successfully!');
+                // Close modal and show success
+                bootstrap.Modal.getInstance(document.getElementById('savePromptModal')).hide();
+                
+                // Show success notification
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alertDiv.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>Prompt saved successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                document.body.appendChild(alertDiv);
+                
+                // Auto-remove notification after 3 seconds
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 3000);
+                
+                // Optionally refresh the saved prompts dropdown
+                location.reload();
             } else {
                 alert('Error saving prompt: ' + data.error);
             }
         })
         .catch(error => {
             alert('Error saving prompt: ' + error.message);
+        })
+        .finally(() => {
+            // Reset button state
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Prompt';
         });
     }
 
@@ -1070,11 +1147,39 @@ content %}
             return;
         }
 
-        const name = prompt('Enter a name for this marking scheme:');
-        if (!name) return;
+        // Clear previous modal data
+        document.getElementById('markingSchemeName').value = '';
+        document.getElementById('markingSchemeDescription').value = '';
+        document.getElementById('markingSchemeCategory').value = '';
 
-        const description = prompt('Enter a description (optional):');
-        const category = prompt('Enter a category (optional, e.g., essay, report):');
+        // Show the modal
+        new bootstrap.Modal(document.getElementById('saveMarkingSchemeModal')).show();
+    }
+
+    function submitMarkingSchemeSave() {
+        const name = document.getElementById('markingSchemeName').value.trim();
+        const description = document.getElementById('markingSchemeDescription').value.trim();
+        const category = document.getElementById('markingSchemeCategory').value.trim();
+        const fileInput = document.getElementById('marking_scheme');
+        const saveBtn = document.getElementById('saveMarkingSchemeBtn');
+
+        if (!name) {
+            document.getElementById('markingSchemeName').classList.add('is-invalid');
+            document.getElementById('markingSchemeName').focus();
+            return;
+        }
+
+        if (!fileInput.files[0]) {
+            alert('Please select a marking scheme file to save.');
+            return;
+        }
+
+        // Clear validation state
+        document.getElementById('markingSchemeName').classList.remove('is-invalid');
+
+        // Show loading state
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
 
         const formData = new FormData();
         formData.append('name', name);
@@ -1089,14 +1194,129 @@ content %}
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Marking scheme saved successfully!');
+                // Close modal and show success
+                bootstrap.Modal.getInstance(document.getElementById('saveMarkingSchemeModal')).hide();
+                
+                // Show success notification
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                alertDiv.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>Marking scheme saved successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                document.body.appendChild(alertDiv);
+                
+                // Auto-remove notification after 3 seconds
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 3000);
+                
+                // Optionally refresh the saved marking schemes dropdown
+                location.reload();
             } else {
                 alert('Error saving marking scheme: ' + data.error);
             }
         })
         .catch(error => {
             alert('Error saving marking scheme: ' + error.message);
+        })
+        .finally(() => {
+            // Reset button state
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Marking Scheme';
         });
     }
 </script>
+
+<!-- Save Prompt Modal -->
+<div class="modal fade" id="savePromptModal" tabindex="-1" aria-labelledby="savePromptModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="savePromptModalLabel">
+                    <i class="fas fa-save me-2"></i>Save Current Prompt
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="savePromptForm">
+                    <div class="mb-3">
+                        <label for="promptName" class="form-label">
+                            <i class="fas fa-tag me-1"></i>Name *
+                        </label>
+                        <input type="text" class="form-control" id="promptName" required 
+                               placeholder="Enter a descriptive name for this prompt">
+                    </div>
+                    <div class="mb-3">
+                        <label for="promptDescription" class="form-label">
+                            <i class="fas fa-info-circle me-1"></i>Description
+                        </label>
+                        <textarea class="form-control" id="promptDescription" rows="3"
+                                  placeholder="Optional: Describe what this prompt is used for"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="promptCategory" class="form-label">
+                            <i class="fas fa-folder me-1"></i>Category
+                        </label>
+                        <input type="text" class="form-control" id="promptCategory" 
+                               placeholder="Optional: essay, report, assignment, etc.">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitPromptSave()" id="savePromptBtn">
+                    <i class="fas fa-save me-1"></i>Save Prompt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Marking Scheme Modal -->
+<div class="modal fade" id="saveMarkingSchemeModal" tabindex="-1" aria-labelledby="saveMarkingSchemeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="saveMarkingSchemeModalLabel">
+                    <i class="fas fa-save me-2"></i>Save Current Marking Scheme
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="saveMarkingSchemeForm">
+                    <div class="mb-3">
+                        <label for="markingSchemeName" class="form-label">
+                            <i class="fas fa-tag me-1"></i>Name *
+                        </label>
+                        <input type="text" class="form-control" id="markingSchemeName" required 
+                               placeholder="Enter a descriptive name for this marking scheme">
+                    </div>
+                    <div class="mb-3">
+                        <label for="markingSchemeDescription" class="form-label">
+                            <i class="fas fa-info-circle me-1"></i>Description
+                        </label>
+                        <textarea class="form-control" id="markingSchemeDescription" rows="3"
+                                  placeholder="Optional: Describe what this marking scheme covers"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="markingSchemeCategory" class="form-label">
+                            <i class="fas fa-folder me-1"></i>Category
+                        </label>
+                        <input type="text" class="form-control" id="markingSchemeCategory" 
+                               placeholder="Optional: essay, report, assignment, etc.">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitMarkingSchemeSave()" id="saveMarkingSchemeBtn">
+                    <i class="fas fa-save me-1"></i>Save Marking Scheme
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

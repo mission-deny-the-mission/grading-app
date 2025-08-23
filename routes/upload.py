@@ -132,7 +132,19 @@ def upload_file():
         # Get grading parameters
         prompt = request.form.get('prompt', session.get('default_prompt', 'Please grade this document and provide detailed feedback.'))
         provider = request.form.get('provider', 'openrouter')
-        custom_model = request.form.get('customModel', '').strip()
+        
+        # Handle model selection from dropdown
+        model_select = request.form.get('modelSelect', 'default').strip()
+        custom_model_input = request.form.get('customModel', '').strip()
+        
+        # Determine the selected model
+        if model_select == 'custom':
+            custom_model = custom_model_input
+        elif model_select == 'default':
+            custom_model = ''
+        else:
+            custom_model = model_select
+            
         models_to_compare = request.form.getlist('models_to_compare[]')
         custom_models = request.form.getlist('customModels[]')
 
@@ -149,9 +161,16 @@ def upload_file():
             if custom_model:
                 models_to_compare = [custom_model]
             else:
-                # Use default model for the provider
-                default_model = DEFAULT_MODELS.get(provider, {}).get('default', 'anthropic/claude-3-5-sonnet-20241022')
-                models_to_compare = [default_model]
+                # Use configured default model for the provider, fallback to hardcoded defaults
+                try:
+                    from models import Config
+                    config = Config.get_or_create()
+                    configured_default = config.get_default_model(provider)
+                    models_to_compare = [configured_default]
+                except Exception:
+                    # Fallback to hardcoded default if config lookup fails
+                    default_model = DEFAULT_MODELS.get(provider, {}).get('default', 'anthropic/claude-3-5-sonnet-20241022')
+                    models_to_compare = [default_model]
 
         results = []
         all_successful = True

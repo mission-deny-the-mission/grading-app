@@ -58,13 +58,28 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="customModel" class="form-label fw-bold">
-                            <i class="fas fa-cog me-2"></i>Custom Model (Optional)
+                        <label for="modelSelect" class="form-label fw-bold">
+                            <i class="fas fa-cog me-2"></i>Model Selection
                         </label>
+                        <select class="form-select" id="modelSelect" name="modelSelect" onchange="toggleCustomModel()">
+                            <option value="default">Use Default Model</option>
+                            <option value="openai/gpt-5">GPT-5</option>
+                            <option value="openai/gpt-5-mini">GPT-5 Mini</option>
+                            <option value="anthropic/claude-4-sonnet">Claude 4 Sonnet</option>
+                            <option value="anthropic/claude-4-opus">Claude 4 Opus</option>
+                            <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+                            <option value="openai/gpt-4o">GPT-4o</option>
+                            <option value="google/gemini-pro">Gemini Pro</option>
+                            <option value="custom">Custom Model...</option>
+                        </select>
+                        <div class="form-text mb-2">
+                            Select a specific model or use the provider's default
+                        </div>
                         <input type="text" class="form-control" id="customModel" name="customModel" 
-                               placeholder="Enter custom model name (e.g., openai/gpt-5, anthropic/claude-4)">
-                        <div class="form-text">
-                            Leave blank to use default model, or enter any model name supported by your provider
+                               placeholder="Enter custom model name (e.g., openai/gpt-5, anthropic/claude-4)"
+                               style="display: none;" disabled>
+                        <div class="form-text" id="customModelHelp" style="display: none;">
+                            Enter any model name supported by your provider
                         </div>
                     </div>
 
@@ -304,6 +319,23 @@ function updateTemperatureValue(value) {
     document.getElementById('temperatureValue').textContent = value;
 }
 
+function toggleCustomModel() {
+    const modelSelect = document.getElementById('modelSelect');
+    const customModelInput = document.getElementById('customModel');
+    const customModelHelp = document.getElementById('customModelHelp');
+    
+    if (modelSelect.value === 'custom') {
+        customModelInput.style.display = 'block';
+        customModelInput.disabled = false;
+        customModelHelp.style.display = 'block';
+    } else {
+        customModelInput.style.display = 'none';
+        customModelInput.disabled = true;
+        customModelInput.value = '';
+        customModelHelp.style.display = 'none';
+    }
+}
+
 function clearResults() {
     document.getElementById('results').style.display = 'none';
     document.getElementById('resultContent').innerHTML = '';
@@ -311,6 +343,8 @@ function clearResults() {
     // Reset model selection
     document.getElementById('enableComparison').checked = false;
     document.getElementById('modelSelection').style.display = 'none';
+    document.getElementById('modelSelect').value = 'default';
+    toggleCustomModel(); // Hide custom model input
     // Clear custom model inputs
     document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
         input.value = '';

@@ -975,3 +975,89 @@ class JobBatch(db.Model):
         """Archive this batch."""
         self.status = 'archived'
         db.session.commit()
+
+
+class Config(db.Model):
+    """Model for storing application configuration settings."""
+    __tablename__ = 'config'
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    # API Configuration
+    openrouter_api_key = db.Column(db.Text)
+    claude_api_key = db.Column(db.Text)
+    gemini_api_key = db.Column(db.Text)
+    openai_api_key = db.Column(db.Text)
+    lm_studio_url = db.Column(db.String(500))
+    ollama_url = db.Column(db.String(500))
+
+    # Default Settings
+    default_prompt = db.Column(db.Text)
+    
+    # Default Models per Provider
+    openrouter_default_model = db.Column(db.String(200))
+    claude_default_model = db.Column(db.String(200))
+    gemini_default_model = db.Column(db.String(200))
+    openai_default_model = db.Column(db.String(200))
+    lm_studio_default_model = db.Column(db.String(200))
+    ollama_default_model = db.Column(db.String(200))
+
+    def to_dict(self):
+        """Convert config to dictionary."""
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'openrouter_api_key': self.openrouter_api_key,
+            'claude_api_key': self.claude_api_key,
+            'gemini_api_key': self.gemini_api_key,
+            'openai_api_key': self.openai_api_key,
+            'lm_studio_url': self.lm_studio_url,
+            'ollama_url': self.ollama_url,
+            'default_prompt': self.default_prompt,
+            'openrouter_default_model': self.openrouter_default_model,
+            'claude_default_model': self.claude_default_model,
+            'gemini_default_model': self.gemini_default_model,
+            'openai_default_model': self.openai_default_model,
+            'lm_studio_default_model': self.lm_studio_default_model,
+            'ollama_default_model': self.ollama_default_model
+        }
+
+    @staticmethod
+    def get_or_create():
+        """Get existing config or create a new one."""
+        config = Config.query.first()
+        if not config:
+            config = Config()
+            db.session.add(config)
+            db.session.commit()
+        return config
+
+    def get_default_model(self, provider):
+        """Get the configured default model for a provider."""
+        model_field_map = {
+            'openrouter': self.openrouter_default_model,
+            'claude': self.claude_default_model,
+            'gemini': self.gemini_default_model,
+            'openai': self.openai_default_model,
+            'lm_studio': self.lm_studio_default_model,
+            'ollama': self.ollama_default_model
+        }
+        
+        configured_model = model_field_map.get(provider)
+        if configured_model:
+            return configured_model
+            
+        # Fall back to hardcoded defaults if not configured
+        fallback_defaults = {
+            'openrouter': 'anthropic/claude-sonnet-4',
+            'claude': 'claude-3.5-sonnet-20241022',
+            'gemini': 'gemini-2.0-flash-exp',
+            'openai': 'gpt-4o',
+            'lm_studio': 'local-model',
+            'ollama': 'llama2'
+        }
+        
+        return fallback_defaults.get(provider, 'anthropic/claude-3-5-sonnet-20241022')
