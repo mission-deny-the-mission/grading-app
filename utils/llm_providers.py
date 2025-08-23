@@ -277,6 +277,7 @@ class OllamaLLMProvider(LLMProvider):
                 json={
                     "model": model,
                     "prompt": full_prompt,
+                    "stream": False,
                     "temperature": temperature,
                     "options": {"num_predict": max_tokens} # Ollama uses num_predict for max_tokens
                 },

@@ -237,6 +237,7 @@ def test_ollama():
             json={
                 "model": "llama2",
                 "prompt": "Hello",
+                "stream": False,
                 "options": {"num_predict": 10}
             },
             headers={"Content-Type": "application/json"},
