@@ -179,25 +179,23 @@ content %}
                             <i class="fas fa-comment me-2"></i>Grading
                             Instructions
                         </label>
-                        <div class="mb-2">
-                            <div class="btn-group" role="group">
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-primary btn-sm"
-                                    onclick="loadSavedPrompt()"
-                                >
-                                    <i class="fas fa-bookmark me-1"></i>Load
-                                    Saved Prompt
-                                </button>
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-success btn-sm"
-                                    onclick="saveCurrentPrompt()"
-                                >
-                                    <i class="fas fa-save me-1"></i>Save Current
-                                    Prompt
-                                </button>
+                        <div class="mb-2 d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center">
+                                <label for="selectSavedPrompt" class="me-2 mb-0">Saved Prompt:</label>
+                                <select class="form-select form-select-sm" id="selectSavedPrompt" style="max-width: 320px;">
+                                    <option value="">No saved prompt</option>
+                                    {% for p in saved_prompts %}
+                                    <option value="{{ p.id }}">{{ p.name }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
+                            <button
+                                type="button"
+                                class="btn btn-outline-success btn-sm"
+                                onclick="saveCurrentPrompt()"
+                            >
+                                <i class="fas fa-save me-1"></i>Save Current Prompt
+                            </button>
                         </div>
                         <textarea
                             class="form-control"
@@ -293,25 +291,23 @@ content %}
                             <i class="fas fa-clipboard-check me-2"></i>Marking
                             Scheme (Optional)
                         </label>
-                        <div class="mb-2">
-                            <div class="btn-group" role="group">
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-primary btn-sm"
-                                    onclick="loadSavedMarkingScheme()"
-                                >
-                                    <i class="fas fa-bookmark me-1"></i>Load
-                                    Saved Scheme
-                                </button>
-                                <button
-                                    type="button"
-                                    class="btn btn-outline-success btn-sm"
-                                    onclick="saveCurrentMarkingScheme()"
-                                >
-                                    <i class="fas fa-save me-1"></i>Save Current
-                                    Scheme
-                                </button>
+                        <div class="mb-2 d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center">
+                                <label for="selectSavedMarkingScheme" class="me-2 mb-0">Saved Scheme:</label>
+                                <select class="form-select form-select-sm" id="selectSavedMarkingScheme" style="max-width: 320px;">
+                                    <option value="">No saved marking scheme</option>
+                                    {% for s in saved_marking_schemes %}
+                                    <option value="{{ s.id }}">{{ s.name }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
+                            <button
+                                type="button"
+                                class="btn btn-outline-success btn-sm"
+                                onclick="saveCurrentMarkingScheme()"
+                            >
+                                <i class="fas fa-save me-1"></i>Save Current Scheme
+                            </button>
                         </div>
                         <input
                             type="file"
@@ -975,25 +971,28 @@ content %}
     });
 
     // Saved Configurations Functions
-    function loadSavedPrompt() {
+    // Replace dialog selection with dropdown change handler for saved prompts
+    document.addEventListener('DOMContentLoaded', function() {
         const savedPrompts = {{ saved_prompts|tojson }};
-        if (savedPrompts.length === 0) {
-            alert('No saved prompts available. Please save a prompt first.');
-            return;
+        const promptSelect = document.getElementById('selectSavedPrompt');
+        if (promptSelect) {
+            promptSelect.addEventListener('change', function() {
+                const selectedId = this.value;
+                if (!selectedId) {
+                    document.getElementById('saved_prompt_id').value = '';
+                    document.getElementById('savedPromptInfo').style.display = 'none';
+                    return;
+                }
+                const selected = savedPrompts.find(p => String(p.id) === String(selectedId));
+                if (selected) {
+                    document.getElementById('prompt').value = selected.prompt_text || '';
+                    document.getElementById('saved_prompt_id').value = selected.id;
+                    document.getElementById('savedPromptName').textContent = selected.name || '';
+                    document.getElementById('savedPromptInfo').style.display = 'block';
+                }
+            });
         }
-
-        const promptNames = savedPrompts.map(p => p.name);
-        const selectedPrompt = prompt('Select a saved prompt:\n\n' + promptNames.map((name, i) => `${i + 1}. ${name}`).join('\n') + '\n\nEnter the number:');
-
-        if (selectedPrompt && !isNaN(selectedPrompt) && selectedPrompt > 0 && selectedPrompt <= savedPrompts.length) {
-            const prompt = savedPrompts[selectedPrompt - 1];
-            document.getElementById('prompt').value = prompt.prompt_text;
-            // Note: saved prompts no longer restore a specific provider or model; provider and model selection are configured per job separately.
-            document.getElementById('saved_prompt_id').value = prompt.id;
-            document.getElementById('savedPromptName').textContent = prompt.name;
-            document.getElementById('savedPromptInfo').style.display = 'block';
-        }
-    }
+    });
 
     function saveCurrentPrompt() {
         const promptText = document.getElementById('prompt').value;
@@ -1037,25 +1036,29 @@ content %}
         });
     }
 
-    function loadSavedMarkingScheme() {
+    // Replace dialog selection with dropdown change handler for saved marking schemes
+    document.addEventListener('DOMContentLoaded', function() {
         const savedSchemes = {{ saved_marking_schemes|tojson }};
-        if (savedSchemes.length === 0) {
-            alert('No saved marking schemes available. Please save a marking scheme first.');
-            return;
+        const schemeSelect = document.getElementById('selectSavedMarkingScheme');
+        if (schemeSelect) {
+            schemeSelect.addEventListener('change', function() {
+                const selectedId = this.value;
+                if (!selectedId) {
+                    document.getElementById('saved_marking_scheme_id').value = '';
+                    document.getElementById('savedSchemeInfo').style.display = 'none';
+                    return;
+                }
+                const selected = savedSchemes.find(s => String(s.id) === String(selectedId));
+                if (selected) {
+                    document.getElementById('saved_marking_scheme_id').value = selected.id;
+                    document.getElementById('savedSchemeName').textContent = selected.name || '';
+                    document.getElementById('savedSchemeInfo').style.display = 'block';
+                    // Clear the file input since we're using a saved scheme
+                    document.getElementById('marking_scheme').value = '';
+                }
+            });
         }
-
-        const schemeNames = savedSchemes.map(s => s.name);
-        const selectedScheme = prompt('Select a saved marking scheme:\n\n' + schemeNames.map((name, i) => `${i + 1}. ${name}`).join('\n') + '\n\nEnter the number:');
-
-        if (selectedScheme && !isNaN(selectedScheme) && selectedScheme > 0 && selectedScheme <= savedSchemes.length) {
-            const scheme = savedSchemes[selectedScheme - 1];
-            document.getElementById('saved_marking_scheme_id').value = scheme.id;
-            document.getElementById('savedSchemeName').textContent = scheme.name;
-            document.getElementById('savedSchemeInfo').style.display = 'block';
-            // Clear the file input since we're using a saved scheme
-            document.getElementById('marking_scheme').value = '';
-        }
-    }
+    });
 
     function saveCurrentMarkingScheme() {
         const fileInput = document.getElementById('marking_scheme');
