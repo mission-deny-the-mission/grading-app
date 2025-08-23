@@ -54,7 +54,7 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    command: celery -A tasks worker --loglevel=info --concurrency=2 --queues=grading,maintenance
+    command: celery -A tasks worker --loglevel=info --concurrency=8 --queues=grading,maintenance
 
   # Celery beat for scheduled tasks
   beat:

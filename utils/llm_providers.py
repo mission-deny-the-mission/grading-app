@@ -9,6 +9,245 @@ from openai import OpenAI
 from anthropic import Anthropic
 import google.generativeai as genai
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
+import threading
+import json
+
+# Optional Redis import for distributed semaphore
+_redis_available = False
+_redis_client = None
+try:
+    import redis
+    _redis_available = True
+except Exception:
+    _redis_available = False
+
+_DEFAULT_PROPRIETARY_CONCURRENCY = int(os.getenv('DEFAULT_PROPRIETARY_CONCURRENCY', '4'))
+_DEFAULT_LOCAL_CONCURRENCY = int(os.getenv('DEFAULT_LOCAL_CONCURRENCY', '1'))
+_PROPRIETARY_PROVIDERS = {'OpenRouter', 'Claude', 'Gemini', 'OpenAI'}
+_LOCAL_PROVIDERS = {'LM Studio', 'Ollama'}
+
+_provider_semaphores = {}
+_provider_limits = {}
+
+def _get_provider_limit(provider_name):
+    """
+    Determine concurrency limit for a provider.
+
+    Resolution order:
+    1. Environment variable PROVIDER_MAX_<PROVIDER_NAME_UPPER> (spaces -> _)
+       e.g. PROVIDER_MAX_CLAUDE=6
+    2. JSON mapping in PROVIDER_MAX_PARALLEL (env), e.g. {"Claude": 6, "LM Studio": 1}
+    3. Defaults based on provider type (proprietary/local)
+    """
+    # Per-provider env var override
+    env_key = f"PROVIDER_MAX_{provider_name.upper().replace(' ', '_')}"
+    if env_key in os.environ:
+        try:
+            return int(os.environ[env_key])
+        except Exception:
+            pass
+
+    # JSON mapping override
+    mapping = os.getenv('PROVIDER_MAX_PARALLEL')
+    if mapping:
+        try:
+            parsed = json.loads(mapping)
+            if provider_name in parsed:
+                return int(parsed[provider_name])
+            # Support lower-case keys as well
+            if provider_name.lower() in parsed:
+                return int(parsed[provider_name.lower()])
+        except Exception:
+            # Ignore parse errors and fall through to defaults
+            pass
+
+    # Defaults
+    if provider_name in _PROPRIETARY_PROVIDERS:
+        return _DEFAULT_PROPRIETARY_CONCURRENCY
+    if provider_name in _LOCAL_PROVIDERS:
+        return _DEFAULT_LOCAL_CONCURRENCY
+    # Fallback to proprietary default for unknown providers
+    return _DEFAULT_PROPRIETARY_CONCURRENCY
+
+def _get_or_create_semaphore(provider_name):
+    """Lazily create a bounded semaphore for a provider with the configured limit.
+    Chooses Redis-backed semaphore if configured, otherwise falls back to in-process semaphore.
+    """
+    if provider_name in _provider_semaphores:
+        return _provider_semaphores[provider_name]
+
+    limit = _get_provider_limit(provider_name)
+
+    # If Redis is requested/available, create a RedisSemaphore
+    use_redis = False
+    if os.getenv('USE_REDIS_SEMAPHORE', '').lower() in ('1', 'true', 'yes'):
+        use_redis = True
+    if os.getenv('REDIS_URL'):
+        use_redis = True
+
+    if use_redis and _redis_available:
+        # Initialize global redis client lazily
+        global _redis_client
+        if _redis_client is None:
+            try:
+                redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+                _redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
+            except Exception:
+                _redis_client = None
+
+        if _redis_client:
+            sem = RedisSemaphore(_redis_client, provider_name, limit, ttl=int(os.getenv('PROVIDER_SEMAPHORE_TTL', '300')))
+            _provider_semaphores[provider_name] = sem
+            _provider_limits[provider_name] = limit
+            return sem
+        else:
+            # Fall through to in-process semaphore if redis init failed
+            pass
+
+    # Fall back to in-process semaphore
+    sem = threading.BoundedSemaphore(limit)
+    _provider_semaphores[provider_name] = sem
+    _provider_limits[provider_name] = limit
+    return sem
+
+# Redis-backed semaphore implementation
+class RedisSemaphore:
+    """
+    A simple Redis-backed semaphore using an atomic Lua script.
+    Keys:
+      - counter key: stores current count
+    Notes:
+      - This semaphore is lightweight and per-key; it does not track holders individually.
+      - TTL is applied to the counter to avoid stale locks if a process dies without releasing,
+        but this means a semaphore count can reset after TTL seconds if all processes fail to release.
+      - This is suitable for limiting parallel requests across processes but not for strong leader-election.
+    """
+    _ACQUIRE_LUA = """
+    local current = tonumber(redis.call('get', KEYS[1]) or '0')
+    if current < tonumber(ARGV[1]) then
+        current = redis.call('incr', KEYS[1])
+        redis.call('expire', KEYS[1], ARGV[2])
+        return 1
+    else
+        return 0
+    end
+    """
+
+    _RELEASE_LUA = """
+    local current = tonumber(redis.call('get', KEYS[1]) or '0')
+    if current > 0 then
+        redis.call('decr', KEYS[1])
+        return 1
+    else
+        return 0
+    end
+    """
+
+    def __init__(self, client, name, limit, ttl=300):
+        self.client = client
+        self.name = name
+        self.limit = int(limit)
+        self.ttl = int(ttl)
+        self.counter_key = f"semaphore:{self.name}:counter"
+        try:
+            self._acquire_script = client.register_script(self._ACQUIRE_LUA)
+            self._release_script = client.register_script(self._RELEASE_LUA)
+        except Exception:
+            # redis-py clients sometimes don't support register_script in certain configs;
+            # fall back to EVAL if necessary by storing None and using eval directly.
+            self._acquire_script = None
+            self._release_script = None
+
+    def acquire(self, timeout=300, sleep_interval=0.1):
+        """Try to acquire the semaphore within timeout seconds."""
+        import time
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                if self._acquire_script:
+                    res = self._acquire_script(keys=[self.counter_key], args=[self.limit, self.ttl])
+                else:
+                    res = self.client.eval(self._ACQUIRE_LUA, 1, self.counter_key, self.limit, self.ttl)
+                if int(res) == 1:
+                    return True
+            except Exception:
+                # On any redis error, break and fallback to failure to avoid hanging
+                return False
+            time.sleep(sleep_interval)
+        return False
+
+    def release(self):
+        """Release one slot in the semaphore."""
+        try:
+            if self._release_script:
+                res = self._release_script(keys=[self.counter_key], args=[])
+            else:
+                res = self.client.eval(self._RELEASE_LUA, 1, self.counter_key)
+            return int(res) == 1
+        except Exception:
+            # Suppress errors to avoid masking original exceptions
+            return False
+
+@contextmanager
+def provider_semaphore(provider_name):
+    """
+    Context manager that acquires/releases a semaphore for the given provider.
+    Waits up to PROVIDER_SEMAPHORE_TIMEOUT seconds (default 300) to acquire; raises TimeoutError if not acquired.
+    Uses Redis-backed semaphore when configured; otherwise uses an in-process threading semaphore.
+    """
+    timeout = int(os.getenv('PROVIDER_SEMAPHORE_TIMEOUT', '300'))
+    sem = _get_or_create_semaphore(provider_name)
+
+    # If using RedisSemaphore, it exposes acquire/release methods.
+    acquired = False
+    try:
+        if isinstance(sem, RedisSemaphore):
+            acquired = sem.acquire(timeout=timeout)
+            if not acquired:
+                raise TimeoutError(f"Timeout acquiring redis semaphore for provider {provider_name}")
+            yield
+        else:
+            acquired = sem.acquire(timeout=timeout)
+            if not acquired:
+                raise TimeoutError(f"Timeout acquiring local semaphore for provider {provider_name}")
+            yield
+    finally:
+        if acquired:
+            try:
+                if isinstance(sem, RedisSemaphore):
+                    sem.release()
+                else:
+                    sem.release()
+            except Exception:
+                # Best-effort release; ignore to avoid masking original exceptions
+                pass
+
+# Backward compatibility wrapper functions
+def grade_with_openrouter(text, prompt, model="anthropic/claude-opus-4-1", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    """Backward compatibility wrapper for OpenRouter grading."""
+    provider = OpenRouterLLMProvider()
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
+
+def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    """Backward compatibility wrapper for Claude grading."""
+    provider = ClaudeLLMProvider()
+    return provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
+
+def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    """Backward compatibility wrapper for LM Studio grading."""
+    provider = LMStudioLLMProvider()
+    return provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
+
+def grade_with_gemini(text, prompt, model="gemini-2.5-pro", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    """Backward compatibility wrapper for Gemini grading."""
+    provider = GeminiLLMProvider()
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
+
+def grade_with_openai(text, prompt, model="gpt-5", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    """Backward compatibility wrapper for OpenAI grading."""
+    provider = OpenAILLMProvider()
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
 
 
 class LLMProvider(ABC):
@@ -65,13 +304,24 @@ class OpenRouterLLMProvider(LLMProvider):
                 json=payload,
                 timeout=120
             )
-            
+
+            # Handle success and non-200 responses explicitly so we can return
+            # helpful error messages (e.g. include response body for 4xx/5xx).
             if response.status_code == 200:
                 result = response.json()
                 grade_text = result['choices'][0]['message']['content']
                 usage = result.get('usage')
             else:
-                response.raise_for_status()
+                # Attempt to decode body for debugging; fall back to raw text.
+                try:
+                    body = response.json()
+                except Exception:
+                    body = response.text
+                return {
+                    'success': False,
+                    'error': f"OpenRouter API error: {response.status_code} - {body}",
+                    'provider': 'OpenRouter'
+                }
 
             return {
                 'success': True,
@@ -289,11 +539,7 @@ class OllamaLLMProvider(LLMProvider):
                 result = response.json()
                 # Ollama's /api/generate streams responses, so we need to concatenate them
                 # For a single response, it might be directly in 'response' or 'eval_count' etc.
-                # This assumes a non-streaming response for simplicity, or takes the last part
-                final_response_content = result.get('response', '')
-                
-                # In case of streaming, result might not have 'response' directly at top level
-                # Let's assume for now a single call returns the full response, or adjust if needed
+                # This assumes a non-streaming response for simplicity, or adjust if needed
 
                 return {
                     'success': True,
@@ -515,34 +761,3 @@ def get_llm_provider(provider_name):
         return OpenAILLMProvider()
     else:
         raise ValueError(f"Unknown LLM provider: {provider_name}")
-
-
-# Backward compatibility wrapper functions
-def grade_with_openrouter(text, prompt, model="anthropic/claude-opus-4-1", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Backward compatibility wrapper for OpenRouter grading."""
-    provider = OpenRouterLLMProvider()
-    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
-
-
-def grade_with_claude(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Backward compatibility wrapper for Claude grading."""
-    provider = ClaudeLLMProvider()
-    return provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
-
-
-def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Backward compatibility wrapper for LM Studio grading."""
-    provider = LMStudioLLMProvider()
-    return provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
-
-
-def grade_with_gemini(text, prompt, model="gemini-2.5-pro", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Backward compatibility wrapper for Gemini grading."""
-    provider = GeminiLLMProvider()
-    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
-
-
-def grade_with_openai(text, prompt, model="gpt-5", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
-    """Backward compatibility wrapper for OpenAI grading."""
-    provider = OpenAILLMProvider()
-    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)

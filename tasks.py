@@ -4,8 +4,9 @@ import requests
 from celery import Celery
 from flask import Flask
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from utils.llm_providers import get_llm_provider, grade_with_openrouter, grade_with_claude, grade_with_lm_studio
+from utils.llm_providers import get_llm_provider, grade_with_openrouter, grade_with_claude, grade_with_lm_studio, provider_semaphore
 from models import db, GradingJob, Submission, MarkingScheme, SavedMarkingScheme, JobBatch, BatchTemplate
 from utils.text_extraction import extract_text_from_docx, extract_text_from_pdf, extract_text_by_file_type
 from utils.file_utils import cleanup_file
@@ -88,17 +89,40 @@ def process_job(self, job_id):
                 job.update_progress()
                 return True
             
-            for submission in pending_submissions:
-                print(f"Processing submission: {submission.original_filename}")
-                result = process_submission_sync(submission.id)
-                if not result:
-                    # Include failure reason if available to aid diagnosis
-                    failure_reason = submission.error_message if hasattr(submission, 'error_message') else None
-                    if failure_reason:
-                        print(f"Failed to process submission: {submission.original_filename} | Reason: {failure_reason}")
-                    else:
-                        print(f"Failed to process submission: {submission.original_filename}")
-            
+            # Process submissions in parallel within this job while still honoring provider semaphores.
+            # Determine number of worker threads to use (env override or batch-level setting)
+            try:
+                max_workers = int(os.getenv('JOB_MAX_PARALLEL', '4'))
+            except Exception:
+                max_workers = 4
+
+            # Allow optional batch-level override if provided (batch.batch_settings is a dict)
+            try:
+                if job.batch and getattr(job.batch, 'batch_settings', None):
+                    bs = job.batch.batch_settings
+                    if isinstance(bs, dict) and 'job_parallelism' in bs:
+                        max_workers = int(bs.get('job_parallelism') or max_workers)
+            except Exception:
+                pass
+
+            workers = max(1, min(max_workers, len(pending_submissions)))
+            print(f"Processing {len(pending_submissions)} submissions using {workers} worker(s)")
+
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                future_map = {executor.submit(process_submission_sync, s.id): s for s in pending_submissions}
+                for fut in as_completed(future_map):
+                    submission_obj = future_map[fut]
+                    try:
+                        result = fut.result()
+                        if not result:
+                            failure_reason = submission_obj.error_message if hasattr(submission_obj, 'error_message') else None
+                            if failure_reason:
+                                print(f"Failed to process submission: {submission_obj.original_filename} | Reason: {failure_reason}")
+                            else:
+                                print(f"Failed to process submission: {submission_obj.original_filename}")
+                    except Exception as e:
+                        print(f"Unhandled exception processing submission {submission_obj.original_filename}: {e}")
+
             job.update_progress()
             
             if job.batch_id:
@@ -162,17 +186,38 @@ def process_job_sync(job_id):
                 job.update_progress()
                 return True
             
-            # Process submissions one by one (not in parallel)
-            for submission in pending_submissions:
-                print(f"Processing submission: {submission.original_filename}")
-                result = process_submission_sync(submission.id)
-                if not result:
-                    failure_reason = submission.error_message if hasattr(submission, 'error_message') else None
-                    if failure_reason:
-                        print(f"Failed to process submission: {submission.original_filename} | Reason: {failure_reason}")
-                    else:
-                        print(f"Failed to process submission: {submission.original_filename}")
-            
+            # Process submissions in parallel within this job while still honoring provider semaphores.
+            try:
+                max_workers = int(os.getenv('JOB_MAX_PARALLEL', '4'))
+            except Exception:
+                max_workers = 4
+
+            try:
+                if job.batch and getattr(job.batch, 'batch_settings', None):
+                    bs = job.batch.batch_settings
+                    if isinstance(bs, dict) and 'job_parallelism' in bs:
+                        max_workers = int(bs.get('job_parallelism') or max_workers)
+            except Exception:
+                pass
+
+            workers = max(1, min(max_workers, len(pending_submissions)))
+            print(f"Processing {len(pending_submissions)} submissions using {workers} worker(s)")
+
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                future_map = {executor.submit(process_submission_sync, s.id): s for s in pending_submissions}
+                for fut in as_completed(future_map):
+                    submission_obj = future_map[fut]
+                    try:
+                        result = fut.result()
+                        if not result:
+                            failure_reason = submission_obj.error_message if hasattr(submission_obj, 'error_message') else None
+                            if failure_reason:
+                                print(f"Failed to process submission: {submission_obj.original_filename} | Reason: {failure_reason}")
+                            else:
+                                print(f"Failed to process submission: {submission_obj.original_filename}")
+                    except Exception as e:
+                        print(f"Unhandled exception processing submission {submission_obj.original_filename}: {e}")
+
             # Update job progress after all submissions are processed
             job.update_progress()
             
@@ -243,10 +288,18 @@ def process_submission_sync(submission_id):
                 models_to_grade = job.models_to_compare
             else:
                 # Fallback to single model (backward compatibility)
-                if job.provider == 'OpenRouter':
-                    models_to_grade = [job.model if job.model else "anthropic/claude-3-5-sonnet-20241022"]
-                else:
-                    models_to_grade = [job.model if job.model else "default"]
+                # Use a case-insensitive provider check and sensible defaults per provider
+                provider_name = (job.provider or '').lower()
+                provider_defaults = {
+                    'openrouter': "anthropic/claude-3-5-sonnet-20241022",
+                    'claude': "claude-3-5-sonnet-20241022",
+                    'lm_studio': "local-model",
+                    'ollama': "llama2",
+                    'gemini': "gemini-2.5-pro",
+                    'openai': "gpt-5"
+                }
+                default_model = provider_defaults.get(provider_name, provider_defaults['openrouter'])
+                models_to_grade = [job.model if job.model else default_model]
             
             all_successful = True
             successful_results = []
@@ -280,18 +333,25 @@ def process_submission_sync(submission_id):
                     provider_name = provider_mapping.get(job.provider, job.provider)
                     llm_provider = get_llm_provider(provider_name)
                     
-                    # For providers that support model selection, pass the model parameter
-                    if job.provider.lower() in ['openrouter', 'ollama', 'gemini', 'openai']:
-                        result = llm_provider.grade_document(
-                            text, job.prompt, model, marking_scheme_content, 
-                            job.temperature, job.max_tokens
-                        )
-                    else:
-                        # For Claude and LM Studio, model is handled internally
-                        result = llm_provider.grade_document(
-                            text, job.prompt, marking_scheme_content, 
-                            job.temperature, job.max_tokens
-                        )
+                    # Acquire provider-specific semaphore to limit parallel requests.
+                    # This enforces the per-provider concurrency configuration.
+                    try:
+                        with provider_semaphore(provider_name):
+                            # For providers that support model selection, pass the model parameter
+                            if job.provider.lower() in ['openrouter', 'ollama', 'gemini', 'openai']:
+                                result = llm_provider.grade_document(
+                                    text, job.prompt, model, marking_scheme_content, 
+                                    job.temperature, job.max_tokens
+                                )
+                            else:
+                                # For Claude and LM Studio, model is handled internally
+                                result = llm_provider.grade_document(
+                                    text, job.prompt, marking_scheme_content, 
+                                    job.temperature, job.max_tokens
+                                )
+                    except TimeoutError as te:
+                        submission.set_status('failed', f'Grading error: {str(te)}')
+                        return False
                 except ValueError as e:
                     # Provider not found
                     submission.set_status('failed', f'Unsupported provider: {job.provider}. Error: {str(e)}')
@@ -314,9 +374,18 @@ def process_submission_sync(submission_id):
                             'usage': result.get('usage')
                         }
                     )
-
+ 
                     successful_results.append(result)
                 else:
+                    # Log detailed provider error to worker logs for debugging
+                    try:
+                        err = result.get('error', 'No error message provided')
+                        prov = result.get('provider', job.provider or 'OpenRouter')
+                        mod = result.get('model', model)
+                        print(f"Model grading failed for submission {submission.original_filename}: provider={prov}, model={mod}, error={err}")
+                    except Exception:
+                        print(f"Model grading failed for submission {submission.original_filename}: (failed to format error)")
+                    
                     submission.add_grade_result(
                         grade='',
                         provider=result.get('provider', job.provider or 'OpenRouter'),
@@ -596,4 +665,3 @@ def cleanup_old_files():
                             os.remove(file_path)
                         except:
                             pass  # Don't fail if cleanup fails
-

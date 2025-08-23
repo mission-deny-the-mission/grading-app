@@ -2,7 +2,7 @@
 import os
 
 # Broker settings (allow override in containers/CI)
-_redis_host = os.getenv('REDIS_HOST', 'localhost')
+_redis_host = os.getenv('REDIS_HOST', 'redis')
 _redis_port = os.getenv('REDIS_PORT', '6379')
 broker_url = f'redis://{_redis_host}:{_redis_port}/0'
 result_backend = f'redis://{_redis_host}:{_redis_port}/0'

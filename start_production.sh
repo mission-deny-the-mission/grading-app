@@ -37,7 +37,7 @@ venv/bin/flask init-db
 
 # Start Celery worker in background
 echo "👷 Starting Celery worker..."
-venv/bin/celery -A tasks worker --loglevel=info --concurrency=4 --queues=grading,maintenance &
+venv/bin/celery -A tasks worker --loglevel=info --concurrency=8 --queues=grading,maintenance &
 CELERY_PID=$!
 
 # Start Celery beat for scheduled tasks

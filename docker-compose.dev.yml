@@ -28,13 +28,17 @@ services:
     ports:
       - "5000:5000"
       - "5555:5555"
+    env_file:
+      - .env
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
       - DATABASE_URL=sqlite:///grading_app.db
       - SECRET_KEY=dev-secret-key-change-in-production
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+#      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+#      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
       - PYTHONPATH=/workspace
     depends_on:
@@ -56,6 +60,8 @@ services:
       - /workspace/.pytest_cache
     ports:
       - "5001:5000"  # Use different port to avoid conflict with app service
+    env_file:
+      - .env
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
@@ -63,6 +69,8 @@ services:
       - SECRET_KEY=dev-secret-key-change-in-production
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
       - PYTHONPATH=/workspace
     depends_on:
@@ -84,19 +92,24 @@ services:
       - /workspace/venv
       - /workspace/__pycache__
       - /workspace/.pytest_cache
+    env_file:
+      - .env
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=sqlite:///grading_app.db
       - SECRET_KEY=dev-secret-key-change-in-production
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+#      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+#      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
       - PYTHONPATH=/workspace
     depends_on:
       redis:
         condition: service_healthy
     restart: unless-stopped
-    command: celery -A tasks worker --loglevel=info --concurrency=2 --queues=grading,maintenance
+    # Use a single worker process in dev when using SQLite to avoid DB locks.
+    command: celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance
     profiles:
       - worker
 
@@ -111,12 +124,16 @@ services:
       - /workspace/venv
       - /workspace/__pycache__
       - /workspace/.pytest_cache
+    env_file:
+      - .env
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=sqlite:///grading_app.db
       - SECRET_KEY=dev-secret-key-change-in-production
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
       - PYTHONPATH=/workspace
     depends_on:
@@ -127,5 +144,25 @@ services:
     profiles:
       - beat
 
+  # Postgres for development (used instead of SQLite when DATABASE_URL is set)
+  postgres:
+    image: postgres:15-alpine
+    container_name: grading-app-postgres-dev
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=grading_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   redis_data:
+  pgdata:
