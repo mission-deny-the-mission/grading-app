@@ -4,6 +4,10 @@
 
 echo "🚀 Starting Document Grading App Services..."
 
+# Ensure we run from the script's directory (repo root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
     echo "📦 Creating virtual environment..."
@@ -27,6 +31,7 @@ fi
 
 # Initialize database
 echo "🗄️  Initializing database..."
+export FLASK_APP=app.py
 venv/bin/flask init-db
 
 # Start Celery worker in background

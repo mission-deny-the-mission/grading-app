@@ -25,7 +25,7 @@ class LLMProvider(ABC):
 class OpenRouterLLMProvider(LLMProvider):
     """LLM Provider for OpenRouter API."""
 
-    def grade_document(self, text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    def grade_document(self, text, prompt, model="anthropic/claude-opus-4-1", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
         try:
             # Re-check environment each call to satisfy tests that clear env
             openrouter_key = os.getenv('OPENROUTER_API_KEY')
@@ -35,10 +35,6 @@ class OpenRouterLLMProvider(LLMProvider):
                     'error': "OpenRouter API authentication failed. Please check your API key configuration.",
                     'provider': 'OpenRouter'
                 }
-            
-            # Configure OpenAI for OpenRouter
-            openai.api_key = openrouter_key
-            openai.api_base = "https://openrouter.ai/api/v1"
 
             # Prepare the grading prompt with marking scheme if provided
             if marking_scheme_content:
@@ -46,47 +42,63 @@ class OpenRouterLLMProvider(LLMProvider):
             else:
                 enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
 
-            response = openai.ChatCompletion.create(
-                model=model,
-                messages=[
+            # Use requests library for OpenRouter API to avoid OpenAI SDK compatibility issues
+            headers = {
+                "Authorization": f"Bearer {openrouter_key}",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "model": model,
+                "messages": [
                     {"role": "system", "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria."},
                     {"role": "user", "content": enhanced_prompt}
                 ],
-                temperature=temperature,
-                max_tokens=max_tokens
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=120
             )
+            
+            if response.status_code == 200:
+                result = response.json()
+                grade_text = result['choices'][0]['message']['content']
+                usage = result.get('usage')
+            else:
+                response.raise_for_status()
 
             return {
                 'success': True,
-                'grade': response.choices[0].message.content,
+                'grade': grade_text,
                 'model': model,
                 'provider': 'OpenRouter',
-                'usage': response.usage
-            }
-        except openai.error.AuthenticationError:
-            return {
-                'success': False,
-                'error': "OpenRouter API authentication failed. Please check your API key.",
-                'provider': 'OpenRouter'
-            }
-        except openai.error.RateLimitError:
-            return {
-                'success': False,
-                'error': "OpenRouter API rate limit exceeded. Please try again later.",
-                'provider': 'OpenRouter'
-            }
-        except openai.error.APIError as e:
-            return {
-                'success': False,
-                'error': f"OpenRouter API error: {str(e)}",
-                'provider': 'OpenRouter'
+                'usage': usage
             }
         except Exception as e:
-            return {
-                'success': False,
-                'error': f"Unexpected error with OpenRouter API: {str(e)}",
-                'provider': 'OpenRouter'
-            }
+            error_msg = str(e)
+            if 'auth' in error_msg.lower() or 'key' in error_msg.lower():
+                return {
+                    'success': False,
+                    'error': "OpenRouter API authentication failed. Please check your API key.",
+                    'provider': 'OpenRouter'
+                }
+            elif 'rate' in error_msg.lower() and 'limit' in error_msg.lower():
+                return {
+                    'success': False,
+                    'error': "OpenRouter API rate limit exceeded. Please try again later.",
+                    'provider': 'OpenRouter'
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f"Unexpected error with OpenRouter API: {error_msg}",
+                    'provider': 'OpenRouter'
+                }
 
 
 class ClaudeLLMProvider(LLMProvider):
@@ -120,7 +132,7 @@ class ClaudeLLMProvider(LLMProvider):
                 enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
 
             response = anthropic.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-4-opus-20250805",
                 max_tokens=max_tokens,
                 temperature=temperature,
                 system="You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
@@ -135,9 +147,9 @@ class ClaudeLLMProvider(LLMProvider):
             return {
                 'success': True,
                 'grade': response.content[0].text,
-                'model': 'claude-3-5-sonnet-20241022',
+                'model': 'claude-4-opus-20250805',
                 'provider': 'Claude',
-                'usage': response.usage.dict() if response.usage else None
+                'usage': response.usage.model_dump() if response.usage else None
             }
         except Exception as e:
             error_msg = str(e)
@@ -333,7 +345,7 @@ class OllamaLLMProvider(LLMProvider):
 class GeminiLLMProvider(LLMProvider):
     """LLM Provider for Google Gemini API."""
 
-    def grade_document(self, text, prompt, model="gemini-2.0-flash-exp", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    def grade_document(self, text, prompt, model="gemini-2.5-pro", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
         try:
             # Re-check environment each call to satisfy tests that clear env
             gemini_key = os.getenv('GEMINI_API_KEY')
@@ -410,7 +422,7 @@ class GeminiLLMProvider(LLMProvider):
 class OpenAILLMProvider(LLMProvider):
     """LLM Provider for OpenAI API (direct, not through OpenRouter)."""
 
-    def grade_document(self, text, prompt, model="gpt-4o", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+    def grade_document(self, text, prompt, model="gpt-5", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
         try:
             # Re-check environment each call to satisfy tests that clear env
             openai_key = os.getenv('OPENAI_API_KEY')
@@ -496,7 +508,7 @@ def get_llm_provider(provider_name):
 
 
 # Backward compatibility wrapper functions
-def grade_with_openrouter(text, prompt, model="anthropic/claude-3-5-sonnet-20241022", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+def grade_with_openrouter(text, prompt, model="anthropic/claude-opus-4-1", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Backward compatibility wrapper for OpenRouter grading."""
     provider = OpenRouterLLMProvider()
     return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
@@ -514,13 +526,13 @@ def grade_with_lm_studio(text, prompt, marking_scheme_content=None, temperature=
     return provider.grade_document(text, prompt, marking_scheme_content, temperature, max_tokens)
 
 
-def grade_with_gemini(text, prompt, model="gemini-2.0-flash-exp", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+def grade_with_gemini(text, prompt, model="gemini-2.5-pro", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Backward compatibility wrapper for Gemini grading."""
     provider = GeminiLLMProvider()
     return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
 
 
-def grade_with_openai(text, prompt, model="gpt-4o", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
+def grade_with_openai(text, prompt, model="gpt-5", marking_scheme_content=None, temperature=0.3, max_tokens=2000):
     """Backward compatibility wrapper for OpenAI grading."""
     provider = OpenAILLMProvider()
     return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)

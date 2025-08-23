@@ -92,7 +92,12 @@ def process_job(self, job_id):
                 print(f"Processing submission: {submission.original_filename}")
                 result = process_submission_sync(submission.id)
                 if not result:
-                    print(f"Failed to process submission: {submission.original_filename}")
+                    # Include failure reason if available to aid diagnosis
+                    failure_reason = submission.error_message if hasattr(submission, 'error_message') else None
+                    if failure_reason:
+                        print(f"Failed to process submission: {submission.original_filename} | Reason: {failure_reason}")
+                    else:
+                        print(f"Failed to process submission: {submission.original_filename}")
             
             job.update_progress()
             
@@ -162,7 +167,11 @@ def process_job_sync(job_id):
                 print(f"Processing submission: {submission.original_filename}")
                 result = process_submission_sync(submission.id)
                 if not result:
-                    print(f"Failed to process submission: {submission.original_filename}")
+                    failure_reason = submission.error_message if hasattr(submission, 'error_message') else None
+                    if failure_reason:
+                        print(f"Failed to process submission: {submission.original_filename} | Reason: {failure_reason}")
+                    else:
+                        print(f"Failed to process submission: {submission.original_filename}")
             
             # Update job progress after all submissions are processed
             job.update_progress()
@@ -202,7 +211,11 @@ def process_submission_sync(submission_id):
 
 
             # Validate provider early so tests expecting provider errors don't fail due to missing file
-            supported_providers = {'openrouter', 'claude', 'lm_studio', 'ollama', 'OpenRouter', 'Claude', 'LM Studio', 'Ollama'}
+            supported_providers = {
+                'openrouter', 'claude', 'lm_studio', 'ollama',
+                'gemini', 'openai',
+                'OpenRouter', 'Claude', 'LM Studio', 'Ollama', 'Gemini', 'OpenAI'
+            }
             if job.provider not in supported_providers:
                 submission.set_status('failed', f'Unsupported provider: {job.provider}. Supported providers are: {", ".join(supported_providers)}')
                 return False

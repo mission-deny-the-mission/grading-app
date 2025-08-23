@@ -27,8 +27,13 @@ app = Flask(__name__, template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 
-# Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///grading_app.db')
+# Database configuration (use absolute path for SQLite to avoid CWD-related resets)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DEFAULT_SQLITE_PATH = os.path.join(BASE_DIR, 'grading_app.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f'sqlite:///{DEFAULT_SQLITE_PATH}')
+
+# Ensure we use the main database file, not the instance folder
+app.instance_path = BASE_DIR
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize database

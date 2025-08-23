@@ -233,7 +233,7 @@
                                 <h6 class="text-muted">Other Providers</h6>
                                 <div class="form-check">
                                     <input class="form-check-input model-checkbox" type="checkbox" 
-                                           name="models_to_compare[]" value="claude-3-5-sonnet-20241022" id="batch_claude_direct">
+                                           name="models_to_compare[]" value="claude-4-opus-20250805" id="batch_claude_direct">
                                     <label class="form-check-label" for="batch_claude_direct">
                                         Claude 3.5 Sonnet (Direct API)
                                     </label>
@@ -427,11 +427,13 @@
         function getBatchModelDisplayName(modelName) {
             // Create a more readable display name from the model identifier
             const nameMap = {
-                'anthropic/claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (Latest)',
+                'anthropic/claude-opus-4-1': 'Claude Opus 4.1 (Latest)',
+                'openai/gpt-5': 'GPT-5',
                 'openai/gpt-4o': 'GPT-4o',
                 'openai/gpt-4o-mini': 'GPT-4o Mini',
                 'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
                 'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
+                'google/gemini-2.5-pro': 'Gemini 2.5 Pro (Latest)',
                 'google/gemini-pro-1.5': 'Gemini Pro 1.5',
                 'mistralai/mistral-7b-instruct': 'Mistral 7B',
                 'openai/gpt-4-turbo': 'GPT-4 Turbo',
