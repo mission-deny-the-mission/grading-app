@@ -537,19 +537,43 @@ class OllamaLLMProvider(LLMProvider):
 
             if response.status_code == 200:
                 result = response.json()
-                # Ollama's /api/generate streams responses, so we need to concatenate them
-                # For a single response, it might be directly in 'response' or 'eval_count' etc.
-                # This assumes a non-streaming response for simplicity, or adjust if needed
-
+                # Ollama may return the output under different keys depending on model/version.
+                # Support common shapes used in tests and local responses:
+                # - {'response': 'Grade: A', 'prompt_eval_count': X, 'eval_count': Y}
+                # - {'choices': [{'message': {'content': '...'}}], ...}
+                # - {'text': '...'}
+                grade_text = None
+                if isinstance(result, dict):
+                    grade_text = result.get('response') or result.get('text')
+                    # choices -> message -> content
+                    if not grade_text and 'choices' in result and isinstance(result['choices'], list) and len(result['choices']) > 0:
+                        try:
+                            grade_text = result['choices'][0]['message']['content']
+                        except Exception:
+                            # defensive: try other nested locations
+                            try:
+                                grade_text = result['choices'][0].get('text')
+                            except Exception:
+                                grade_text = None
+                # Fallback to stringifying result if nothing found
+                if not grade_text:
+                    try:
+                        grade_text = str(result)
+                    except Exception:
+                        grade_text = ''
+                
+                prompt_count = result.get('prompt_eval_count', 0) if isinstance(result, dict) else 0
+                eval_count = result.get('eval_count', 0) if isinstance(result, dict) else 0
+                
                 return {
                     'success': True,
-                    'grade': final_response_content,
+                    'grade': grade_text,
                     'model': model,
                     'provider': 'Ollama',
                     'usage': {
-                        'prompt_tokens': result.get('prompt_eval_count'),
-                        'completion_tokens': result.get('eval_count'),
-                        'total_tokens': (result.get('prompt_eval_count', 0) + result.get('eval_count', 0))
+                        'prompt_tokens': prompt_count,
+                        'completion_tokens': eval_count,
+                        'total_tokens': (prompt_count or 0) + (eval_count or 0)
                     }
                 }
             elif response.status_code == 404:

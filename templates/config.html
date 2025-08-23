@@ -22,7 +22,7 @@
                 </h5>
             </div>
             <div class="card-body p-4">
-                <form id="configForm">
+                <form id="configForm" autocomplete="off">
                     <!-- OpenRouter Configuration -->
                     <div class="mb-4">
                         <h6 class="fw-bold text-primary">
@@ -32,7 +32,7 @@
                             <div class="col-md-6">
                                 <label for="openrouter_api_key" class="form-label">API Key</label>
                                 <input type="password" class="form-control" id="openrouter_api_key" 
-                                       name="openrouter_api_key" placeholder="sk-or-..." 
+                                       name="openrouter_api_key" placeholder="sk-or-..." autocomplete="new-password"
                                        value="{{ config.openrouter_api_key if config else '' }}">
                                 <div class="form-text">
                                     Get your API key from <a href="https://openrouter.ai" target="_blank">OpenRouter</a>
@@ -87,7 +87,7 @@
                             <div class="col-md-6">
                                 <label for="claude_api_key" class="form-label">API Key</label>
                                 <input type="password" class="form-control" id="claude_api_key" 
-                                       name="claude_api_key" placeholder="sk-ant-..." 
+                                       name="claude_api_key" placeholder="sk-ant-..." autocomplete="new-password"
                                        value="{{ config.claude_api_key if config else '' }}">
                                 <div class="form-text">
                                     Get your API key from <a href="https://console.anthropic.com" target="_blank">Anthropic Console</a>
@@ -136,7 +136,7 @@
                             <div class="col-md-6">
                                 <label for="gemini_api_key" class="form-label">API Key</label>
                                 <input type="password" class="form-control" id="gemini_api_key" 
-                                       name="gemini_api_key" placeholder="your-gemini-key-here" 
+                                       name="gemini_api_key" placeholder="your-gemini-key-here" autocomplete="new-password"
                                        value="{{ config.gemini_api_key if config else '' }}">
                                 <div class="form-text">
                                     Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
@@ -184,7 +184,7 @@
                             <div class="col-md-6">
                                 <label for="openai_api_key" class="form-label">API Key</label>
                                 <input type="password" class="form-control" id="openai_api_key" 
-                                       name="openai_api_key" placeholder="sk-..." 
+                                       name="openai_api_key" placeholder="sk-..." autocomplete="new-password"
                                        value="{{ config.openai_api_key if config else '' }}">
                                 <div class="form-text">
                                     Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>

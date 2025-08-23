@@ -781,7 +781,7 @@ except Exception as e:
             # Run the test script in the grading app directory
             result = subprocess.run(
                 [sys.executable, test_file_path],
-                cwd='/home/harry/grading-app',
+                cwd=os.getcwd(),
                 capture_output=True,
                 text=True,
                 timeout=30
