@@ -2,18 +2,20 @@
 File handling utilities.
 This module provides common file operations and validations.
 """
+
 import os
+
 from werkzeug.utils import secure_filename
 
 
 def determine_file_type(filename):
     """Determine file type based on filename extension."""
-    if filename.lower().endswith('.docx'):
-        return 'docx'
-    elif filename.lower().endswith('.pdf'):
-        return 'pdf'
-    elif filename.lower().endswith('.txt'):
-        return 'txt'
+    if filename.lower().endswith(".docx"):
+        return "docx"
+    elif filename.lower().endswith(".pdf"):
+        return "pdf"
+    elif filename.lower().endswith(".txt"):
+        return "txt"
     else:
         return None
 
@@ -39,10 +41,10 @@ def get_secure_filename(filename):
 
 def validate_file_upload(file):
     """Validate an uploaded file."""
-    if not file or file.filename == '':
-        return False, 'No file selected'
-    
+    if not file or file.filename == "":
+        return False, "No file selected"
+
     if not is_allowed_file(file.filename):
-        return False, 'Unsupported file type. Please upload .docx, .pdf, or .txt files.'
-    
+        return False, "Unsupported file type. Please upload .docx, .pdf, or .txt files."
+
     return True, None

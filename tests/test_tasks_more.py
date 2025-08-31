@@ -2,39 +2,45 @@
 Additional tests for tasks.py error paths and sync helpers.
 """
 
-import os
-from unittest.mock import patch, MagicMock
-
-import pytest
+from tasks import (
+    cancel_batch_processing,
+    pause_batch_processing,
+    process_batch,
+    process_job_sync,
+    process_submission_sync,
+    resume_batch_processing,
+    retry_batch_failed_jobs,
+    update_batch_progress,
+)
 
 
 class TestTasksHelpers:
     def test_process_job_sync_nonexistent_job(self, app):
-        from tasks import process_job_sync
-        assert process_job_sync('nonexistent') is False
+        """Test process_job_sync returns False for non-existent job."""
+        assert process_job_sync("nonexistent") is False
 
     def test_process_submission_sync_nonexistent(self, app):
-        from tasks import process_submission_sync
-        assert process_submission_sync('nonexistent') is False
+        """Test process_submission_sync returns False for non-existent
+        submission."""
+        assert process_submission_sync("nonexistent") is False
 
     def test_update_batch_progress_nonexistent(self, app):
-        from tasks import update_batch_progress
-        assert update_batch_progress('nonexistent') is False
+        """Test update_batch_progress returns False for non-existent batch."""
+        assert update_batch_progress("nonexistent") is False
 
 
 class TestTasksBatchErrors:
     def test_process_batch_nonexistent(self, app):
-        from tasks import process_batch
-        assert process_batch.run('nonexistent') is False
+        """Test process_batch returns False for non-existent batch."""
+        assert process_batch.run("nonexistent") is False
 
     def test_retry_batch_failed_jobs_nonexistent(self, app):
-        from tasks import retry_batch_failed_jobs
-        assert retry_batch_failed_jobs.run('nonexistent') == 0
+        """Test retry_batch_failed_jobs returns 0 for non-existent batch."""
+        assert retry_batch_failed_jobs.run("nonexistent") == 0
 
     def test_pause_resume_cancel_nonexistent(self, app):
-        from tasks import pause_batch_processing, resume_batch_processing, cancel_batch_processing
-        assert pause_batch_processing.run('nonexistent') is False
-        assert resume_batch_processing.run('nonexistent') is False
-        assert cancel_batch_processing.run('nonexistent') is False
-
-
+        """Test pause/resume/cancel operations return False for non-existent
+        batch."""
+        assert pause_batch_processing.run("nonexistent") is False
+        assert resume_batch_processing.run("nonexistent") is False
+        assert cancel_batch_processing.run("nonexistent") is False

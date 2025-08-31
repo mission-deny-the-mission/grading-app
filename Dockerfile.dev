@@ -41,6 +41,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir \
+        autoflake \
         black \
         flake8 \
         isort \
@@ -49,7 +50,11 @@ RUN pip install --no-cache-dir --upgrade pip \
         pytest-cov \
         ipython \
         ipdb \
-        debugpy
+        debugpy \
+        mypy \
+        bandit \
+        safety \
+        ruff
 
 # Copy the application source code
 COPY . .

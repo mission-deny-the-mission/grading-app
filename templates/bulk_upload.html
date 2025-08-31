@@ -577,15 +577,16 @@ content %}
                 popularModelsDiv.innerHTML = '';
 
                 if (data.popular && data.popular.length > 0) {
+                    // Use a provider-prefixed value for cross-provider comparison (e.g., "openrouter:anthropic/claude-opus-4.1")
                     data.popular.forEach(model => {
-                        const modelId = model.replace(/[^a-zA-Z0-9]/g, '_');
+                        const modelId = `${provider}_${model.replace(/[^a-zA-Z0-9]/g, '_')}`;
                         const displayName = getModelDisplayName(model);
 
                         const div = document.createElement('div');
                         div.className = 'form-check';
                         div.innerHTML = `
                             <input class="form-check-input model-checkbox" type="checkbox"
-                                   name="models_to_compare[]" value="${model}" id="${modelId}">
+                                   name="models_to_compare[]" value="${provider}:${model}" id="${modelId}">
                             <label class="form-check-label" for="${modelId}">
                                 ${displayName}
                             </label>
@@ -891,18 +892,23 @@ content %}
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Job...';
 
-        // Get selected models for comparison
+        // Get selected models for comparison (supports cross-provider entries like "provider:model")
         const selectedModels = [];
+        const selectedProvider = document.getElementById('provider').value;
         if (document.getElementById('enableComparison').checked) {
             document.querySelectorAll('.model-checkbox:checked').forEach(checkbox => {
                 selectedModels.push(checkbox.value);
             });
 
-            // Add custom models
+            // Add custom models and prefix with selected provider when no provider included
             document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
-                if (input.value.trim()) {
-                    selectedModels.push(input.value.trim());
+                const raw = input.value.trim();
+                if (!raw) return;
+                let entry = raw;
+                if (!raw.includes(':')) {
+                    entry = `${selectedProvider}:${raw}`;
                 }
+                selectedModels.push(entry);
             });
         }
 

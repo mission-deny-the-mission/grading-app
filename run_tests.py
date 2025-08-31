@@ -3,11 +3,10 @@
 Test runner script for the grading app.
 """
 
-import sys
+import argparse
 import os
 import subprocess
-import argparse
-from pathlib import Path
+import sys
 
 
 def run_command(cmd, description):
@@ -16,7 +15,7 @@ def run_command(cmd, description):
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
     print(f"{'='*60}")
-    
+
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         print(result.stdout)
@@ -32,8 +31,7 @@ def run_command(cmd, description):
 def run_unit_tests():
     """Run unit tests."""
     return run_command(
-        [sys.executable, "-m", "pytest", "tests/", "-m", "unit", "-v"],
-        "Unit Tests"
+        [sys.executable, "-m", "pytest", "tests/", "-m", "unit", "-v"], "Unit Tests"
     )
 
 
@@ -41,15 +39,14 @@ def run_integration_tests():
     """Run integration tests."""
     return run_command(
         [sys.executable, "-m", "pytest", "tests/", "-m", "integration", "-v"],
-        "Integration Tests"
+        "Integration Tests",
     )
 
 
 def run_api_tests():
     """Run API tests."""
     return run_command(
-        [sys.executable, "-m", "pytest", "tests/", "-m", "api", "-v"],
-        "API Tests"
+        [sys.executable, "-m", "pytest", "tests/", "-m", "api", "-v"], "API Tests"
     )
 
 
@@ -57,7 +54,7 @@ def run_database_tests():
     """Run database tests."""
     return run_command(
         [sys.executable, "-m", "pytest", "tests/", "-m", "database", "-v"],
-        "Database Tests"
+        "Database Tests",
     )
 
 
@@ -65,23 +62,30 @@ def run_celery_tests():
     """Run Celery task tests."""
     return run_command(
         [sys.executable, "-m", "pytest", "tests/", "-m", "celery", "-v"],
-        "Celery Task Tests"
+        "Celery Task Tests",
     )
 
 
 def run_all_tests():
     """Run all tests."""
-    return run_command(
-        [sys.executable, "-m", "pytest", "tests/", "-v"],
-        "All Tests"
-    )
+    return run_command([sys.executable, "-m", "pytest", "tests/", "-v"], "All Tests")
 
 
 def run_tests_with_coverage():
     """Run tests with coverage report."""
     return run_command(
-        [sys.executable, "-m", "pytest", "tests/", "--cov=app", "--cov=models", "--cov=tasks", "--cov-report=html", "--cov-report=term-missing"],
-        "Tests with Coverage"
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/",
+            "--cov=app",
+            "--cov=models",
+            "--cov=tasks",
+            "--cov-report=html",
+            "--cov-report=term-missing",
+        ],
+        "Tests with Coverage",
     )
 
 
@@ -90,18 +94,24 @@ def run_specific_test_file(test_file):
     if not os.path.exists(test_file):
         print(f"Test file {test_file} not found!")
         return False
-    
+
     return run_command(
         [sys.executable, "-m", "pytest", test_file, "-v"],
-        f"Specific Test File: {test_file}"
+        f"Specific Test File: {test_file}",
     )
 
 
 def run_specific_test_class(test_class):
     """Run a specific test class."""
     return run_command(
-        [sys.executable, "-m", "pytest", f"tests/test_{test_class}.py::Test{test_class}", "-v"],
-        f"Specific Test Class: {test_class}"
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            f"tests/test_{test_class}.py::Test{test_class}",
+            "-v",
+        ],
+        f"Specific Test Class: {test_class}",
     )
 
 
@@ -109,7 +119,7 @@ def run_fast_tests():
     """Run only fast tests (exclude slow tests)."""
     return run_command(
         [sys.executable, "-m", "pytest", "tests/", "-m", "not slow", "-v"],
-        "Fast Tests (excluding slow tests)"
+        "Fast Tests (excluding slow tests)",
     )
 
 
@@ -117,17 +127,18 @@ def run_linting():
     """Run code linting."""
     return run_command(
         [sys.executable, "-m", "flake8", "app.py", "models.py", "tasks.py", "tests/"],
-        "Code Linting"
+        "Code Linting",
     )
 
 
 def run_type_checking():
     """Run type checking (if mypy is available)."""
     try:
-        import mypy
+        pass
+
         return run_command(
             [sys.executable, "-m", "mypy", "app.py", "models.py", "tasks.py"],
-            "Type Checking"
+            "Type Checking",
         )
     except ImportError:
         print("mypy not installed. Skipping type checking.")
@@ -138,57 +149,42 @@ def main():
     """Main function to run tests based on command line arguments."""
     parser = argparse.ArgumentParser(description="Run tests for the grading app")
     parser.add_argument(
-        "--type", 
+        "--type",
         choices=["unit", "integration", "api", "database", "celery", "all", "fast"],
         default="all",
-        help="Type of tests to run"
+        help="Type of tests to run",
     )
     parser.add_argument(
-        "--coverage", 
+        "--coverage", action="store_true", help="Run tests with coverage report"
+    )
+    parser.add_argument("--file", type=str, help="Run a specific test file")
+    parser.add_argument(
+        "--class", type=str, dest="test_class", help="Run a specific test class"
+    )
+    parser.add_argument("--lint", action="store_true", help="Run code linting")
+    parser.add_argument("--type-check", action="store_true", help="Run type checking")
+    parser.add_argument(
+        "--all-checks",
         action="store_true",
-        help="Run tests with coverage report"
+        help="Run all checks (tests, linting, type checking)",
     )
-    parser.add_argument(
-        "--file", 
-        type=str,
-        help="Run a specific test file"
-    )
-    parser.add_argument(
-        "--class", 
-        type=str,
-        dest="test_class",
-        help="Run a specific test class"
-    )
-    parser.add_argument(
-        "--lint", 
-        action="store_true",
-        help="Run code linting"
-    )
-    parser.add_argument(
-        "--type-check", 
-        action="store_true",
-        help="Run type checking"
-    )
-    parser.add_argument(
-        "--all-checks", 
-        action="store_true",
-        help="Run all checks (tests, linting, type checking)"
-    )
-    
+
     args = parser.parse_args()
-    
+
     # Ensure we're in the right directory
     if not os.path.exists("app.py"):
-        print("Error: app.py not found. Please run this script from the project root directory.")
+        print(
+            "Error: app.py not found. Please run this script from the project root directory."
+        )
         sys.exit(1)
-    
+
     # Create tests directory if it doesn't exist
     if not os.path.exists("tests"):
         os.makedirs("tests")
         print("Created tests directory.")
-    
+
     success = True
-    
+
     if args.all_checks:
         print("Running all checks...")
         success &= run_linting()
@@ -219,7 +215,7 @@ def main():
             success &= run_fast_tests()
         else:  # all
             success &= run_all_tests()
-    
+
     print(f"\n{'='*60}")
     if success:
         print("✅ All tests passed successfully!")
