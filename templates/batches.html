@@ -148,15 +148,24 @@
                         <label for="batchDescription" class="form-label">Description</label>
                         <textarea class="form-control" id="batchDescription" name="description" rows="3"></textarea>
                     </div>
-                    <div class="mb-3">
+                                        <div class="mb-3">
                         <label for="batchTemplate" class="form-label">Select Template (Optional)</label>
                         <select class="form-select" id="batchTemplate" name="template_id">
                             <option value="">No Template</option>
                             {% for template in templates %}
-                            <option value="{{ template.id }}" data-settings="{{ template.default_settings | tojson }}">{{ template.name }}</option>
+                            <option value="{{ template.id }}" 
+                                    data-settings="{{ template.default_settings | tojson }}"
+                                    data-job-structure="{{ template.job_structure | tojson }}"
+                                    data-processing-rules="{{ template.processing_rules | tojson }}">
+                                {{ template.name }} ({{ template.type|title }})
+                            </option>
                             {% endfor %}
                         </select>
-                    </div>
+                        <small class="form-text text-muted">
+                            <a href="/templates" target="_blank">Manage templates</a> or create new ones
+                        </small>
+                    </div></search>
+</search_and_replace>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="batchProvider" class="form-label">Default Provider</label>
@@ -355,8 +364,11 @@
         $('#batchTemplate').on('change', function() {
             const selectedOption = $(this).find('option:selected');
             const defaultSettings = selectedOption.data('settings');
+            const jobStructure = selectedOption.data('job-structure');
+            const processingRules = selectedOption.data('processing-rules');
 
             if (defaultSettings) {
+                // Apply default settings
                 if (defaultSettings.provider) {
                     $('#batchProvider').val(defaultSettings.provider);
                 }
@@ -369,14 +381,55 @@
                 if (defaultSettings.max_tokens !== undefined) {
                     $('#batchMaxTokens').val(defaultSettings.max_tokens);
                 }
+                
+                // Apply job structure settings
+                if (jobStructure) {
+                    if (jobStructure.auto_create_jobs !== undefined) {
+                        $('#autoAssignJobs').prop('checked', jobStructure.auto_create_jobs);
+                    }
+                    if (jobStructure.default_priority !== undefined) {
+                        $('#batchPriority').val(jobStructure.default_priority);
+                    }
+                }
+                
+                // Apply processing rules
+                if (processingRules) {
+                    // Could add processing rule application here if needed
+                    console.log('Processing rules available:', processingRules);
+                }
+                
+                // Show template applied notification
+                showTemplateNotification('Template settings applied successfully');
+                
             } else {
                 // Reset to default if "No Template" is selected
                 $('#batchProvider').val('openrouter');
                 $('#batchModel').val('');
                 $('#batchTemperature').val('0.3');
                 $('#batchMaxTokens').val('2000');
+                $('#batchPriority').val('5');
+                $('#autoAssignJobs').prop('checked', false);
             }
         });
+        
+        function showTemplateNotification(message) {
+            // Create and show a temporary notification
+            const notification = $(`
+                <div class="alert alert-info alert-dismissible fade show position-fixed" 
+                     style="top: 20px; right: 20px; z-index: 1050; min-width: 300px;">
+                    <i class="fas fa-check-circle me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+            
+            $('body').append(notification);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                notification.alert('close');
+            }, 3000);
+        }
 
         // Handle multi-model comparison toggle
         $('#enableMultiModelComparison').on('change', function() {

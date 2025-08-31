@@ -28,6 +28,8 @@ services:
     ports:
       - "5000:5000"
       - "5555:5555"
+    extra_hosts:
+      - host.docker.internal:host-gateway
     env_file:
       - .env
     environment:

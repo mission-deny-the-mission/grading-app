@@ -3,7 +3,6 @@
   "dockerComposeFile": "../docker-compose.dev.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
-  
   "features": {
     "ghcr.io/devcontainers/features/python:1": {
       "version": "3.11"
@@ -11,7 +10,6 @@
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-
   "customizations": {
     "vscode": {
       "extensions": [
@@ -27,15 +25,22 @@
         "ms-vscode-remote.remote-containers",
         "ms-vscode-remote.remote-ssh",
         "ms-vscode-remote.remote-wsl",
-        "ms-vscode-remote.vscode-remote-extensionpack"
+        "ms-vscode-remote.vscode-remote-extensionpack",
+        "kilocode.kilo-code"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
         "python.linting.enabled": true,
         "python.linting.flake8Enabled": true,
         "python.formatting.provider": "black",
-        "python.formatting.blackArgs": ["--line-length", "88"],
-        "python.sortImports.args": ["--profile", "black"],
+        "python.formatting.blackArgs": [
+          "--line-length",
+          "88"
+        ],
+        "python.sortImports.args": [
+          "--profile",
+          "black"
+        ],
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
           "source.organizeImports": true
@@ -49,8 +54,11 @@
       }
     }
   },
-
-  "forwardPorts": [5000, 5555, 6379],
+  "forwardPorts": [
+    5000,
+    5555,
+    6379
+  ],
   "portsAttributes": {
     "5000": {
       "label": "Flask App",
@@ -65,10 +73,7 @@
       "onAutoForward": "silent"
     }
   },
-
-  "postCreateCommand": "pip install -r requirements.txt && flask init-db",
-
+  "postCreateCommand": "flask init-db",
   "remoteUser": "vscode",
-
   "shutdownAction": "stopCompose"
 }

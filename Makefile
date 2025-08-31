@@ -25,64 +25,64 @@ help:
 
 # Production commands
 build:
-	docker-compose build
+	docker compose build
 
 up:
-	docker-compose up -d
+	docker compose up -d
 
 down:
-	docker-compose down
+	docker compose down
 
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 clean:
-	docker-compose down -v --remove-orphans
+	docker compose down -v --remove-orphans
 	docker system prune -f
 
 # Development commands
 dev-build:
-	docker-compose -f docker-compose.dev.yml build
+	docker compose -f docker-compose.dev.yml build
 
 dev-up:
-	docker-compose -f docker-compose.dev.yml up -d
+	docker compose -f docker-compose.dev.yml up -d
 
 dev-down:
-	docker-compose -f docker-compose.dev.yml down
+	docker compose -f docker-compose.dev.yml down
 
 dev-logs:
-	docker-compose -f docker-compose.dev.yml logs -f
+	docker compose -f docker-compose.dev.yml logs -f
 
 # Start web service for development
 dev-web:
-	docker-compose -f docker-compose.dev.yml --profile web up -d
+	docker compose -f docker-compose.dev.yml --profile web up -d
 
 # Start worker and beat services for development
 dev-worker:
-	docker-compose -f docker-compose.dev.yml --profile worker up -d
+	docker compose -f docker-compose.dev.yml --profile worker up -d
 
 dev-beat:
-	docker-compose -f docker-compose.dev.yml --profile beat up -d
+	docker compose -f docker-compose.dev.yml --profile beat up -d
 
 # Code quality commands
 test:
-	docker-compose -f docker-compose.dev.yml exec app pytest
+	docker compose -f docker-compose.dev.yml exec app pytest
 
 lint:
-	docker-compose -f docker-compose.dev.yml exec app flake8 .
-	docker-compose -f docker-compose.dev.yml exec app pylint *.py
+	docker compose -f docker-compose.dev.yml exec app flake8 .
+	docker compose -f docker-compose.dev.yml exec app pylint *.py
 
 format:
-	docker-compose -f docker-compose.dev.yml exec app black .
-	docker-compose -f docker-compose.dev.yml exec app isort .
+	docker compose -f docker-compose.dev.yml exec app black .
+	docker compose -f docker-compose.dev.yml exec app isort .
 
 # Database commands
 init-db:
-	docker-compose -f docker-compose.dev.yml exec app flask init-db
+	docker compose -f docker-compose.dev.yml exec app flask init-db
 
 # Shell access
 shell:
-	docker-compose -f docker-compose.dev.yml exec app bash
+	docker compose -f docker-compose.dev.yml exec app bash
 
 # Quick start for development
 dev: dev-build dev-up

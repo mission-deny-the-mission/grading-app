@@ -4,7 +4,7 @@ Handles RESTful API endpoints for jobs, submissions, and saved configurations.
 """
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.exceptions import NotFound
-from models import db, GradingJob, Submission, SavedPrompt, SavedMarkingScheme, JobBatch, BatchTemplate
+from models import db, JobBatch, GradingJob, Submission, SavedPrompt, SavedMarkingScheme, BatchTemplate, JobTemplate
 from datetime import datetime, timezone
 import zipfile
 import io
@@ -494,6 +494,451 @@ def create_saved_marking_scheme():
             'success': False,
             'error': str(e)
         }), 400
+
+
+# Template Management API Endpoints
+
+@api_bp.route('/templates', methods=['GET'])
+def api_get_templates():
+    """Get all templates (both batch and job templates)."""
+    try:
+        # Get query parameters
+        template_type = request.args.get('type')  # 'batch', 'job', or None for both
+        category = request.args.get('category')
+        search = request.args.get('search', '').strip()
+        is_public = request.args.get('public', 'true').lower() == 'true'
+        
+        # Build query
+        query = db.session.query(BatchTemplate)
+        
+        # Filter by type
+        if template_type == 'job':
+            query = db.session.query(JobTemplate)
+        elif template_type == 'batch':
+            # Keep as batch template query
+            pass
+        else:
+            # Get both types
+            batch_templates = BatchTemplate.query.all()
+            job_templates = JobTemplate.query.all()
+            
+            # Apply filters to both types
+            filtered_batch = []
+            filtered_job = []
+            
+            for template in batch_templates:
+                if _template_matches_filter(template, category, search, is_public):
+                    filtered_batch.append(template)
+            
+            for template in job_templates:
+                if _template_matches_filter(template, category, search, is_public):
+                    filtered_job.append(template)
+            
+            return jsonify({
+                'success': True,
+                'templates': [t.to_dict() for t in filtered_batch + filtered_job],
+                'total_count': len(filtered_batch) + len(filtered_job)
+            })
+        
+        # Apply filters
+        if category:
+            query = query.filter(BatchTemplate.category == category)
+        
+        if search:
+            query = query.filter(
+                BatchTemplate.name.contains(search) |
+                BatchTemplate.description.contains(search)
+            )
+        
+        if not is_public:
+            # Only show user's own templates if not requesting public
+            query = query.filter(
+                (BatchTemplate.is_public == True) |
+                (BatchTemplate.created_by == request.remote_addr)
+            )
+        
+        templates = query.order_by(BatchTemplate.usage_count.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'templates': [t.to_dict() for t in templates],
+            'total_count': len(templates)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api_bp.route('/templates', methods=['POST'])
+def api_create_template():
+    """Create a new template (batch or job)."""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('name'):
+            return jsonify({
+                'success': False,
+                'error': 'Template name is required'
+            }), 400
+        
+        # Determine template type based on provided fields
+        if 'default_settings' in data or 'job_structure' in data:
+            # Create batch template
+            template = BatchTemplate(
+                name=data['name'],
+                description=data.get('description', ''),
+                category=data.get('category'),
+                default_settings=data.get('default_settings'),
+                job_structure=data.get('job_structure'),
+                processing_rules=data.get('processing_rules'),
+                is_public=data.get('is_public', False),
+                created_by=request.remote_addr
+            )
+        else:
+            # Create job template
+            template = JobTemplate(
+                name=data['name'],
+                description=data.get('description', ''),
+                category=data.get('category'),
+                provider=data.get('provider'),
+                model=data.get('model'),
+                prompt=data.get('prompt'),
+                temperature=data.get('temperature'),
+                max_tokens=data.get('max_tokens'),
+                models_to_compare=data.get('models_to_compare'),
+                saved_prompt_id=data.get('saved_prompt_id'),
+                saved_marking_scheme_id=data.get('saved_marking_scheme_id'),
+                is_public=data.get('is_public', False),
+                created_by=request.remote_addr
+            )
+        
+        db.session.add(template)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'template_id': template.id,
+            'template': template.to_dict(),
+            'message': 'Template created successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+
+@api_bp.route('/templates/<template_id>', methods=['GET'])
+def api_get_template(template_id):
+    """Get a specific template by ID."""
+    try:
+        # Try to get batch template first
+        template = BatchTemplate.query.get(template_id)
+        if template:
+            return jsonify({
+                'success': True,
+                'template': template.to_dict()
+            })
+        
+        # Try to get job template
+        template = JobTemplate.query.get(template_id)
+        if template:
+            return jsonify({
+                'success': True,
+                'template': template.to_dict()
+            })
+        
+        return jsonify({
+            'success': False,
+            'error': 'Template not found'
+        }), 404
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api_bp.route('/templates/<template_id>', methods=['PUT'])
+def api_update_template(template_id):
+    """Update an existing template."""
+    try:
+        data = request.get_json()
+        
+        # Try to get batch template first
+        template = BatchTemplate.query.get(template_id)
+        is_batch_template = True
+        
+        if not template:
+            # Try to get job template
+            template = JobTemplate.query.get(template_id)
+            is_batch_template = False
+            
+            if not template:
+                return jsonify({
+                    'success': False,
+                    'error': 'Template not found'
+                }), 404
+        
+        # Check ownership (only allow updating own templates)
+        if template.created_by != request.remote_addr and not template.is_public:
+            return jsonify({
+                'success': False,
+                'error': 'Permission denied'
+            }), 403
+        
+        # Update template fields
+        template.name = data.get('name', template.name)
+        template.description = data.get('description', template.description)
+        template.category = data.get('category', template.category)
+        template.is_public = data.get('is_public', template.is_public)
+        
+        if is_batch_template:
+            # Update batch template specific fields
+            template.default_settings = data.get('default_settings', template.default_settings)
+            template.job_structure = data.get('job_structure', template.job_structure)
+            template.processing_rules = data.get('processing_rules', template.processing_rules)
+        else:
+            # Update job template specific fields
+            template.provider = data.get('provider', template.provider)
+            template.model = data.get('model', template.model)
+            template.prompt = data.get('prompt', template.prompt)
+            template.temperature = data.get('temperature', template.temperature)
+            template.max_tokens = data.get('max_tokens', template.max_tokens)
+            template.models_to_compare = data.get('models_to_compare', template.models_to_compare)
+            template.saved_prompt_id = data.get('saved_prompt_id', template.saved_prompt_id)
+            template.saved_marking_scheme_id = data.get('saved_marking_scheme_id', template.saved_marking_scheme_id)
+        
+        template.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'template': template.to_dict(),
+            'message': 'Template updated successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+
+@api_bp.route('/templates/<template_id>', methods=['DELETE'])
+def api_delete_template(template_id):
+    """Delete a template."""
+    try:
+        # Try to get batch template first
+        template = BatchTemplate.query.get(template_id)
+        is_batch_template = True
+        
+        if not template:
+            # Try to get job template
+            template = JobTemplate.query.get(template_id)
+            is_batch_template = False
+            
+            if not template:
+                return jsonify({
+                    'success': False,
+                    'error': 'Template not found'
+                }), 404
+        
+        # Check ownership (only allow deleting own templates)
+        if template.created_by != request.remote_addr and not template.is_public:
+            return jsonify({
+                'success': False,
+                'error': 'Permission denied'
+            }), 403
+        
+        db.session.delete(template)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Template deleted successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+
+@api_bp.route('/templates/categories', methods=['GET'])
+def api_get_template_categories():
+    """Get all template categories."""
+    try:
+        # Get categories from both batch and job templates
+        batch_categories = db.session.query(BatchTemplate.category).distinct().all()
+        job_categories = db.session.query(JobTemplate.category).distinct().all()
+        
+        # Flatten and combine categories
+        categories = []
+        for cat in batch_categories:
+            if cat[0] and cat[0] not in categories:
+                categories.append(cat[0])
+        
+        for cat in job_categories:
+            if cat[0] and cat[0] not in categories:
+                categories.append(cat[0])
+        
+        return jsonify({
+            'success': True,
+            'categories': sorted(categories)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api_bp.route('/templates/<template_id>/clone', methods=['POST'])
+def api_clone_template(template_id):
+    """Clone an existing template."""
+    try:
+        # Try to get batch template first
+        template = BatchTemplate.query.get(template_id)
+        is_batch_template = True
+        
+        if not template:
+            # Try to get job template
+            template = JobTemplate.query.get(template_id)
+            is_batch_template = False
+            
+            if not template:
+                return jsonify({
+                    'success': False,
+                    'error': 'Template not found'
+                }), 404
+        
+        # Create new template with same data
+        if is_batch_template:
+            new_template = BatchTemplate(
+                name=f"{template.name} (Copy)",
+                description=template.description,
+                category=template.category,
+                default_settings=template.default_settings,
+                job_structure=template.job_structure,
+                processing_rules=template.processing_rules,
+                is_public=False,  # Cloned templates are private by default
+                created_by=request.remote_addr
+            )
+        else:
+            new_template = JobTemplate(
+                name=f"{template.name} (Copy)",
+                description=template.description,
+                category=template.category,
+                provider=template.provider,
+                model=template.model,
+                prompt=template.prompt,
+                temperature=template.temperature,
+                max_tokens=template.max_tokens,
+                models_to_compare=template.models_to_compare,
+                saved_prompt_id=template.saved_prompt_id,
+                saved_marking_scheme_id=template.saved_marking_scheme_id,
+                is_public=False,  # Cloned templates are private by default
+                created_by=request.remote_addr
+            )
+        
+        db.session.add(new_template)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'template_id': new_template.id,
+            'template': new_template.to_dict(),
+            'message': 'Template cloned successfully'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+
+def _template_matches_filter(template, category, search, is_public):
+    """Helper function to check if a template matches filter criteria."""
+    if category and template.category != category:
+        return False
+    
+    if search:
+        search_lower = search.lower()
+        name_match = template.name.lower().contains(search_lower) if hasattr(template.name, 'lower') else search_lower in str(template.name).lower()
+        desc_match = template.description.lower().contains(search_lower) if hasattr(template.description, 'lower') and template.description else False
+        if not name_match and not desc_match:
+            return False
+    
+    if not is_public and template.created_by != request.remote_addr:
+        return False
+    
+    return True
+
+@api_bp.route('/templates/analytics', methods=['GET'])
+def api_get_template_analytics():
+    """Get template usage analytics."""
+    try:
+        # Get batch templates analytics
+        batch_templates = BatchTemplate.query.all()
+        batch_analytics = {
+            'total_count': len(batch_templates),
+            'total_usage': sum(t.usage_count for t in batch_templates),
+            'most_used': max(batch_templates, key=lambda x: x.usage_count).to_dict() if batch_templates else None,
+            'recently_used': sorted(batch_templates, key=lambda x: x.last_used or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[0].to_dict() if batch_templates else None,
+            'by_category': {}
+        }
+        
+        # Get job templates analytics
+        job_templates = JobTemplate.query.all()
+        job_analytics = {
+            'total_count': len(job_templates),
+            'total_usage': sum(t.usage_count for t in job_templates),
+            'most_used': max(job_templates, key=lambda x: x.usage_count).to_dict() if job_templates else None,
+            'recently_used': sorted(job_templates, key=lambda x: x.last_used or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[0].to_dict() if job_templates else None,
+            'by_category': {}
+        }
+        
+        # Calculate category breakdowns
+        for template in batch_templates:
+            category = template.category or 'Uncategorized'
+            batch_analytics['by_category'][category] = batch_analytics['by_category'].get(category, 0) + 1
+        
+        for template in job_templates:
+            category = template.category or 'Uncategorized'
+            job_analytics['by_category'][category] = job_analytics['by_category'].get(category, 0) + 1
+        
+        return jsonify({
+            'success': True,
+            'analytics': {
+                'batch_templates': batch_analytics,
+                'job_templates': job_analytics,
+                'overall': {
+                    'total_templates': len(batch_templates) + len(job_templates),
+                    'total_usage': batch_analytics['total_usage'] + job_analytics['total_usage'],
+                    'average_usage_per_template': round((batch_analytics['total_usage'] + job_analytics['total_usage']) / (len(batch_templates) + len(job_templates) or 1), 2)
+                }
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 # ============================================================================

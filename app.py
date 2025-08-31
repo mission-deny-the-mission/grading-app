@@ -19,6 +19,7 @@ from routes.main import main_bp
 from routes.upload import upload_bp
 from routes.api import api_bp
 from routes.batches import batches_bp
+from routes.templates import templates_bp
 
 
 load_dotenv()
@@ -44,6 +45,7 @@ app.register_blueprint(main_bp)
 app.register_blueprint(upload_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(batches_bp)
+app.register_blueprint(templates_bp)
 
 # Configure upload folder
 UPLOAD_FOLDER = 'uploads'

@@ -308,6 +308,7 @@ def upload_bulk():
 
         files = request.files.getlist('files[]')
         job_id = request.form.get('job_id')
+        job_template_id = request.form.get('job_template_id')  # Track template usage
 
         # If no job provided, create one from form data
         if not job_id:
@@ -322,6 +323,13 @@ def upload_bulk():
             )
             db.session.add(job)
             db.session.commit()
+            
+            # Track template usage if a template was used
+            if job_template_id:
+                from models import JobTemplate
+                template = JobTemplate.query.get(job_template_id)
+                if template:
+                    template.increment_usage()
         else:
             job = GradingJob.query.get_or_404(job_id)
 

@@ -515,7 +515,7 @@ class Submission(db.Model):
         return grade_result
 
 class BatchTemplate(db.Model):
-    """Model for storing reusable batch templates."""
+    """Model for storing batch templates that can be reused."""
     __tablename__ = 'batch_templates'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -525,23 +525,23 @@ class BatchTemplate(db.Model):
     # Template metadata
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    category = db.Column(db.String(100))  # e.g., 'academic', 'business', 'research'
-    
-    # Template configuration
-    default_settings = db.Column(db.JSON)  # Default provider, prompts, etc.
-    job_structure = db.Column(db.JSON)     # How jobs should be organized
-    processing_rules = db.Column(db.JSON)  # Auto-processing configuration
-    
+    category = db.Column(db.String(100))  # e.g., 'essay', 'report', 'assignment'
+
+    # Template settings
+    default_settings = db.Column(db.JSON)  # Default settings for batch creation
+    job_structure = db.Column(db.JSON)  # Default job structure for batch
+    processing_rules = db.Column(db.JSON)  # Processing rules for batch
+
     # Usage tracking
     usage_count = db.Column(db.Integer, default=0)
     last_used = db.Column(db.DateTime)
+
+    # Access control
     is_public = db.Column(db.Boolean, default=False)
-    
-    # Ownership
     created_by = db.Column(db.String(100))
-    
+
     def to_dict(self):
-        """Convert template to dictionary."""
+        """Convert batch template to dictionary."""
         return {
             'id': self.id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -555,9 +555,78 @@ class BatchTemplate(db.Model):
             'usage_count': self.usage_count,
             'last_used': self.last_used.isoformat() if self.last_used else None,
             'is_public': self.is_public,
-            'created_by': self.created_by
+            'created_by': self.created_by,
+            'type': 'batch'
         }
-    
+
+    def increment_usage(self):
+        """Increment usage count and update last used timestamp."""
+        self.usage_count += 1
+        self.last_used = datetime.now(timezone.utc)
+        db.session.commit()
+
+
+class JobTemplate(db.Model):
+    """Model for storing job templates that can be reused."""
+    __tablename__ = 'job_templates'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    # Template metadata
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    category = db.Column(db.String(100))  # e.g., 'essay', 'report', 'assignment'
+
+    # Job configuration
+    provider = db.Column(db.String(50))  # openrouter, claude, lm_studio
+    model = db.Column(db.String(100))
+    prompt = db.Column(db.Text)
+    temperature = db.Column(db.Float, default=0.3)
+    max_tokens = db.Column(db.Integer, default=2000)
+    models_to_compare = db.Column(db.JSON)  # List of models to use for comparison
+
+    # References to saved configurations
+    saved_prompt_id = db.Column(db.String(36), db.ForeignKey('saved_prompts.id'), nullable=True)
+    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey('saved_marking_schemes.id'), nullable=True)
+
+    # Usage tracking
+    usage_count = db.Column(db.Integer, default=0)
+    last_used = db.Column(db.DateTime)
+
+    # Access control
+    is_public = db.Column(db.Boolean, default=False)
+    created_by = db.Column(db.String(100))
+
+    # Relationships
+    saved_prompt = db.relationship('SavedPrompt', backref='job_templates', lazy=True)
+    saved_marking_scheme = db.relationship('SavedMarkingScheme', backref='job_templates', lazy=True)
+
+    def to_dict(self):
+        """Convert job template to dictionary."""
+        return {
+            'id': self.id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'name': self.name,
+            'description': self.description,
+            'category': self.category,
+            'provider': self.provider,
+            'model': self.model,
+            'prompt': self.prompt,
+            'temperature': self.temperature,
+            'max_tokens': self.max_tokens,
+            'models_to_compare': self.models_to_compare,
+            'saved_prompt_id': self.saved_prompt_id,
+            'saved_marking_scheme_id': self.saved_marking_scheme_id,
+            'usage_count': self.usage_count,
+            'last_used': self.last_used.isoformat() if self.last_used else None,
+            'is_public': self.is_public,
+            'created_by': self.created_by,
+            'type': 'job'
+        }
+
     def increment_usage(self):
         """Increment usage count and update last used timestamp."""
         self.usage_count += 1

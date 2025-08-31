@@ -281,10 +281,15 @@ def bulk_upload():
     saved_prompts = [prompt.to_dict() for prompt in SavedPrompt.query.order_by(SavedPrompt.name).all()]
     saved_marking_schemes = [scheme.to_dict() for scheme in SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()]
 
+    # Get job templates for dropdown
+    from models import JobTemplate
+    job_templates = [template.to_dict() for template in JobTemplate.query.order_by(JobTemplate.name).all()]
+
     return render_template('bulk_upload.html',
                          default_prompt=default_prompt,
                          saved_prompts=saved_prompts,
-                         saved_marking_schemes=saved_marking_schemes)
+                         saved_marking_schemes=saved_marking_schemes,
+                         job_templates=job_templates)
 
 
 @main_bp.route('/saved-configurations')
