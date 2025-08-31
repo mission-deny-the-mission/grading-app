@@ -66,4 +66,22 @@ class TestValidateFileUpload:
         ok, err = fu.validate_file_upload(fake)
         assert ok is True and err is None
 
+class TestDetermineAndAllow:
+    def test_determine_file_type_uppercase_extensions(self):
+        """Test file type determination with uppercase extensions"""
+        assert fu.determine_file_type('file.TXT') == 'txt'
+        assert fu.determine_file_type('file.DOCX') == 'docx'
+        assert fu.determine_file_type('file.PDF') == 'pdf'
+
+    def test_is_allowed_file_edge_cases(self):
+        """Test allowed file validation with edge cases"""
+        # Empty filename
+        assert fu.is_allowed_file('') == False
+        # No extension
+        assert fu.is_allowed_file('file') == False
+        # Dot file without extension
+        assert fu.is_allowed_file('.hidden') == False
+        # Multiple dots
+        assert fu.is_allowed_file('file.name.txt') == True
+
 

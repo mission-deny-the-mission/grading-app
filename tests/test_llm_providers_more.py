@@ -98,6 +98,23 @@ class TestOllamaProvider:
             res = provider.grade_document('t', 'p', model='llama2')
             assert res['success'] is True and res['grade'] == 'Grade: A'
 
+class TestLMStudioProvider:
+    def test_lm_studio_timeout_error(self):
+        """Test LM Studio provider handles timeout errors"""
+        with patch('utils.llm_providers.requests.post', side_effect=lp.requests.exceptions.Timeout):
+            provider = lp.LMStudioLLMProvider()
+            res = provider.grade_document('t', 'p')
+            assert res['success'] is False and 'timed out' in res['error'].lower()
+
+    def test_lm_studio_connection_refused(self):
+        """Test LM Studio provider handles connection refused errors"""
+        with patch('utils.llm_providers.requests.post', side_effect=lp.requests.exceptions.ConnectionError):
+            provider = lp.LMStudioLLMProvider()
+            res = provider.grade_document('t', 'p')
+            error_lower = res['error'].lower()
+            assert res['success'] is False 
+            assert 'connection' in error_lower or 'connect' in error_lower
+
 
 class TestGeminiProvider:
     def test_missing_api_key(self):
