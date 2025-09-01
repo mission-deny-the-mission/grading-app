@@ -426,7 +426,7 @@ def _grade_with_model(submission, job, model, marking_scheme_content):
             "gemini": "Gemini",
             "openai": "OpenAI",
         }
-        provider_name = provider_mapping.get(job.provider, job.provider)
+        provider_name = provider_mapping.get(job.provider.lower(), job.provider)
         llm_provider = get_llm_provider(provider_name)
 
         with provider_semaphore(provider_name):
@@ -435,7 +435,7 @@ def _grade_with_model(submission, job, model, marking_scheme_content):
                     text=submission.extracted_text,
                     prompt=job.prompt,
                     model=model,
-                    marking_scheme=marking_scheme_content,
+                    marking_scheme_content=marking_scheme_content,
                     temperature=job.temperature,
                     max_tokens=job.max_tokens,
                 )
@@ -443,7 +443,7 @@ def _grade_with_model(submission, job, model, marking_scheme_content):
                 return llm_provider.grade_document(
                     text=submission.extracted_text,
                     prompt=job.prompt,
-                    marking_scheme=marking_scheme_content,
+                    marking_scheme_content=marking_scheme_content,
                     temperature=job.temperature,
                     max_tokens=job.max_tokens,
                 )

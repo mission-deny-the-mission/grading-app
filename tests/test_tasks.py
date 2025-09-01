@@ -389,7 +389,7 @@ class TestProcessSubmission:
 
             persisted = db.session.get(Submission, sample_submission.id)
             assert persisted.status == "failed"
-            assert persisted.error_message == "API Error"
+            assert persisted.error_message == "All models failed to grade the document"
 
     def test_process_submission_file_not_found(
         self, app, sample_job, sample_submission
