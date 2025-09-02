@@ -86,6 +86,12 @@ def get_provider_models(provider):
         return jsonify({"error": f"Unknown provider: {provider}"}), 400
 
 
+@api_bp.route("/models/all")
+def get_all_models():
+    """Get all available models from all providers for unified selection."""
+    return jsonify(DEFAULT_MODELS)
+
+
 @api_bp.route("/jobs")
 def api_jobs():
     """API endpoint for all jobs."""

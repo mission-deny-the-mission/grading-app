@@ -94,34 +94,67 @@
                             </label>
                         </div>
                         <div id="modelSelection" class="mt-3" style="display: none;">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>Popular Models:</h6>
-                                    <div id="popularModels">
-                                        <!-- Popular models will be loaded dynamically -->
+                            <!-- Unified Model Selection Interface -->
+                            <div class="unified-model-selection">
+                                <div class="selection-header mb-3">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-4">
+                                            <div class="provider-filters">
+                                                <label class="form-label mb-1">Filter by Providers:</label>
+                                                <div id="providerFilters" class="d-flex flex-wrap gap-2">
+                                                    <!-- Provider filter checkboxes will be loaded dynamically -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="search-bar">
+                                                <label class="form-label mb-1">Search Models:</label>
+                                                <input type="text" class="form-control" id="modelSearch"
+                                                       placeholder="Search across all models...">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="selection-info">
+                                                <label class="form-label mb-1">Selected Models:</label>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span id="selectedCount" class="badge bg-primary">0</span>
+                                                    <span>models selected</span>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-auto"
+                                                            onclick="clearAllModelSelections()">Clear All</button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="models-container">
+                                    <div id="allModelsContainer">
+                                        <!-- Models from all providers will be loaded here -->
+                                    </div>
+                                </div>
+                                <div class="custom-models-section mt-3">
                                     <h6>Custom Models:</h6>
-                                    <div class="mb-3">
-                                        <input type="text" class="form-control" id="customModel1" name="customModels[]" 
-                                               placeholder="Enter custom model name">
-                                    </div>
-                                    <div class="mb-3">
-                                        <input type="text" class="form-control" id="customModel2" name="customModels[]" 
-                                               placeholder="Enter custom model name">
-                                    </div>
-                                    <div class="mb-3">
-                                        <input type="text" class="form-control" id="customModel3" name="customModels[]" 
-                                               placeholder="Enter custom model name">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-2">
+                                            <input type="text" class="form-control" id="customModel1" name="customModels[]"
+                                                   placeholder="Enter custom model name">
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <input type="text" class="form-control" id="customModel2" name="customModels[]"
+                                                   placeholder="Enter custom model name">
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <input type="text" class="form-control" id="customModel3" name="customModels[]"
+                                                   placeholder="Enter custom model name">
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Select 2 or more models to compare their grading results. You can also enter custom model names.
-                                </small>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Select 2 or more models from different providers to compare their grading results.
+                                        Use provider filters to focus on specific providers, or search to find specific models.
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -349,6 +382,19 @@ function clearResults() {
     document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
         input.value = '';
     });
+    // Clear unified model selections
+    document.querySelectorAll('.unified-model-checkbox').forEach(input => {
+        input.checked = false;
+    });
+    // Clear provider filters
+    document.querySelectorAll('.provider-filter').forEach(input => {
+        input.checked = true;
+    });
+    document.querySelectorAll('.provider-select-all').forEach(input => {
+        input.checked = true;
+    });
+    // Reset selected count
+    updateSelectedModelCount();
     // Reset temperature display
     document.getElementById('temperatureValue').textContent = '0.3';
     // Load available models again
@@ -359,7 +405,7 @@ function loadAvailableModels() {
     const provider = document.getElementById('provider').value;
     const popularModelsDiv = document.getElementById('popularModels');
     
-    // Fetch available models for the selected provider
+    // Fetch available models for the selected provider (for single model selection)
     fetch(`/api/models/${provider}`)
         .then(response => response.json())
         .then(data => {
@@ -373,7 +419,7 @@ function loadAvailableModels() {
                     const div = document.createElement('div');
                     div.className = 'form-check';
                     div.innerHTML = `
-                        <input class="form-check-input model-checkbox" type="checkbox" 
+                        <input class="form-check-input model-checkbox" type="checkbox"
                                name="models_to_compare[]" value="${model}" id="${modelId}">
                         <label class="form-check-label" for="${modelId}">
                             ${displayName}
@@ -387,6 +433,225 @@ function loadAvailableModels() {
             console.error('Error loading models:', error);
             popularModelsDiv.innerHTML = '<p class="text-muted">Error loading models</p>';
         });
+}
+
+function loadAllProvidersModels() {
+    // Load all models from all providers for unified selection
+    const allModelsContainer = document.getElementById('allModelsContainer');
+    const providerFilters = document.getElementById('providerFilters');
+    
+    // Fetch all models
+    fetch('/api/models/all')
+        .then(response => response.json())
+        .then(data => {
+            // Clear previous content
+            allModelsContainer.innerHTML = '';
+            providerFilters.innerHTML = '';
+            
+            // Create provider filter checkboxes
+            const allProviderFilter = document.createElement('div');
+            allProviderFilter.className = 'form-check form-check-inline';
+            allProviderFilter.innerHTML = `
+                <input class="form-check-input provider-filter" type="checkbox"
+                       id="provider-all" value="all" checked>
+                <label class="form-check-label" for="provider-all">
+                    <strong>All Providers</strong>
+                </label>
+            `;
+            providerFilters.appendChild(allProviderFilter);
+            
+            // Create provider sections
+            Object.entries(data).forEach(([providerKey, providerData]) => {
+                // Add provider filter checkbox
+                const providerFilter = document.createElement('div');
+                providerFilter.className = 'form-check form-check-inline';
+                providerFilter.innerHTML = `
+                    <input class="form-check-input provider-filter" type="checkbox"
+                           id="provider-${providerKey}" value="${providerKey}" checked>
+                    <label class="form-check-label" for="provider-${providerKey}">
+                        ${getProviderDisplayName(providerKey)}
+                    </label>
+                `;
+                providerFilters.appendChild(providerFilter);
+                
+                // Create provider section
+                const providerSection = document.createElement('div');
+                providerSection.className = 'provider-section mb-4';
+                providerSection.setAttribute('data-provider', providerKey);
+                providerSection.innerHTML = `
+                    <div class="provider-header d-flex align-items-center mb-2 p-2 bg-light rounded">
+                        <input class="form-check-input provider-select-all me-2" type="checkbox"
+                               id="select-all-${providerKey}" checked>
+                        <h5 class="mb-0 me-2">
+                            <i class="fas fa-${getProviderIcon(providerKey)} me-2"></i>
+                            ${getProviderDisplayName(providerKey)}
+                        </h5>
+                        <span class="badge bg-secondary">${providerData.popular.length} models</span>
+                    </div>
+                    <div class="models-grid row" id="models-grid-${providerKey}">
+                        <!-- Individual model checkboxes will be added here -->
+                    </div>
+                `;
+                allModelsContainer.appendChild(providerSection);
+                
+                // Add models to this provider section
+                const modelsGrid = document.getElementById(`models-grid-${providerKey}`);
+                providerData.popular.forEach(model => {
+                    const modelId = `${providerKey}-${model.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                    const displayName = getModelDisplayName(model);
+                    
+                    const modelDiv = document.createElement('div');
+                    modelDiv.className = 'col-md-6 col-lg-4 mb-2';
+                    modelDiv.innerHTML = `
+                        <div class="form-check">
+                            <input class="form-check-input model-checkbox unified-model-checkbox" type="checkbox"
+                                   name="models_to_compare[]" value="${providerKey}:${model}" id="${modelId}">
+                            <label class="form-check-label" for="${modelId}">
+                                <span class="model-name">${displayName}</span>
+                                <span class="badge bg-outline-secondary badge-sm">${providerKey}</span>
+                            </label>
+                        </div>
+                    `;
+                    modelsGrid.appendChild(modelDiv);
+                });
+            });
+            
+            // Add event listeners for provider filters
+            addProviderFilterListeners();
+            
+            // Add event listeners for provider select-all checkboxes
+            addProviderSelectAllListeners();
+            
+            // Add event listener for model search
+            addModelSearchListener();
+            
+            // Update selected count
+            updateSelectedModelCount();
+        })
+        .catch(error => {
+            console.error('Error loading all models:', error);
+            document.getElementById('allModelsContainer').innerHTML = '<p class="text-muted">Error loading models</p>';
+        });
+}
+
+function addProviderFilterListeners() {
+    const providerFilters = document.querySelectorAll('.provider-filter');
+    providerFilters.forEach(filter => {
+        filter.addEventListener('change', function() {
+            const providerKey = this.value;
+            const isChecked = this.checked;
+            
+            if (providerKey === 'all') {
+                // Show/hide all provider sections
+                const allSections = document.querySelectorAll('.provider-section');
+                allSections.forEach(section => {
+                    section.style.display = isChecked ? 'block' : 'none';
+                });
+                
+                // Update other checkboxes
+                document.querySelectorAll('.provider-filter:not([value="all"])').forEach(cb => {
+                    cb.checked = isChecked;
+                });
+            } else {
+                // Show/hide specific provider section
+                const providerSection = document.querySelector(`[data-provider="${providerKey}"]`);
+                if (providerSection) {
+                    providerSection.style.display = isChecked ? 'block' : 'none';
+                }
+                
+                // Check if all providers are selected/deselected
+                const allProviderCheckbox = document.getElementById('provider-all');
+                const allProviderFilters = document.querySelectorAll('.provider-filter:not([value="all"])');
+                const allChecked = Array.from(allProviderFilters).every(cb => cb.checked);
+                allProviderCheckbox.checked = allChecked;
+            }
+        });
+    });
+}
+
+function addProviderSelectAllListeners() {
+    const selectAllCheckboxes = document.querySelectorAll('.provider-select-all');
+    selectAllCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const providerKey = this.getAttribute('id').replace('select-all-', '');
+            const isChecked = this.checked;
+            const providerSection = document.querySelector(`[data-provider="${providerKey}"]`);
+            
+            if (providerSection) {
+                const modelCheckboxes = providerSection.querySelectorAll('.unified-model-checkbox');
+                modelCheckboxes.forEach(modelCheckbox => {
+                    modelCheckbox.checked = isChecked;
+                });
+            }
+            
+            updateSelectedModelCount();
+        });
+    });
+}
+
+function addModelSearchListener() {
+    const searchInput = document.getElementById('modelSearch');
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const modelLabels = document.querySelectorAll('.unified-model-checkbox + label');
+        
+        modelLabels.forEach(label => {
+            const modelName = label.textContent.toLowerCase();
+            const modelCheckbox = label.previousElementSibling;
+            const providerSection = label.closest('.provider-section');
+            
+            if (modelName.includes(searchTerm)) {
+                label.style.display = 'block';
+                if (providerSection) {
+                    providerSection.style.display = 'block';
+                }
+            } else {
+                label.style.display = 'none';
+            }
+        });
+    });
+}
+
+function updateSelectedModelCount() {
+    const selectedCheckboxes = document.querySelectorAll('.unified-model-checkbox:checked');
+    const count = selectedCheckboxes.length;
+    document.getElementById('selectedCount').textContent = count;
+    
+    // Update the count badge color
+    const countBadge = document.getElementById('selectedCount');
+    countBadge.className = count >= 2 ? 'badge bg-success' : count === 1 ? 'badge bg-warning' : 'badge bg-secondary';
+}
+
+function clearAllModelSelections() {
+    const modelCheckboxes = document.querySelectorAll('.unified-model-checkbox');
+    modelCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectedModelCount();
+}
+
+function getProviderDisplayName(providerKey) {
+    const displayNames = {
+        'openrouter': 'OpenRouter',
+        'claude': 'Claude',
+        'lm_studio': 'LM Studio',
+        'ollama': 'Ollama',
+        'gemini': 'Gemini',
+        'openai': 'OpenAI'
+    };
+    return displayNames[providerKey] || providerKey;
+}
+
+function getProviderIcon(providerKey) {
+    const icons = {
+        'openrouter': 'globe',
+        'claude': 'robot',
+        'lm_studio': 'server',
+        'ollama': 'microchip',
+        'gemini': 'gem',
+        'openai': 'bolt'
+    };
+    return icons[providerKey] || 'question';
 }
 
 function getModelDisplayName(modelName) {
@@ -442,6 +707,18 @@ $(document).ready(function() {
     // Add event listener for provider change
     $('#provider').on('change', function() {
         loadAvailableModels();
+    });
+    
+    // Add event listener for unified model selection
+    $('#enableComparison').on('change', function() {
+        if ($(this).is(':checked')) {
+            loadAllProvidersModels();
+        }
+    });
+    
+    // Add event listeners for model checkboxes to update count
+    $(document).on('change', '.unified-model-checkbox', function() {
+        updateSelectedModelCount();
     });
     
     $('#uploadForm').on('submit', function(e) {
