@@ -112,15 +112,24 @@ echo "Services stopped."
 EOF
       chmod +x stop-services.sh
 
+      # Set up shell aliases
+      alias celery-worker="celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance"
+      alias celery-beat="celery -A tasks beat --loglevel=info"
+      alias flask-app="python app.py"
+      alias start-all="python app.py & celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance & celery -A tasks beat --loglevel=info"
+
       echo "Development environment ready!"
       echo ""
       echo "Services running:"
       echo "  - PostgreSQL: localhost:5433"
       echo "  - Redis: localhost:6379"
       echo ""
-      echo "To start the Flask app: python app.py"
-      echo "To start Celery worker: celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance"
-      echo "To start Celery beat: celery -A tasks beat --loglevel=info"
+      echo "Available aliases:"
+      echo "  - flask-app: Start the Flask application"
+      echo "  - celery-worker: Start Celery worker"
+      echo "  - celery-beat: Start Celery beat scheduler"
+      echo "  - start-all: Start all three services (Flask, Celery worker, Celery beat)"
+      echo ""
       echo "To stop services: ./stop-services.sh"
       echo ""
       echo "Note: Services will be stopped when you exit the shell"
