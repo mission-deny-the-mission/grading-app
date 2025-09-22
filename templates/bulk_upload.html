@@ -122,31 +122,39 @@ content %}
                                 </option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="modelSelect" class="form-label fw-bold"
-                                >Model Selection</label
-                            >
-                            <select class="form-select" id="modelSelect" name="modelSelect" onchange="toggleCustomModelBulk()">
-                                <option value="default">Use Default Model</option>
-                                <option value="openai/gpt-5">GPT-5</option>
-                                <option value="openai/gpt-5-mini">GPT-5 Mini</option>
-                                <option value="anthropic/claude-4-sonnet">Claude 4 Sonnet</option>
-                                <option value="anthropic/claude-4-opus">Claude 4 Opus</option>
-                                <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
-                                <option value="openai/gpt-4o">GPT-4o</option>
-                                <option value="google/gemini-pro">Gemini Pro</option>
-                                <option value="custom">Custom Model...</option>
-                            </select>
-                            <input
-                                type="text"
-                                class="form-control mt-2"
-                                id="customModel"
-                                name="customModel"
-                                placeholder="Enter custom model name"
-                                style="display: none;" 
-                                disabled
-                            />
-                        </div>
+                         <div class="col-md-6 mb-3">
+                             <label for="modelSelect" class="form-label fw-bold"
+                                 >Model Selection</label
+                             >
+                             <div class="d-flex align-items-center">
+                                 <select class="form-select" id="modelSelect" name="modelSelect" onchange="toggleCustomModelBulk()">
+                                     <option value="default">Use Default Model</option>
+                                 </select>
+                                 <div class="spinner-border spinner-border-sm text-primary ms-2" 
+                                      id="modelSelectSpinner" style="display: none;" role="status">
+                                     <span class="visually-hidden">Loading...</span>
+                                 </div>
+                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
+                                         onclick="refreshBulkProviderModels()" 
+                                         id="refreshBulkModelsBtn" 
+                                         title="Refresh available models">
+                                     <i class="fas fa-sync-alt"></i>
+                                 </button>
+                             </div>
+                             <div class="mt-1">
+                                 <small class="text-muted" id="bulkModelLoadingStatus">Ready</small>
+                             </div>
+                             <div class="invalid-feedback" id="bulkModelError" style="display: none;"></div>
+                             <input
+                                 type="text"
+                                 class="form-control mt-2"
+                                 id="customModel"
+                                 name="customModel"
+                                 placeholder="Enter custom model name"
+                                 style="display: none;" 
+                                 disabled
+                             />
+                         </div>
                     </div>
 
                     <div class="mb-3">
@@ -585,15 +593,58 @@ content %}
     function loadAvailableModels() {
         const provider = document.getElementById('provider').value;
         const popularModelsDiv = document.getElementById('popularModels');
-
-        // Fetch available models for the selected provider (for single model selection)
+        const modelSelect = document.getElementById('modelSelect');
+        const spinner = document.getElementById('modelSelectSpinner');
+        const status = document.getElementById('bulkModelLoadingStatus');
+        const errorDiv = document.getElementById('bulkModelError');
+        
+        // Show loading state
+        spinner.style.display = 'block';
+        status.textContent = 'Loading models...';
+        errorDiv.style.display = 'none';
+        
+        // Clear existing options (keep default option)
+        modelSelect.innerHTML = '<option value="default">Use Default Model</option>';
+        
+        // Fetch available models for the selected provider
         fetch(`/api/models/${provider}`)
             .then(response => response.json())
             .then(data => {
                 popularModelsDiv.innerHTML = '';
-
+                
                 if (data.popular && data.popular.length > 0) {
-                    // Use a provider-prefixed value for cross-provider comparison (e.g., "openrouter:anthropic/claude-opus-4.1")
+                    // Add popular models to single model select
+                    data.popular.forEach(model => {
+                        const displayName = getModelDisplayName(model);
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = displayName;
+                        modelSelect.appendChild(option);
+                    });
+                    
+                    // Add separator if there are other models
+                    if (data.other && data.other.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.disabled = true;
+                        separator.textContent = '──────────────';
+                        modelSelect.appendChild(separator);
+                        
+                        data.other.forEach(model => {
+                            const displayName = getModelDisplayName(model);
+                            const option = document.createElement('option');
+                            option.value = model;
+                            option.textContent = displayName;
+                            modelSelect.appendChild(option);
+                        });
+                    }
+                    
+                    // Add custom model option
+                    const customOption = document.createElement('option');
+                    customOption.value = 'custom';
+                    customOption.textContent = 'Custom Model...';
+                    modelSelect.appendChild(customOption);
+                    
+                    // Add models to comparison section with provider prefix
                     data.popular.forEach(model => {
                         const modelId = `${provider}_${model.replace(/[^a-zA-Z0-9]/g, '_')}`;
                         const displayName = getModelDisplayName(model);
@@ -609,12 +660,103 @@ content %}
                         `;
                         popularModelsDiv.appendChild(div);
                     });
+                    
+                    status.textContent = 'Models loaded successfully';
+                } else {
+                    status.textContent = 'No models available';
+                    errorDiv.textContent = 'No models available for this provider';
+                    errorDiv.style.display = 'block';
+                    
+                    // Add fallback models
+                    const fallbackModels = getBulkFallbackModels(provider);
+                    fallbackModels.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = model.name;
+                        modelSelect.appendChild(option);
+                    });
                 }
             })
             .catch(error => {
                 console.error('Error loading models:', error);
                 popularModelsDiv.innerHTML = '<p class="text-muted">Error loading models</p>';
+                status.textContent = 'Error loading models';
+                errorDiv.textContent = 'Failed to load models. Please try again.';
+                errorDiv.style.display = 'block';
+                
+                // Add fallback models
+                const fallbackModels = getBulkFallbackModels(provider);
+                fallbackModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name;
+                    modelSelect.appendChild(option);
+                });
+            })
+            .finally(() => {
+                spinner.style.display = 'none';
+                setTimeout(() => status.textContent = 'Ready', 2000);
             });
+    }
+    
+    function refreshBulkProviderModels() {
+        const provider = document.getElementById('provider').value;
+        const refreshBtn = document.getElementById('refreshBulkModelsBtn');
+        const status = document.getElementById('bulkModelLoadingStatus');
+        
+        // Show loading state on refresh button
+        refreshBtn.disabled = true;
+        refreshBtn.querySelector('i').classList.add('fa-spin');
+        status.textContent = 'Refreshing models...';
+        
+        // Clear cache by making a fresh request
+        fetch(`/api/models/${provider}?t=${Date.now()}`)
+            .then(response => response.json())
+            .then(data => {
+                loadAvailableModels(); // Reload models
+                status.textContent = 'Models refreshed successfully';
+            })
+            .catch(error => {
+                console.error('Error refreshing models:', error);
+                status.textContent = 'Error refreshing models';
+            })
+            .finally(() => {
+                refreshBtn.disabled = false;
+                refreshBtn.querySelector('i').classList.remove('fa-spin');
+                setTimeout(() => status.textContent = 'Ready', 2000);
+            });
+    }
+    
+    function getBulkFallbackModels(provider) {
+        const fallbackModels = {
+            'openrouter': [
+                {id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4'},
+                {id: 'openai/gpt-4o', name: 'GPT-4o'},
+                {id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet'}
+            ],
+            'claude': [
+                {id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'},
+                {id: 'claude-3-opus-20240229', name: 'Claude 3 Opus'},
+                {id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku'}
+            ],
+            'gemini': [
+                {id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash'},
+                {id: 'gemini-pro', name: 'Gemini Pro'}
+            ],
+            'openai': [
+                {id: 'gpt-4o', name: 'GPT-4o'},
+                {id: 'gpt-4o-mini', name: 'GPT-4o Mini'},
+                {id: 'gpt-4-turbo', name: 'GPT-4 Turbo'}
+            ],
+            'lm_studio': [
+                {id: 'local-model', name: 'Local Model'}
+            ],
+            'ollama': [
+                {id: 'llama2', name: 'Llama 2'},
+                {id: 'llama3', name: 'Llama 3'}
+            ]
+        };
+        return fallbackModels[provider] || [];
     }
 
     function loadAllProvidersModels() {

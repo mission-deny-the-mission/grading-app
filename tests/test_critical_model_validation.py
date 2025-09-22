@@ -14,42 +14,38 @@ class TestCriticalModelValidation:
     @pytest.mark.integration
     def test_model_naming_consistency(self, client):
         """Test model names are consistent and follow expected patterns."""
-        all_models = []
-        pages_to_test = [("config", "/config"), ("main", "/"), ("bulk", "/bulk_upload")]
-
-        # Collect all model options
-        for context, url in pages_to_test:
-            response = client.get(url)
-            if response.status_code == 200:
-                models = self._extract_model_options_from_html(response.text, context)
-                all_models.extend(models)
-
-        # Group by backend value to check consistency
-        backend_to_displays = {}
-        for model in all_models:
-            backend_val = model["backend_value"]
-            if backend_val not in backend_to_displays:
-                backend_to_displays[backend_val] = []
-            backend_to_displays[backend_val].append(model)
-
-        # Check naming patterns
-        issues_found = 0
+        # Since models are loaded dynamically via JavaScript, we'll test the API directly
+        # instead of trying to extract from HTML
+        response = client.get("/api/models")
+        assert response.status_code == 200
+        
+        models_data = response.get_json()
+        
+        # Check that we have providers with the expected structure
+        required_providers = ["openrouter", "claude", "gemini", "openai", "lm_studio", "ollama"]
+        
         valid_models = 0
-
-        for backend_value, model_instances in backend_to_displays.items():
-            display_names = [m["display_name"] for m in model_instances]
-
-            # Check for consistent display names across contexts
-            unique_displays = set(display_names)
-            if len(unique_displays) > 1:
-                issues_found += 1
-
-            # Validate naming patterns
-            is_valid = self._validate_model_patterns(backend_value)
-
-            if is_valid:
-                valid_models += 1
-
+        issues_found = 0
+        
+        for provider in required_providers:
+            if provider in models_data:
+                provider_data = models_data[provider]
+                
+                # Check structure
+                if "popular" in provider_data and "default" in provider_data:
+                    # Validate naming patterns for popular models
+                    for model in provider_data["popular"]:
+                        if self._validate_model_patterns(model):
+                            valid_models += 1
+                        else:
+                            issues_found += 1
+                    
+                    # Also validate default model
+                    if self._validate_model_patterns(provider_data["default"]):
+                        valid_models += 1
+                    else:
+                        issues_found += 1
+        
         # Should have mostly valid models with few issues
         assert valid_models > 0, "No valid models found"
         assert issues_found <= 5, f"Too many naming issues: {issues_found}"
@@ -136,11 +132,12 @@ class TestCriticalModelValidation:
         if context == "config":
             # Extract from configuration dropdowns
             selects_to_check = [
-                "openrouter_default_model_select",
+                "openrouter_default_model",
                 "claude_default_model",
                 "gemini_default_model",
                 "openai_default_model",
-                "ollama_default_model_select",
+                "lm_studio_default_model",
+                "ollama_default_model",
             ]
 
             for select_id in selects_to_check:
@@ -230,7 +227,7 @@ class TestCriticalModelValidation:
             if page_name == "configuration page":
                 # Config page uses provider-specific dropdowns, not modelSelect
                 assert (
-                    "openrouter_default_model_select" in html
+                    "openrouter_default_model" in html
                 ), f"Config dropdowns missing from {page_name}"
             else:
                 assert (

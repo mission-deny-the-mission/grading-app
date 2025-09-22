@@ -68,7 +68,7 @@
                     <th>Last Updated</th>
                     <th>Actions</th>
                 </tr>
-            </thead&gt>
+                </thead>
             <tbody id="batches-table-body">
                 {% if batches %}
                     {% for batch in batches %}
@@ -166,20 +166,40 @@
                         </small>
                     </div></search>
 </search_and_replace>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="batchProvider" class="form-label">Default Provider</label>
-                            <select class="form-select" id="batchProvider" name="provider">
-                                <option value="openrouter">OpenRouter</option>
-                                <option value="claude">Claude</option>
-                                <option value="lm_studio">LM Studio</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="batchModel" class="form-label">Default Model</label>
-                            <input type="text" class="form-control" id="batchModel" name="model" placeholder="e.g., anthropic/claude-sonnet-4">
-                        </div>
-                    </div>
+                     <div class="row">
+                         <div class="col-md-6 mb-3">
+                             <label for="batchProvider" class="form-label">Default Provider</label>
+                             <div class="d-flex align-items-center">
+                                 <select class="form-select" id="batchProvider" name="provider">
+                                     <option value="openrouter">OpenRouter</option>
+                                     <option value="claude">Claude</option>
+                                     <option value="lm_studio">LM Studio</option>
+                                 </select>
+                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
+                                         onclick="refreshBatchProviderModels()" 
+                                         id="refreshBatchModelsBtn" 
+                                         title="Refresh available models">
+                                     <i class="fas fa-sync-alt"></i>
+                                 </button>
+                             </div>
+                             <div class="mt-1">
+                                 <small class="text-muted" id="batchModelLoadingStatus">Ready</small>
+                             </div>
+                         </div>
+                         <div class="col-md-6 mb-3">
+                             <label for="batchModel" class="form-label">Default Model</label>
+                             <div class="d-flex align-items-center">
+                                 <select class="form-select" id="batchModel" name="model">
+                                     <option value="">Select a model...</option>
+                                 </select>
+                                 <div class="spinner-border spinner-border-sm text-primary ms-2" 
+                                      id="batchModelSpinner" style="display: none;" role="status">
+                                     <span class="visually-hidden">Loading...</span>
+                                 </div>
+                             </div>
+                             <div class="invalid-feedback" id="batchModelError" style="display: none;"></div>
+                         </div>
+                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="batchTemperature" class="form-label">Temperature</label>
@@ -347,7 +367,121 @@
         $(document).on('change', '.unified-model-checkbox', function() {
             updateBatchSelectedModelCount();
         });
+        
+        // Handle provider change to load models dynamically
+        $('#batchProvider').on('change', function() {
+            loadBatchProviderModels();
+        });
+        
+        // Load models on page load
+        loadBatchProviderModels();
     });
+    
+    function loadBatchProviderModels() {
+        const provider = $('#batchProvider').val();
+        const modelSelect = $('#batchModel');
+        const spinner = $('#batchModelSpinner');
+        const status = $('#batchModelLoadingStatus');
+        const errorDiv = $('#batchModelError');
+        
+        // Show loading state
+        spinner.show();
+        status.text('Loading models...');
+        errorDiv.hide();
+        modelSelect.prop('disabled', true);
+        
+        // Clear existing options
+        modelSelect.empty();
+        modelSelect.append('<option value="">Select a model...</option>');
+        
+        // Fetch models for the selected provider
+        fetch(`/api/models/${provider}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.popular && data.popular.length > 0) {
+                    // Add popular models
+                    data.popular.forEach(model => {
+                        const displayName = getBatchModelDisplayName(model);
+                        modelSelect.append(`<option value="${model}">${displayName}</option>`);
+                    });
+                    
+                    // Add separator if there are other models
+                    if (data.other && data.other.length > 0) {
+                        modelSelect.append('<option disabled>──────────────</option>');
+                        data.other.forEach(model => {
+                            const displayName = getBatchModelDisplayName(model);
+                            modelSelect.append(`<option value="${model}">${displayName}</option>`);
+                        });
+                    }
+                    
+                    status.text('Models loaded successfully');
+                } else {
+                    status.text('No models available');
+                    errorDiv.text('No models available for this provider').show();
+                }
+            })
+            .catch(error => {
+                console.error('Error loading models:', error);
+                status.text('Error loading models');
+                errorDiv.text('Failed to load models. Please try again.').show();
+                
+                // Add fallback models
+                const fallbackModels = getBatchFallbackModels(provider);
+                fallbackModels.forEach(model => {
+                    modelSelect.append(`<option value="${model.id}">${model.name}</option>`);
+                });
+            })
+            .finally(() => {
+                spinner.hide();
+                modelSelect.prop('disabled', false);
+                setTimeout(() => status.text('Ready'), 2000);
+            });
+    }
+    
+    function refreshBatchProviderModels() {
+        const provider = $('#batchProvider').val();
+        const refreshBtn = $('#refreshBatchModelsBtn');
+        const status = $('#batchModelLoadingStatus');
+        
+        // Show loading state on refresh button
+        refreshBtn.prop('disabled', true).find('i').addClass('fa-spin');
+        status.text('Refreshing models...');
+        
+        // Clear cache by making a fresh request
+        fetch(`/api/models/${provider}?t=${Date.now()}`)
+            .then(response => response.json())
+            .then(data => {
+                loadBatchProviderModels(); // Reload models
+                status.text('Models refreshed successfully');
+            })
+            .catch(error => {
+                console.error('Error refreshing models:', error);
+                status.text('Error refreshing models');
+            })
+            .finally(() => {
+                refreshBtn.prop('disabled', false).find('i').removeClass('fa-spin');
+                setTimeout(() => status.text('Ready'), 2000);
+            });
+    }
+    
+    function getBatchFallbackModels(provider) {
+        const fallbackModels = {
+            'openrouter': [
+                {id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4'},
+                {id: 'openai/gpt-4o', name: 'GPT-4o'},
+                {id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet'}
+            ],
+            'claude': [
+                {id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'},
+                {id: 'claude-3-opus-20240229', name: 'Claude 3 Opus'},
+                {id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku'}
+            ],
+            'lm_studio': [
+                {id: 'local-model', name: 'Local Model'}
+            ]
+        };
+        return fallbackModels[provider] || [];
+    }
     
     function loadBatchAllProvidersModels() {
         // Load all models from all providers for unified selection in batch creation

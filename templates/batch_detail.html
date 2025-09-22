@@ -295,10 +295,19 @@
                                         <option value="lm_studio">LM Studio</option>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <label for="jobModel" class="form-label">Model</label>
-                                    <input type="text" class="form-control" id="jobModel" placeholder="Inherit from batch ({{ batch.model or 'Default' }})">
-                                </div>
+                             <div class="col-md-6">
+                                 <label for="jobModel" class="form-label">Model</label>
+                                 <div class="d-flex align-items-center">
+                                     <select class="form-control" id="jobModel">
+                                         <option value="">Inherit from batch ({{ batch.model or 'Default' }})</option>
+                                     </select>
+                                     <div class="spinner-border spinner-border-sm text-primary ms-2" 
+                                          id="jobModelSpinner" style="display: none;" role="status">
+                                         <span class="visually-hidden">Loading...</span>
+                                     </div>
+                                 </div>
+                                 <div class="invalid-feedback" id="jobModelError" style="display: none;"></div>
+                             </div>
                             </div>
                             <div class="row mt-3">
                                 <div class="col-md-6">
@@ -483,6 +492,14 @@ $('#enableJobMultiModel').on('change', function() {
     }
 });
 
+// Handle provider change to load models dynamically
+$('#jobProvider').on('change', function() {
+    loadJobProviderModels();
+});
+
+// Load models on page load
+loadJobProviderModels();
+
 // Load popular models for job multi-model comparison
 function loadJobPopularModels() {
     const jobPopularModelsDiv = document.getElementById('jobPopularModels');
@@ -519,6 +536,86 @@ function loadJobPopularModels() {
             console.error('Error loading models:', error);
             jobPopularModelsDiv.innerHTML = '<small class="text-muted">Error loading models</small>';
         });
+}
+
+function loadJobProviderModels() {
+    const provider = $('#jobProvider').val();
+    const modelSelect = $('#jobModel');
+    const spinner = $('#jobModelSpinner');
+    const errorDiv = $('#jobModelError');
+    
+    if (!provider) {
+        // Reset to inherit from batch
+        modelSelect.empty();
+        modelSelect.append(`<option value="">Inherit from batch ({{ batch.model or 'Default' }})</option>`);
+        return;
+    }
+    
+    // Show loading state
+    spinner.show();
+    errorDiv.hide();
+    modelSelect.prop('disabled', true);
+    
+    // Clear existing options
+    modelSelect.empty();
+    modelSelect.append('<option value="">Select a model...</option>');
+    
+    // Fetch models for the selected provider
+    fetch(`/api/models/${provider}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.popular && data.popular.length > 0) {
+                // Add popular models
+                data.popular.forEach(model => {
+                    const displayName = getJobModelDisplayName(model);
+                    modelSelect.append(`<option value="${model}">${displayName}</option>`);
+                });
+                
+                // Add separator if there are other models
+                if (data.other && data.other.length > 0) {
+                    modelSelect.append('<option disabled>──────────────</option>');
+                    data.other.forEach(model => {
+                        const displayName = getJobModelDisplayName(model);
+                        modelSelect.append(`<option value="${model}">${displayName}</option>`);
+                    });
+                }
+            } else {
+                errorDiv.text('No models available for this provider').show();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading job models:', error);
+            errorDiv.text('Failed to load models. Please try again.').show();
+            
+            // Add fallback models
+            const fallbackModels = getJobFallbackModels(provider);
+            fallbackModels.forEach(model => {
+                modelSelect.append(`<option value="${model.id}">${model.name}</option>`);
+            });
+        })
+        .finally(() => {
+            spinner.hide();
+            modelSelect.prop('disabled', false);
+        });
+}
+
+function getJobFallbackModels(provider) {
+    const fallbackModels = {
+        'openrouter': [
+            {id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4'},
+            {id: 'openai/gpt-4o', name: 'GPT-4o'},
+            {id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet'}
+        ],
+        'claude': [
+            {id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'},
+            {id: 'claude-3-opus-20240229', name: 'Claude 3 Opus'},
+            {id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku'}
+        ],
+        'lm_studio': [
+            {id: 'local-model', name: 'Local Model'}
+        ]
+    };
+    return fallbackModels[provider] || [];
 }
 
 function getJobModelDisplayName(modelName) {

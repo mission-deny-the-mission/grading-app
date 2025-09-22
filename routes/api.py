@@ -10,14 +10,100 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.exceptions import NotFound
+import time
 
 from models import (BatchTemplate, GradingJob, JobBatch, JobTemplate,
                     SavedMarkingScheme, SavedPrompt, Submission, db)
+from utils.llm_providers import get_llm_provider
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 
-# DEFAULT_MODELS configuration (shared from main app)
+# Cache for model lists to avoid excessive API calls
+_model_cache = {}
+_cache_timestamp = {}
+CACHE_TTL = 300  # 5 minutes in seconds
+
+def get_cached_models(provider_name):
+    """Get cached models for a provider, or fetch if cache is expired/empty."""
+    current_time = time.time()
+    
+    # Check if we have cached data and it's not expired
+    if (provider_name in _model_cache and 
+        provider_name in _cache_timestamp and 
+        current_time - _cache_timestamp[provider_name] < CACHE_TTL):
+        return _model_cache[provider_name]
+    
+    # Cache is empty or expired, fetch fresh data
+    try:
+        # Map lowercase provider names to capitalized names expected by get_llm_provider
+        provider_name_mapping = {
+            "openrouter": "OpenRouter",
+            "claude": "Claude", 
+            "gemini": "Gemini",
+            "openai": "OpenAI",
+            "lm_studio": "LM Studio",
+            "ollama": "Ollama"
+        }
+        
+        capitalized_name = provider_name_mapping.get(provider_name, provider_name)
+        provider = get_llm_provider(capitalized_name)
+        result = provider.get_available_models()
+        
+        if result.get("success"):
+            # Convert raw models list to expected format with popular/default structure
+            models_list = result["models"]
+            provider_config = DEFAULT_MODELS.get(provider_name, {})
+            
+            # Build the expected response format
+            formatted_models = {
+                "popular": [model["id"] for model in models_list] if models_list else provider_config.get("popular", []),
+                "default": provider_config.get("default", models_list[0]["id"] if models_list else "")
+            }
+            
+            # Cache the successful result
+            _model_cache[provider_name] = formatted_models
+            _cache_timestamp[provider_name] = current_time
+            return formatted_models
+        else:
+            # Return fallback models if API fails
+            return get_fallback_models(provider_name)
+    except Exception as e:
+        print(f"Error fetching models for {provider_name}: {e}")
+        # Return None for unknown providers to trigger 400 error
+        return None
+
+def get_fallback_models(provider_name):
+    """Get fallback hardcoded models for a provider."""
+    fallback_models = {
+        "openrouter": {
+            "popular": ["anthropic/claude-opus-4.1", "openai/gpt-5", "openai/gpt-4o", "anthropic/claude-3.5-sonnet-20241022"],
+            "default": "anthropic/claude-opus-4.1"
+        },
+        "claude": {
+            "popular": ["claude-3.5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229"],
+            "default": "claude-3.5-sonnet-20241022"
+        },
+        "gemini": {
+            "popular": ["gemini-2.0-flash-exp", "gemini-pro"],
+            "default": "gemini-2.0-flash-exp"
+        },
+        "openai": {
+            "popular": ["gpt-5", "gpt-4o", "gpt-4o-mini"],
+            "default": "gpt-4o"
+        },
+        "lm_studio": {
+            "popular": ["local-model"],
+            "default": "local-model"
+        },
+        "ollama": {
+            "popular": ["llama2", "llama3"],
+            "default": "llama2"
+        }
+    }
+    return fallback_models.get(provider_name, {"popular": [], "default": ""})
+
+# Dynamic model configuration (will be populated at runtime)
 DEFAULT_MODELS = {
     "openrouter": {
         "default": "anthropic/claude-sonnet-4",
@@ -74,14 +160,21 @@ DEFAULT_MODELS = {
 @api_bp.route("/models")
 def get_available_models():
     """Get available models for each provider."""
-    return jsonify(DEFAULT_MODELS)
+    providers = ["openrouter", "claude", "gemini", "openai", "lm_studio", "ollama"]
+    models = {}
+    
+    for provider in providers:
+        models[provider] = get_cached_models(provider)
+    
+    return jsonify(models)
 
 
 @api_bp.route("/models/<provider>")
 def get_provider_models(provider):
     """Get available models for a specific provider."""
-    if provider in DEFAULT_MODELS:
-        return jsonify(DEFAULT_MODELS[provider])
+    models = get_cached_models(provider)
+    if models:
+        return jsonify(models)
     else:
         return jsonify({"error": f"Unknown provider: {provider}"}), 400
 
@@ -89,7 +182,15 @@ def get_provider_models(provider):
 @api_bp.route("/models/all")
 def get_all_models():
     """Get all available models from all providers for unified selection."""
-    return jsonify(DEFAULT_MODELS)
+    providers = ["openrouter", "claude", "gemini", "openai", "lm_studio", "ollama"]
+    all_models = {}
+    
+    for provider in providers:
+        models = get_cached_models(provider)
+        if models:
+            all_models[provider] = models
+    
+    return jsonify(all_models)
 
 
 @api_bp.route("/jobs")

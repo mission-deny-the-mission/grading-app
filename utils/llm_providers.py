@@ -354,6 +354,43 @@ class LLMProvider(ABC):
 class OpenRouterLLMProvider(LLMProvider):
     """LLM Provider for OpenRouter API."""
 
+    def get_available_models(self):
+        """Fetch available models from OpenRouter API."""
+        try:
+            openrouter_key = os.getenv("OPENROUTER_API_KEY")
+            if not openrouter_key:
+                return {"success": False, "error": "API key not configured"}
+            
+            headers = {
+                "Authorization": f"Bearer {openrouter_key}",
+                "Content-Type": "application/json",
+            }
+            
+            response = requests.get(
+                "https://openrouter.ai/api/v1/models",
+                headers=headers,
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                models_data = response.json()
+                models = []
+                for model in models_data.get("data", []):
+                    models.append({
+                        "id": model["id"],
+                        "name": model.get("name", model["id"]),
+                        "description": model.get("description", ""),
+                        "pricing": model.get("pricing", {}),
+                        "context_length": model.get("context_length", 0),
+                        "provider": model.get("provider", "")
+                    })
+                return {"success": True, "models": models}
+            else:
+                return {"success": False, "error": f"API error: {response.status_code}"}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def grade_document(
         self,
         text,
@@ -459,6 +496,30 @@ class OpenRouterLLMProvider(LLMProvider):
 class ClaudeLLMProvider(LLMProvider):
     """LLM Provider for Claude API."""
 
+    def get_available_models(self):
+        """Fetch available models from Claude API."""
+        try:
+            claude_key = os.getenv("CLAUDE_API_KEY")
+            if not claude_key:
+                return {"success": False, "error": "API key not configured"}
+            
+            anthropic = Anthropic(api_key=claude_key)
+            models = anthropic.models.list()
+            
+            model_list = []
+            for model in models.data:
+                model_list.append({
+                    "id": model.id,
+                    "name": model.display_name or model.id,
+                    "description": "",
+                    "context_length": model.max_tokens,
+                    "provider": "Anthropic"
+                })
+            return {"success": True, "models": model_list}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def grade_document(
         self,
         text,
@@ -539,6 +600,34 @@ class ClaudeLLMProvider(LLMProvider):
 
 class LMStudioLLMProvider(LLMProvider):
     """LLM Provider for LM Studio API."""
+
+    def get_available_models(self):
+        """Fetch available models from LM Studio API."""
+        try:
+            lm_studio_url = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1")
+            
+            response = requests.get(
+                f"{lm_studio_url}/models",
+                headers={"Content-Type": "application/json"},
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                models_data = response.json()
+                models = []
+                for model in models_data.get("data", []):
+                    models.append({
+                        "id": model["id"],
+                        "name": model.get("name", model["id"]),
+                        "description": model.get("description", ""),
+                        "provider": "LM Studio"
+                    })
+                return {"success": True, "models": models}
+            else:
+                return {"success": False, "error": f"API error: {response.status_code}"}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def grade_document(
         self,
@@ -626,6 +715,34 @@ class LMStudioLLMProvider(LLMProvider):
 
 class OllamaLLMProvider(LLMProvider):
     """LLM Provider for Ollama API."""
+
+    def get_available_models(self):
+        """Fetch available models from Ollama API."""
+        try:
+            ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/tags")
+            
+            response = requests.get(
+                ollama_url,
+                headers={"Content-Type": "application/json"},
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                models_data = response.json()
+                models = []
+                for model in models_data.get("models", []):
+                    models.append({
+                        "id": model["name"],
+                        "name": model["name"],
+                        "description": f"{model.get('details', {}).get('description', '')} - Size: {model.get('size', 0)}GB",
+                        "provider": "Ollama"
+                    })
+                return {"success": True, "models": models}
+            else:
+                return {"success": False, "error": f"API error: {response.status_code}"}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def grade_document(
         self,
@@ -759,6 +876,30 @@ class OllamaLLMProvider(LLMProvider):
 class GeminiLLMProvider(LLMProvider):
     """LLM Provider for Google Gemini API."""
 
+    def get_available_models(self):
+        """Fetch available models from Gemini API."""
+        try:
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            if not gemini_key:
+                return {"success": False, "error": "API key not configured"}
+            
+            genai.configure(api_key=gemini_key)
+            
+            # List available models
+            models = []
+            for model in genai.list_models():
+                if "generateContent" in model.supported_generation_methods:
+                    models.append({
+                        "id": model.name,
+                        "name": model.display_name or model.name,
+                        "description": model.description or "",
+                        "provider": "Google"
+                    })
+            return {"success": True, "models": models}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def grade_document(
         self,
         text,
@@ -863,6 +1004,29 @@ class GeminiLLMProvider(LLMProvider):
 
 class OpenAILLMProvider(LLMProvider):
     """LLM Provider for OpenAI API (direct, not through OpenRouter)."""
+
+    def get_available_models(self):
+        """Fetch available models from OpenAI API."""
+        try:
+            openai_key = os.getenv("OPENAI_API_KEY")
+            if not openai_key:
+                return {"success": False, "error": "API key not configured"}
+            
+            client = OpenAI(api_key=openai_key)
+            models = client.models.list()
+            
+            model_list = []
+            for model in models.data:
+                model_list.append({
+                    "id": model.id,
+                    "name": model.id,
+                    "description": "",
+                    "provider": "OpenAI"
+                })
+            return {"success": True, "models": model_list}
+                
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def grade_document(
         self,

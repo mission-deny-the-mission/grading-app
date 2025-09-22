@@ -57,22 +57,21 @@
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="openrouter_default_model_select" class="form-label">Default Model</label>
-                                <select class="form-select" id="openrouter_default_model_select" onchange="toggleCustomOpenRouterModel()">
+                                <label for="openrouter_default_model" class="form-label">Default Model</label>
+                                <select class="form-select" id="openrouter_default_model" name="openrouter_default_model">
                                     <option value="">Use System Default</option>
-                                    <option value="openai/gpt-5">GPT-5</option>
-                                    <option value="anthropic/claude-4-sonnet">Claude 4 Sonnet</option>
-                                    <option value="anthropic/claude-4-opus">Claude 4 Opus</option>
-                                    <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
-                                    <option value="openai/gpt-4o">GPT-4o</option>
-                                    <option value="google/gemini-pro">Gemini Pro</option>
-                                    <option value="custom">Custom Model...</option>
+                                    <!-- Models will be loaded dynamically -->
                                 </select>
-                                <input type="text" class="form-control mt-2" id="openrouter_default_model" name="openrouter_default_model" 
-                                       placeholder="Enter custom model name (e.g., anthropic/claude-4-sonnet)"
-                                       style="display: none;" disabled>
                                 <div class="form-text">
                                     Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('openrouter')" id="openrouter-refresh-btn">
+                                        <i class="fas fa-sync me-1"></i> <span id="openrouter-refresh-text">Refresh Models</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -115,13 +114,18 @@
                                 <label for="claude_default_model" class="form-label">Default Model</label>
                                 <select class="form-select" id="claude_default_model" name="claude_default_model">
                                     <option value="">Use System Default</option>
-                                    <option value="claude-4-sonnet">Claude 4 Sonnet</option>
-                                    <option value="claude-4-opus">Claude 4 Opus</option>
-                                    <option value="claude-4-haiku">Claude 4 Haiku</option>
-                                    <option value="claude-3.5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                                    <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
                                     Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('claude')" id="claude-refresh-btn">
+                                        <i class="fas fa-sync me-1"></i> <span id="claude-refresh-text">Refresh Models</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -164,12 +168,18 @@
                                 <label for="gemini_default_model" class="form-label">Default Model</label>
                                 <select class="form-select" id="gemini_default_model" name="gemini_default_model">
                                     <option value="">Use System Default</option>
-                                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
-                                    <option value="gemini-pro">Gemini Pro</option>
-                                    <option value="gemini-pro-vision">Gemini Pro Vision</option>
+                                    <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
                                     Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('gemini')" id="gemini-refresh-btn">
+                                        <i class="fas fa-sync me-1"></i> <span id="gemini-refresh-text">Refresh Models</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -212,14 +222,18 @@
                                 <label for="openai_default_model" class="form-label">Default Model</label>
                                 <select class="form-select" id="openai_default_model" name="openai_default_model">
                                     <option value="">Use System Default</option>
-                                    <option value="gpt-5">GPT-5</option>
-                                    <option value="gpt-5-mini">GPT-5 Mini</option>
-                                    <option value="gpt-4o">GPT-4o</option>
-                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
-                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                    <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
                                     Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('openai')" id="openai-refresh-btn">
+                                        <i class="fas fa-sync me-1"></i> <span id="openai-refresh-text">Refresh Models</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -251,11 +265,20 @@
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <label for="lm_studio_default_model" class="form-label">Default Model</label>
-                                <input type="text" class="form-control" id="lm_studio_default_model" 
-                                       name="lm_studio_default_model" placeholder="local-model"
-                                       value="{{ config.lm_studio_default_model if config else '' }}">
+                                <select class="form-select" id="lm_studio_default_model" name="lm_studio_default_model">
+                                    <option value="">Use System Default</option>
+                                    <!-- Models will be loaded dynamically -->
+                                </select>
                                 <div class="form-text">
-                                    Default model name for LM Studio (e.g., "local-model")
+                                    Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('lm_studio')" id="lm_studio-refresh-btn">
+                                        <i class="fas fa-sync me-1"></i> <span id="lm_studio-refresh-text">Refresh Models</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -286,22 +309,21 @@
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="ollama_default_model_select" class="form-label">Default Model</label>
-                                <select class="form-select" id="ollama_default_model_select" onchange="toggleCustomOllamaModel()">
+                                <label for="ollama_default_model" class="form-label">Default Model</label>
+                                <select class="form-select" id="ollama_default_model" name="ollama_default_model">
                                     <option value="">Use System Default</option>
-                                    <option value="llama2">Llama 2</option>
-                                    <option value="llama3">Llama 3</option>
-                                    <option value="codellama">Code Llama</option>
-                                    <option value="mistral">Mistral</option>
-                                    <option value="gemma">Gemma</option>
-                                    <option value="phi">Phi</option>
-                                    <option value="custom">Custom Model...</option>
+                                    <!-- Models will be loaded dynamically -->
                                 </select>
-                                <input type="text" class="form-control mt-2" id="ollama_default_model" name="ollama_default_model" 
-                                       placeholder="Enter custom model name (e.g., llama3:8b)"
-                                       style="display: none;" disabled>
                                 <div class="form-text">
                                     Default model to use when "Use Default Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('ollama')" id="ollama-refresh-btn">
+                                        <i class="fas fa-sync me-1"></i> <span id="ollama-refresh-text">Refresh Models</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -352,42 +374,65 @@
                         <div class="d-flex align-items-center">
                             <div id="openrouter-status" class="status-indicator me-2"></div>
                             <span>OpenRouter</span>
+                            <div id="openrouter-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
                             <div id="claude-status" class="status-indicator me-2"></div>
                             <span>Claude API</span>
+                            <div id="claude-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
                             <div id="gemini-status" class="status-indicator me-2"></div>
                             <span>Gemini</span>
+                            <div id="gemini-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
                             <div id="openai-status" class="status-indicator me-2"></div>
                             <span>OpenAI</span>
+                            <div id="openai-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
                             <div id="lmstudio-status" class="status-indicator me-2"></div>
                             <span>LM Studio</span>
+                            <div id="lmstudio-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
                             <div id="ollama-status" class="status-indicator me-2"></div>
                             <span>Ollama</span>
+                            <div id="ollama-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <button class="btn btn-sm btn-outline-primary" onclick="checkAllAPIs()">
-                    <i class="fas fa-sync me-1"></i>Check All APIs
-                </button>
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-sm btn-outline-primary" onclick="checkAllAPIs()">
+                        <i class="fas fa-sync me-1"></i>Check All APIs
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" onclick="refreshAllModels()">
+                        <i class="fas fa-download me-1"></i>Refresh All Models
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -552,78 +597,11 @@ function togglePassword(fieldId) {
     }
 }
 
-function toggleCustomOpenRouterModel() {
-    const select = document.getElementById('openrouter_default_model_select');
-    const customInput = document.getElementById('openrouter_default_model');
-    
-    if (select.value === 'custom') {
-        customInput.style.display = 'block';
-        customInput.disabled = false;
-        customInput.name = 'openrouter_default_model';
-    } else {
-        customInput.style.display = 'none';
-        customInput.disabled = true;
-        customInput.value = select.value;
-        customInput.name = 'openrouter_default_model';
+function setDefaultModelValue(provider, value) {
+    const select = document.getElementById(`${provider}_default_model`);
+    if (select) {
+        select.value = value || '';
     }
-}
-
-function toggleCustomOllamaModel() {
-    const select = document.getElementById('ollama_default_model_select');
-    const customInput = document.getElementById('ollama_default_model');
-    
-    if (select.value === 'custom') {
-        customInput.style.display = 'block';
-        customInput.disabled = false;
-        customInput.name = 'ollama_default_model';
-    } else {
-        customInput.style.display = 'none';
-        customInput.disabled = true;
-        customInput.value = select.value;
-        customInput.name = 'ollama_default_model';
-    }
-}
-
-function setOpenRouterDefaultModel(value) {
-    const select = document.getElementById('openrouter_default_model_select');
-    const customInput = document.getElementById('openrouter_default_model');
-    
-    // Check if value is one of the predefined options
-    const predefinedOptions = ['', 'openai/gpt-5', 'anthropic/claude-4-sonnet', 'anthropic/claude-4-opus', 'google/gemini-2.5-pro', 'openai/gpt-4o', 'google/gemini-pro'];
-    
-    if (predefinedOptions.includes(value)) {
-        select.value = value;
-        customInput.style.display = 'none';
-        customInput.disabled = true;
-        customInput.value = value;
-    } else {
-        select.value = 'custom';
-        customInput.style.display = 'block';
-        customInput.disabled = false;
-        customInput.value = value;
-    }
-    customInput.name = 'openrouter_default_model';
-}
-
-function setOllamaDefaultModel(value) {
-    const select = document.getElementById('ollama_default_model_select');
-    const customInput = document.getElementById('ollama_default_model');
-    
-    // Check if value is one of the predefined options
-    const predefinedOptions = ['', 'llama2', 'llama3', 'codellama', 'mistral', 'gemma', 'phi'];
-    
-    if (predefinedOptions.includes(value)) {
-        select.value = value;
-        customInput.style.display = 'none';
-        customInput.disabled = true;
-        customInput.value = value;
-    } else {
-        select.value = 'custom';
-        customInput.style.display = 'block';
-        customInput.disabled = false;
-        customInput.value = value;
-    }
-    customInput.name = 'ollama_default_model';
 }
 
 function showStatus(message, type = 'success') {
@@ -680,12 +658,12 @@ function loadFromEnv() {
             document.getElementById('default_prompt').value = data.default_prompt || '';
             
             // Load default model configurations
-            setOpenRouterDefaultModel(data.openrouter_default_model || '');
-            document.getElementById('claude_default_model').value = data.claude_default_model || '';
-            document.getElementById('gemini_default_model').value = data.gemini_default_model || '';
-            document.getElementById('openai_default_model').value = data.openai_default_model || '';
-            document.getElementById('lm_studio_default_model').value = data.lm_studio_default_model || '';
-            setOllamaDefaultModel(data.ollama_default_model || '');
+            setDefaultModelValue('openrouter', data.openrouter_default_model);
+            setDefaultModelValue('claude', data.claude_default_model);
+            setDefaultModelValue('gemini', data.gemini_default_model);
+            setDefaultModelValue('openai', data.openai_default_model);
+            setDefaultModelValue('lm_studio', data.lm_studio_default_model);
+            setDefaultModelValue('ollama', data.ollama_default_model);
             
             showStatus('Configuration loaded successfully', 'success');
         })
@@ -821,6 +799,124 @@ function testAPIKey(provider) {
         showStatus(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key test failed: ${error.message}`, 'danger');
     });
 }
+
+// Dynamic model loading functions
+function loadModelsForProvider(provider) {
+    const select = document.getElementById(`${provider}_default_model`);
+    const statusIndicator = document.getElementById(`${provider}-status`);
+    const loadingIndicator = document.getElementById(`${provider}-loading`);
+    const refreshButton = document.getElementById(`${provider}-refresh-btn`);
+    const refreshText = document.getElementById(`${provider}-refresh-text`);
+    
+    // Show loading state
+    select.innerHTML = '<option value="">Loading models...</option>';
+    select.disabled = true;
+    
+    // Show loading spinner
+    if (loadingIndicator) {
+        loadingIndicator.classList.remove('d-none');
+    }
+    
+    // Update refresh button
+    if (refreshButton) {
+        refreshButton.disabled = true;
+    }
+    if (refreshText) {
+        refreshText.textContent = 'Refreshing...';
+    }
+    
+    fetch(`/api/models/${provider}`)
+        .then(response => response.json())
+        .then(data => {
+            // Clear existing options
+            select.innerHTML = '';
+            
+            if (Array.isArray(data)) {
+                // Add default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Use System Default';
+                select.appendChild(defaultOption);
+                
+                // Add models
+                data.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name;
+                    select.appendChild(option);
+                });
+                
+                select.disabled = false;
+                if (statusIndicator) {
+                    statusIndicator.classList.remove('offline');
+                    statusIndicator.classList.add('online');
+                }
+            } else {
+                // Handle error case
+                const errorOption = document.createElement('option');
+                errorOption.value = '';
+                errorOption.textContent = 'Error loading models';
+                select.appendChild(errorOption);
+                select.disabled = true;
+                if (statusIndicator) {
+                    statusIndicator.classList.remove('online');
+                    statusIndicator.classList.add('offline');
+                }
+                showStatus(`Failed to load models for ${provider}: ${data.error || 'Unknown error'}`, 'danger');
+            }
+        })
+        .catch(error => {
+            select.innerHTML = '<option value="">Failed to load models</option>';
+            select.disabled = true;
+            if (statusIndicator) {
+                statusIndicator.classList.remove('online');
+                statusIndicator.classList.add('offline');
+            }
+            showStatus(`Network error loading models for ${provider}: ${error.message}`, 'danger');
+        })
+        .finally(() => {
+            // Hide loading spinner
+            if (loadingIndicator) {
+                loadingIndicator.classList.add('d-none');
+            }
+            
+            // Restore refresh button
+            if (refreshButton) {
+                refreshButton.disabled = false;
+            }
+            if (refreshText) {
+                refreshText.textContent = 'Refresh Models';
+            }
+        });
+}
+
+function refreshAllModels() {
+    const providers = ['openrouter', 'claude', 'gemini', 'openai', 'lm_studio', 'ollama'];
+    
+    showStatus('Refreshing all model lists...', 'info');
+    
+    // Create a promise for each provider
+    const promises = providers.map(provider => {
+        return new Promise((resolve) => {
+            loadModelsForProvider(provider);
+            // Small delay to allow UI updates
+            setTimeout(resolve, 100);
+        });
+    });
+    
+    // Wait for all providers to finish loading
+    Promise.all(promises).then(() => {
+        showStatus('All model lists refreshed successfully!', 'success');
+    }).catch(error => {
+        showStatus('Some model lists failed to refresh', 'warning');
+    });
+}
+
+// Initialize dynamic model loading on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load models for all providers
+    refreshAllModels();
+});
 
 $(document).ready(function() {
     // Load current configuration on page load
