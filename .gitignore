@@ -186,3 +186,5 @@ dump.rdb
 !.brokk/style.md
 !.brokk/review.md
 !.brokk/project.properties
+.postgres_data
+.postgres_log
