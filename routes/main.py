@@ -6,6 +6,7 @@ Handles index, jobs, config, and other main navigation routes.
 import os
 
 import openai
+import requests
 from anthropic import Anthropic
 from flask import Blueprint, jsonify, render_template, request, session
 
@@ -172,17 +173,36 @@ def test_api_key():
         if api_type == "openrouter":
             # Test OpenRouter API key
             try:
-                openai.api_key = api_key
-                openai.api_base = "https://openrouter.ai/api/v1"
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
 
-                response = openai.ChatCompletion.create(
-                    model="anthropic/claude-3.5-sonnet",
-                    messages=[{"role": "user", "content": "Hello"}],
-                    max_tokens=10,
+                payload = {
+                    "model": "anthropic/claude-3.5-sonnet",
+                    "messages": [{"role": "user", "content": "Hello"}],
+                    "max_tokens": 10,
+                }
+
+                response = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
                 )
-                return jsonify(
-                    {"success": True, "message": "OpenRouter API key is valid"}
-                )
+
+                if response.status_code == 200:
+                    return jsonify(
+                        {"success": True, "message": "OpenRouter API key is valid"}
+                    )
+                else:
+                    try:
+                        error_body = response.json()
+                    except Exception:
+                        error_body = response.text
+                    return jsonify(
+                        {"success": False, "error": f"OpenRouter API error: {response.status_code} - {error_body}"}
+                    )
             except Exception as e:
                 return jsonify(
                     {"success": False, "error": f"Invalid OpenRouter API key: {str(e)}"}
