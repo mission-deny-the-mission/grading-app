@@ -73,8 +73,17 @@ class TestExternalChecksSuccess:
 
     def test_ollama_success(self, client):
         """Test successful Ollama connection check."""
-        fake_resp = MagicMock(status_code=200)
-        with patch("requests.post", return_value=fake_resp):
+        # Mock the GET request to /api/tags (returns available models)
+        fake_get_resp = MagicMock(status_code=200)
+        fake_get_resp.json.return_value = {
+            "models": [{"name": "llama2"}]  # A generative model
+        }
+
+        # Mock the POST request to /api/generate (successful generation)
+        fake_post_resp = MagicMock(status_code=200)
+
+        with patch("requests.get", return_value=fake_get_resp), \
+             patch("requests.post", return_value=fake_post_resp):
             resp = client.post("/test_ollama", json={"url": "http://x"})
         assert resp.status_code == 200
         data = json.loads(resp.data)

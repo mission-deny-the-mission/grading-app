@@ -61,7 +61,7 @@ def save_config():
             "lm_studio_url", "http://localhost:1234/v1"
         ).strip()
         config.ollama_url = request.form.get(
-            "ollama_url", "http://localhost:11434/api/generate"
+            "ollama_url", "http://localhost:11434"
         ).strip()
         config.default_prompt = request.form.get("default_prompt", "").strip() or None
 
@@ -116,7 +116,7 @@ def load_config():
             "lm_studio_url": config.lm_studio_url
             or os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
             "ollama_url": config.ollama_url
-            or os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate"),
+            or os.getenv("OLLAMA_URL", "http://localhost:11434"),
             "default_prompt": config.default_prompt
             or "Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.",
             # Default model configurations
@@ -137,7 +137,7 @@ def load_config():
             "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
             "lm_studio_url": os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
             "ollama_url": os.getenv(
-                "OLLAMA_URL", "http://localhost:11434/api/generate"
+                "OLLAMA_URL", "http://localhost:11434"
             ),
             "default_prompt": (
                 "Please grade this document and provide detailed feedback on:\n"
@@ -321,13 +321,49 @@ def test_ollama():
         import requests
 
         data = request.get_json()
-        url = data.get("url", "http://localhost:11434/api/generate")
+        base_url = data.get("url", "http://localhost:11434")
+        url = f"{base_url}/api/generate"
 
+        # First, check if there are any models available
+        models_response = requests.get(
+            f"{base_url}/api/tags",
+            headers={"Content-Type": "application/json"},
+            timeout=10,
+        )
+        
+        if models_response.status_code != 200:
+            return jsonify({
+                "success": False,
+                "error": f"Ollama models endpoint not accessible: {models_response.status_code} - {models_response.text}"
+            })
+        
+        models_data = models_response.json()
+        if not models_data.get("models"):
+            return jsonify({
+                "success": False,
+                "error": "No models found on Ollama server. Please install at least one model."
+            })
+        
+        # Find a model that supports generation (not embedding models)
+        generative_models = [
+            model for model in models_data["models"] 
+            if not any(keyword in model["name"].lower() for keyword in ["embed", "minilm", "bert"])
+        ]
+        
+        if not generative_models:
+            return jsonify({
+                "success": False,
+                "error": "No generative models found on Ollama server. Please install a generative model like llama2, mistral, or qwen."
+            })
+        
+        # Use the first generative model for testing
+        test_model = generative_models[0]["name"]
+        
         # Test with a simple generation request
         response = requests.post(
             url,
             json={
-                "model": "llama2",
+                "model": test_model,
                 "prompt": "Hello",
                 "stream": False,
                 "options": {"num_predict": 10},

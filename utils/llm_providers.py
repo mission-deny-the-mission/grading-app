@@ -719,10 +719,10 @@ class OllamaLLMProvider(LLMProvider):
     def get_available_models(self):
         """Fetch available models from Ollama API."""
         try:
-            ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/tags")
+            ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
             
             response = requests.get(
-                ollama_url,
+                f"{ollama_url}/api/tags",
                 headers={"Content-Type": "application/json"},
                 timeout=30
             )
@@ -753,7 +753,7 @@ class OllamaLLMProvider(LLMProvider):
         temperature=0.3,
         max_tokens=2000,
     ):
-        ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
+        ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
         try:
             if marking_scheme_content:
@@ -769,7 +769,7 @@ class OllamaLLMProvider(LLMProvider):
             )
 
             response = requests.post(
-                ollama_url,
+                f"{ollama_url}/api/generate",
                 json={
                     "model": model,
                     "prompt": full_prompt,
