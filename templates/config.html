@@ -1,8 +1,5 @@
-{% extends "base.html" %}
-
-{% block title %}Configuration - Document Grader{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Configuration - Document Grader{%
+endblock %} {% block content %}
 <div class="row">
     <div class="col-lg-8 mx-auto">
         <div class="text-center mb-4">
@@ -11,7 +8,8 @@
                 Configuration Settings
             </h1>
             <p class="lead text-muted">
-                Configure your API keys and default settings for the document grading system
+                Configure your API keys and default settings for the document
+                grading system
             </p>
         </div>
 
@@ -30,18 +28,37 @@
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="openrouter_api_key" class="form-label">API Key</label>
-                                <input type="password" class="form-control" id="openrouter_api_key" 
-                                       name="openrouter_api_key" placeholder="sk-or-..." autocomplete="new-password"
-                                       value="{{ config.openrouter_api_key if config else '' }}">
+                                <label
+                                    for="openrouter_api_key"
+                                    class="form-label"
+                                    >API Key</label
+                                >
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="openrouter_api_key"
+                                    name="openrouter_api_key"
+                                    placeholder="sk-or-..."
+                                    autocomplete="new-password"
+                                    value="{{ config.openrouter_api_key if config else '' }}"
+                                />
                                 <div class="form-text">
-                                    Get your API key from <a href="https://openrouter.ai" target="_blank">OpenRouter</a>
+                                    Get your API key from
+                                    <a
+                                        href="https://openrouter.ai"
+                                        target="_blank"
+                                        >OpenRouter</a
+                                    >
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-primary" onclick="togglePassword('openrouter_api_key')">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        onclick="togglePassword('openrouter_api_key')"
+                                    >
                                         <i class="fas fa-eye"></i> Show/Hide
                                     </button>
                                 </div>
@@ -49,7 +66,11 @@
                             <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-success" onclick="testAPIKey('openrouter')">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="testAPIKey('openrouter')"
+                                    >
                                         <i class="fas fa-check"></i> Test Key
                                     </button>
                                 </div>
@@ -57,20 +78,37 @@
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="openrouter_default_model" class="form-label">Default Model</label>
-                                <select class="form-select" id="openrouter_default_model" name="openrouter_default_model">
+                                <label
+                                    for="openrouter_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="openrouter_default_model"
+                                    name="openrouter_default_model"
+                                >
                                     <option value="">Use System Default</option>
                                     <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
-                                    Default model to use when "Use Default Model" is selected for this provider
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('openrouter')" id="openrouter-refresh-btn">
-                                        <i class="fas fa-sync me-1"></i> <span id="openrouter-refresh-text">Refresh Models</span>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('openrouter')"
+                                        id="openrouter-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="openrouter-refresh-text"
+                                            >Refresh Models</span
+                                        >
                                     </button>
                                 </div>
                             </div>
@@ -84,18 +122,35 @@
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="claude_api_key" class="form-label">API Key</label>
-                                <input type="password" class="form-control" id="claude_api_key" 
-                                       name="claude_api_key" placeholder="sk-ant-..." autocomplete="new-password"
-                                       value="{{ config.claude_api_key if config else '' }}">
+                                <label for="claude_api_key" class="form-label"
+                                    >API Key</label
+                                >
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="claude_api_key"
+                                    name="claude_api_key"
+                                    placeholder="sk-ant-..."
+                                    autocomplete="new-password"
+                                    value="{{ config.claude_api_key if config else '' }}"
+                                />
                                 <div class="form-text">
-                                    Get your API key from <a href="https://console.anthropic.com" target="_blank">Anthropic Console</a>
+                                    Get your API key from
+                                    <a
+                                        href="https://console.anthropic.com"
+                                        target="_blank"
+                                        >Anthropic Console</a
+                                    >
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-primary" onclick="togglePassword('claude_api_key')">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        onclick="togglePassword('claude_api_key')"
+                                    >
                                         <i class="fas fa-eye"></i> Show/Hide
                                     </button>
                                 </div>
@@ -103,7 +158,11 @@
                             <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-success" onclick="testAPIKey('claude')">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="testAPIKey('claude')"
+                                    >
                                         <i class="fas fa-check"></i> Test Key
                                     </button>
                                 </div>
@@ -111,20 +170,37 @@
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="claude_default_model" class="form-label">Default Model</label>
-                                <select class="form-select" id="claude_default_model" name="claude_default_model">
+                                <label
+                                    for="claude_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="claude_default_model"
+                                    name="claude_default_model"
+                                >
                                     <option value="">Use System Default</option>
                                     <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
-                                    Default model to use when "Use Default Model" is selected for this provider
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('claude')" id="claude-refresh-btn">
-                                        <i class="fas fa-sync me-1"></i> <span id="claude-refresh-text">Refresh Models</span>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('claude')"
+                                        id="claude-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="claude-refresh-text"
+                                            >Refresh Models</span
+                                        >
                                     </button>
                                 </div>
                             </div>
@@ -138,18 +214,35 @@
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="gemini_api_key" class="form-label">API Key</label>
-                                <input type="password" class="form-control" id="gemini_api_key" 
-                                       name="gemini_api_key" placeholder="your-gemini-key-here" autocomplete="new-password"
-                                       value="{{ config.gemini_api_key if config else '' }}">
+                                <label for="gemini_api_key" class="form-label"
+                                    >API Key</label
+                                >
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="gemini_api_key"
+                                    name="gemini_api_key"
+                                    placeholder="your-gemini-key-here"
+                                    autocomplete="new-password"
+                                    value="{{ config.gemini_api_key if config else '' }}"
+                                />
                                 <div class="form-text">
-                                    Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                                    Get your API key from
+                                    <a
+                                        href="https://makersuite.google.com/app/apikey"
+                                        target="_blank"
+                                        >Google AI Studio</a
+                                    >
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-primary" onclick="togglePassword('gemini_api_key')">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        onclick="togglePassword('gemini_api_key')"
+                                    >
                                         <i class="fas fa-eye"></i> Show/Hide
                                     </button>
                                 </div>
@@ -157,7 +250,11 @@
                             <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-success" onclick="testAPIKey('gemini')">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="testAPIKey('gemini')"
+                                    >
                                         <i class="fas fa-check"></i> Test Key
                                     </button>
                                 </div>
@@ -165,20 +262,37 @@
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="gemini_default_model" class="form-label">Default Model</label>
-                                <select class="form-select" id="gemini_default_model" name="gemini_default_model">
+                                <label
+                                    for="gemini_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="gemini_default_model"
+                                    name="gemini_default_model"
+                                >
                                     <option value="">Use System Default</option>
                                     <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
-                                    Default model to use when "Use Default Model" is selected for this provider
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('gemini')" id="gemini-refresh-btn">
-                                        <i class="fas fa-sync me-1"></i> <span id="gemini-refresh-text">Refresh Models</span>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('gemini')"
+                                        id="gemini-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="gemini-refresh-text"
+                                            >Refresh Models</span
+                                        >
                                     </button>
                                 </div>
                             </div>
@@ -192,18 +306,35 @@
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="openai_api_key" class="form-label">API Key</label>
-                                <input type="password" class="form-control" id="openai_api_key" 
-                                       name="openai_api_key" placeholder="sk-..." autocomplete="new-password"
-                                       value="{{ config.openai_api_key if config else '' }}">
+                                <label for="openai_api_key" class="form-label"
+                                    >API Key</label
+                                >
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="openai_api_key"
+                                    name="openai_api_key"
+                                    placeholder="sk-..."
+                                    autocomplete="new-password"
+                                    value="{{ config.openai_api_key if config else '' }}"
+                                />
                                 <div class="form-text">
-                                    Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+                                    Get your API key from
+                                    <a
+                                        href="https://platform.openai.com/api-keys"
+                                        target="_blank"
+                                        >OpenAI Platform</a
+                                    >
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-primary" onclick="togglePassword('openai_api_key')">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        onclick="togglePassword('openai_api_key')"
+                                    >
                                         <i class="fas fa-eye"></i> Show/Hide
                                     </button>
                                 </div>
@@ -211,7 +342,11 @@
                             <div class="col-md-3">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-success" onclick="testAPIKey('openai')">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="testAPIKey('openai')"
+                                    >
                                         <i class="fas fa-check"></i> Test Key
                                     </button>
                                 </div>
@@ -219,20 +354,37 @@
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="openai_default_model" class="form-label">Default Model</label>
-                                <select class="form-select" id="openai_default_model" name="openai_default_model">
+                                <label
+                                    for="openai_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="openai_default_model"
+                                    name="openai_default_model"
+                                >
                                     <option value="">Use System Default</option>
                                     <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
-                                    Default model to use when "Use Default Model" is selected for this provider
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('openai')" id="openai-refresh-btn">
-                                        <i class="fas fa-sync me-1"></i> <span id="openai-refresh-text">Refresh Models</span>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('openai')"
+                                        id="openai-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="openai-refresh-text"
+                                            >Refresh Models</span
+                                        >
                                     </button>
                                 </div>
                             </div>
@@ -246,38 +398,68 @@
                         </h6>
                         <div class="row">
                             <div class="col-md-8">
-                                <label for="lm_studio_url" class="form-label">API URL</label>
-                                <input type="url" class="form-control" id="lm_studio_url" 
-                                       name="lm_studio_url" value="{{ config.lm_studio_url if config else 'http://localhost:1234/v1' }}">
+                                <label for="lm_studio_url" class="form-label"
+                                    >API URL</label
+                                >
+                                <input
+                                    type="url"
+                                    class="form-control"
+                                    id="lm_studio_url"
+                                    name="lm_studio_url"
+                                    value="{{ config.lm_studio_url if config else 'http://localhost:1234/v1' }}"
+                                />
                                 <div class="form-text">
-                                    Local LM Studio server URL (default: http://localhost:1234/v1)
+                                    Local LM Studio server URL (default:
+                                    http://localhost:1234/v1)
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="testLMStudio()">
-                                        <i class="fas fa-plug"></i> Test Connection
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        onclick="testLMStudio()"
+                                    >
+                                        <i class="fas fa-plug"></i> Test
+                                        Connection
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="lm_studio_default_model" class="form-label">Default Model</label>
-                                <select class="form-select" id="lm_studio_default_model" name="lm_studio_default_model">
+                                <label
+                                    for="lm_studio_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="lm_studio_default_model"
+                                    name="lm_studio_default_model"
+                                >
                                     <option value="">Use System Default</option>
                                     <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
-                                    Default model to use when "Use Default Model" is selected for this provider
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('lm_studio')" id="lm_studio-refresh-btn">
-                                        <i class="fas fa-sync me-1"></i> <span id="lm_studio-refresh-text">Refresh Models</span>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('lm_studio')"
+                                        id="lm_studio-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="lm_studio-refresh-text"
+                                            >Refresh Models</span
+                                        >
                                     </button>
                                 </div>
                             </div>
@@ -291,57 +473,98 @@
                         </h6>
                         <div class="row">
                             <div class="col-md-8">
-                                <label for="ollama_url" class="form-label">API URL</label>
-                                <input type="url" class="form-control" id="ollama_url" 
-                                        name="ollama_url" value="{{ config.ollama_url if config else 'http://localhost:11434' }}">
+                                <label for="ollama_url" class="form-label"
+                                    >API URL</label
+                                >
+                                <input
+                                    type="url"
+                                    class="form-control"
+                                    id="ollama_url"
+                                    name="ollama_url"
+                                    value="{{ config.ollama_url if config else 'http://localhost:11434' }}"
+                                />
                                 <div class="form-text">
-                                    Local Ollama server URL (default: http://localhost:11434)
+                                    Local Ollama server URL (default:
+                                    http://localhost:11434)
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="testOllama()">
-                                        <i class="fas fa-plug"></i> Test Connection
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-secondary"
+                                        onclick="testOllama()"
+                                    >
+                                        <i class="fas fa-plug"></i> Test
+                                        Connection
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <label for="ollama_default_model" class="form-label">Default Model</label>
-                                <select class="form-select" id="ollama_default_model" name="ollama_default_model">
+                                <label
+                                    for="ollama_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="ollama_default_model"
+                                    name="ollama_default_model"
+                                >
                                     <option value="">Use System Default</option>
                                     <!-- Models will be loaded dynamically -->
                                 </select>
                                 <div class="form-text">
-                                    Default model to use when "Use Default Model" is selected for this provider
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">&nbsp;</label>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-outline-info" onclick="loadModelsForProvider('ollama')" id="ollama-refresh-btn">
-                                        <i class="fas fa-sync me-1"></i> <span id="ollama-refresh-text">Refresh Models</span>
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('ollama')"
+                                        id="ollama-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="ollama-refresh-text"
+                                            >Refresh Models</span
+                                        >
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <hr class="my-4">
+                    <hr class="my-4" />
 
                     <!-- Default Settings -->
                     <div class="mb-4">
                         <h6 class="fw-bold text-primary">
-                            <i class="fas fa-sliders-h me-2"></i>Default Settings
+                            <i class="fas fa-sliders-h me-2"></i>Default
+                            Settings
                         </h6>
                         <div class="mb-3">
-                            <label for="default_prompt" class="form-label">Default Grading Prompt</label>
-                            <textarea class="form-control" id="default_prompt" name="default_prompt" rows="4"
-                                      placeholder="Enter your default grading instructions...">{{ config.default_prompt if config else 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.' }}</textarea>
+                            <label for="default_prompt" class="form-label"
+                                >Default Grading Prompt</label
+                            >
+                            <textarea
+                                class="form-control"
+                                id="default_prompt"
+                                name="default_prompt"
+                                rows="4"
+                                placeholder="Enter your default grading instructions..."
+                            >
+{{ config.default_prompt if config else 'Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.' }}</textarea
+                            >
                             <div class="form-text">
-                                This prompt will be used as the default when grading documents
+                                This prompt will be used as the default when
+                                grading documents
                             </div>
                         </div>
                     </div>
@@ -350,14 +573,23 @@
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="fas fa-save me-2"></i>Save Configuration
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="loadFromEnv()">
-                            <i class="fas fa-download me-2"></i>Load from Environment Variables
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            onclick="loadFromEnv()"
+                        >
+                            <i class="fas fa-download me-2"></i>Load from
+                            Environment Variables
                         </button>
                     </div>
                 </form>
 
                 <!-- Status messages -->
-                <div id="statusMessage" class="mt-3" style="display: none;"></div>
+                <div
+                    id="statusMessage"
+                    class="mt-3"
+                    style="display: none"
+                ></div>
             </div>
         </div>
 
@@ -372,64 +604,112 @@
                 <div class="row">
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
-                            <div id="openrouter-status" class="status-indicator me-2"></div>
+                            <div
+                                id="openrouter-status"
+                                class="status-indicator me-2"
+                            ></div>
                             <span>OpenRouter</span>
-                            <div id="openrouter-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                            <div
+                                id="openrouter-loading"
+                                class="spinner-border spinner-border-sm ms-2 d-none"
+                                role="status"
+                            >
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
-                            <div id="claude-status" class="status-indicator me-2"></div>
+                            <div
+                                id="claude-status"
+                                class="status-indicator me-2"
+                            ></div>
                             <span>Claude API</span>
-                            <div id="claude-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                            <div
+                                id="claude-loading"
+                                class="spinner-border spinner-border-sm ms-2 d-none"
+                                role="status"
+                            >
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
-                            <div id="gemini-status" class="status-indicator me-2"></div>
+                            <div
+                                id="gemini-status"
+                                class="status-indicator me-2"
+                            ></div>
                             <span>Gemini</span>
-                            <div id="gemini-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                            <div
+                                id="gemini-loading"
+                                class="spinner-border spinner-border-sm ms-2 d-none"
+                                role="status"
+                            >
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
-                            <div id="openai-status" class="status-indicator me-2"></div>
+                            <div
+                                id="openai-status"
+                                class="status-indicator me-2"
+                            ></div>
                             <span>OpenAI</span>
-                            <div id="openai-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                            <div
+                                id="openai-loading"
+                                class="spinner-border spinner-border-sm ms-2 d-none"
+                                role="status"
+                            >
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
-                            <div id="lmstudio-status" class="status-indicator me-2"></div>
+                            <div
+                                id="lmstudio-status"
+                                class="status-indicator me-2"
+                            ></div>
                             <span>LM Studio</span>
-                            <div id="lmstudio-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                            <div
+                                id="lmstudio-loading"
+                                class="spinner-border spinner-border-sm ms-2 d-none"
+                                role="status"
+                            >
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-2 mb-3">
                         <div class="d-flex align-items-center">
-                            <div id="ollama-status" class="status-indicator me-2"></div>
+                            <div
+                                id="ollama-status"
+                                class="status-indicator me-2"
+                            ></div>
                             <span>Ollama</span>
-                            <div id="ollama-loading" class="spinner-border spinner-border-sm ms-2 d-none" role="status">
+                            <div
+                                id="ollama-loading"
+                                class="spinner-border spinner-border-sm ms-2 d-none"
+                                role="status"
+                            >
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="d-flex gap-2 mt-3">
-                    <button class="btn btn-sm btn-outline-primary" onclick="checkAllAPIs()">
+                    <button
+                        class="btn btn-sm btn-outline-primary"
+                        onclick="checkAllAPIs()"
+                    >
                         <i class="fas fa-sync me-1"></i>Check All APIs
                     </button>
-                    <button class="btn btn-sm btn-outline-info" onclick="refreshAllModels()">
+                    <button
+                        class="btn btn-sm btn-outline-info"
+                        onclick="refreshAllModels()"
+                    >
                         <i class="fas fa-download me-1"></i>Refresh All Models
                     </button>
                 </div>
@@ -447,14 +727,30 @@
                 <div class="accordion" id="helpAccordion">
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#openrouter-help">
+                            <button
+                                class="accordion-button"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#openrouter-help"
+                            >
                                 OpenRouter Setup
                             </button>
                         </h2>
-                        <div id="openrouter-help" class="accordion-collapse collapse show" data-bs-parent="#helpAccordion">
+                        <div
+                            id="openrouter-help"
+                            class="accordion-collapse collapse show"
+                            data-bs-parent="#helpAccordion"
+                        >
                             <div class="accordion-body">
                                 <ol>
-                                    <li>Visit <a href="https://openrouter.ai" target="_blank">OpenRouter</a></li>
+                                    <li>
+                                        Visit
+                                        <a
+                                            href="https://openrouter.ai"
+                                            target="_blank"
+                                            >OpenRouter</a
+                                        >
+                                    </li>
                                     <li>Sign up for an account</li>
                                     <li>Add payment method</li>
                                     <li>Generate an API key</li>
@@ -466,18 +762,36 @@
                     </div>
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#claude-help">
+                            <button
+                                class="accordion-button collapsed"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#claude-help"
+                            >
                                 Claude API Setup
                             </button>
                         </h2>
-                        <div id="claude-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                        <div
+                            id="claude-help"
+                            class="accordion-collapse collapse"
+                            data-bs-parent="#helpAccordion"
+                        >
                             <div class="accordion-body">
                                 <ol>
-                                    <li>Visit <a href="https://console.anthropic.com" target="_blank">Anthropic Console</a></li>
+                                    <li>
+                                        Visit
+                                        <a
+                                            href="https://console.anthropic.com"
+                                            target="_blank"
+                                            >Anthropic Console</a
+                                        >
+                                    </li>
                                     <li>Create an account</li>
                                     <li>Add payment method</li>
                                     <li>Generate an API key</li>
-                                    <li>Copy the key (starts with "sk-ant-")</li>
+                                    <li>
+                                        Copy the key (starts with "sk-ant-")
+                                    </li>
                                     <li>Paste it in the configuration above</li>
                                 </ol>
                             </div>
@@ -485,35 +799,73 @@
                     </div>
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gemini-help">
+                            <button
+                                class="accordion-button collapsed"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#gemini-help"
+                            >
                                 Google Gemini Setup
                             </button>
                         </h2>
-                        <div id="gemini-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                        <div
+                            id="gemini-help"
+                            class="accordion-collapse collapse"
+                            data-bs-parent="#helpAccordion"
+                        >
                             <div class="accordion-body">
                                 <ol>
-                                    <li>Visit <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                                    <li>
+                                        Visit
+                                        <a
+                                            href="https://makersuite.google.com/app/apikey"
+                                            target="_blank"
+                                            >Google AI Studio</a
+                                        >
+                                    </li>
                                     <li>Sign in with your Google account</li>
                                     <li>Click "Create API Key"</li>
                                     <li>Copy the generated API key</li>
                                     <li>Paste it in the configuration above</li>
-                                    <li>Note: Gemini has free tier limits and paid usage options</li>
+                                    <li>
+                                        Note: Gemini has free tier limits and
+                                        paid usage options
+                                    </li>
                                 </ol>
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#openai-help">
+                            <button
+                                class="accordion-button collapsed"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#openai-help"
+                            >
                                 OpenAI Setup
                             </button>
                         </h2>
-                        <div id="openai-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                        <div
+                            id="openai-help"
+                            class="accordion-collapse collapse"
+                            data-bs-parent="#helpAccordion"
+                        >
                             <div class="accordion-body">
                                 <ol>
-                                    <li>Visit <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></li>
+                                    <li>
+                                        Visit
+                                        <a
+                                            href="https://platform.openai.com/api-keys"
+                                            target="_blank"
+                                            >OpenAI Platform</a
+                                        >
+                                    </li>
                                     <li>Sign up or log into your account</li>
-                                    <li>Add payment method (required for API usage)</li>
+                                    <li>
+                                        Add payment method (required for API
+                                        usage)
+                                    </li>
                                     <li>Click "Create new secret key"</li>
                                     <li>Copy the key (starts with "sk-")</li>
                                     <li>Paste it in the configuration above</li>
@@ -523,38 +875,92 @@
                     </div>
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#lmstudio-help">
+                            <button
+                                class="accordion-button collapsed"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#lmstudio-help"
+                            >
                                 LM Studio Setup
                             </button>
                         </h2>
-                        <div id="lmstudio-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                        <div
+                            id="lmstudio-help"
+                            class="accordion-collapse collapse"
+                            data-bs-parent="#helpAccordion"
+                        >
                             <div class="accordion-body">
                                 <ol>
-                                    <li>Download <a href="https://lmstudio.ai" target="_blank">LM Studio</a></li>
+                                    <li>
+                                        Download
+                                        <a
+                                            href="https://lmstudio.ai"
+                                            target="_blank"
+                                            >LM Studio</a
+                                        >
+                                    </li>
                                     <li>Install and launch the application</li>
-                                    <li>Download a model (e.g., Llama 2, Mistral)</li>
+                                    <li>
+                                        Download a model (e.g., Llama 2,
+                                        Mistral)
+                                    </li>
                                     <li>Start the local server</li>
-                                    <li>Ensure the API URL is correct (default: http://localhost:1234/v1)</li>
-                                    <li>Test the connection using the button above</li>
+                                    <li>
+                                        Ensure the API URL is correct (default:
+                                        http://localhost:1234/v1)
+                                    </li>
+                                    <li>
+                                        Test the connection using the button
+                                        above
+                                    </li>
                                 </ol>
                             </div>
                         </div>
                     </div>
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ollama-help">
+                            <button
+                                class="accordion-button collapsed"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#ollama-help"
+                            >
                                 Ollama Setup
                             </button>
                         </h2>
-                        <div id="ollama-help" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                        <div
+                            id="ollama-help"
+                            class="accordion-collapse collapse"
+                            data-bs-parent="#helpAccordion"
+                        >
                             <div class="accordion-body">
                                 <ol>
-                                    <li>Download <a href="https://ollama.ai" target="_blank">Ollama</a></li>
+                                    <li>
+                                        Download
+                                        <a
+                                            href="https://ollama.ai"
+                                            target="_blank"
+                                            >Ollama</a
+                                        >
+                                    </li>
                                     <li>Install and start Ollama service</li>
-                                    <li>Download a model: <code>ollama pull llama2</code> or <code>ollama pull mistral</code></li>
-                                    <li>Ensure Ollama is running (default: http://localhost:11434)</li>
-                                    <li>Verify the API URL is correct (default: http://localhost:11434)</li>
-                                    <li>Test the connection using the button above</li>
+                                    <li>
+                                        Download a model:
+                                        <code>ollama pull llama2</code> or
+                                        <code>ollama pull mistral</code>
+                                    </li>
+                                    <li>
+                                        Ensure Ollama is running (default:
+                                        http://localhost:11434)
+                                    </li>
+                                    <li>
+                                        Verify the API URL is correct (default:
+                                        http://localhost:11434)
+                                    </li>
+                                    <li>
+                                        Test the connection using the button
+                                        above
+                                    </li>
                                 </ol>
                             </div>
                         </div>
@@ -564,402 +970,487 @@
         </div>
     </div>
 </div>
-{% endblock %}
+{% endblock %} {% block scripts %}
 
-{% block scripts %}
 <style>
-.status-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: #6c757d;
-}
-.status-indicator.online {
-    background-color: #28a745;
-}
-.status-indicator.offline {
-    background-color: #dc3545;
-}
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #6c757d;
+    }
+    .status-indicator.online {
+        background-color: #28a745;
+    }
+    .status-indicator.offline {
+        background-color: #dc3545;
+    }
 </style>
 
 <script>
-function togglePassword(fieldId) {
-    const field = document.getElementById(fieldId);
-    const button = event.target;
-    const icon = button.querySelector('i');
-    
-    if (field.type === 'password') {
-        field.type = 'text';
-        icon.className = 'fas fa-eye-slash';
-    } else {
-        field.type = 'password';
-        icon.className = 'fas fa-eye';
-    }
-}
+    function togglePassword(fieldId) {
+        const field = document.getElementById(fieldId);
+        const button = event.target;
+        const icon = button.querySelector("i");
 
-function setDefaultModelValue(provider, value) {
-    const select = document.getElementById(`${provider}_default_model`);
-    if (select) {
-        select.value = value || '';
-    }
-}
-
-function showStatus(message, type = 'success') {
-    const statusDiv = document.getElementById('statusMessage');
-    statusDiv.className = `alert alert-${type}`;
-    statusDiv.innerHTML = message;
-    statusDiv.style.display = 'block';
-    
-    setTimeout(() => {
-        statusDiv.style.display = 'none';
-    }, 5000);
-}
-
-function testLMStudio() {
-    const url = document.getElementById('lm_studio_url').value;
-    const statusIndicator = document.getElementById('lmstudio-status');
-    
-    statusIndicator.className = 'status-indicator';
-    
-    fetch('/test_lm_studio', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: url })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            statusIndicator.classList.add('online');
-            showStatus('LM Studio connection successful!', 'success');
+        if (field.type === "password") {
+            field.type = "text";
+            icon.className = "fas fa-eye-slash";
         } else {
-            statusIndicator.classList.add('offline');
-            showStatus('LM Studio connection failed: ' + data.error, 'danger');
+            field.type = "password";
+            icon.className = "fas fa-eye";
         }
-    })
-    .catch(error => {
-        statusIndicator.classList.add('offline');
-        showStatus('Connection test failed: ' + error.message, 'danger');
-    });
-}
+    }
 
-function loadFromEnv() {
-    // Load values from environment variables via API
-    fetch('/load_config')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('openrouter_api_key').value = data.openrouter_api_key || '';
-            document.getElementById('claude_api_key').value = data.claude_api_key || '';
-            document.getElementById('gemini_api_key').value = data.gemini_api_key || '';
-            document.getElementById('openai_api_key').value = data.openai_api_key || '';
-            document.getElementById('lm_studio_url').value = data.lm_studio_url || 'http://localhost:1234/v1';
-            document.getElementById('ollama_url').value = data.ollama_url || 'http://localhost:11434';
-            document.getElementById('default_prompt').value = data.default_prompt || '';
-            
-            // Load default model configurations
-            setDefaultModelValue('openrouter', data.openrouter_default_model);
-            setDefaultModelValue('claude', data.claude_default_model);
-            setDefaultModelValue('gemini', data.gemini_default_model);
-            setDefaultModelValue('openai', data.openai_default_model);
-            setDefaultModelValue('lm_studio', data.lm_studio_default_model);
-            setDefaultModelValue('ollama', data.ollama_default_model);
-            
-            showStatus('Configuration loaded successfully', 'success');
+    function setDefaultModelValue(provider, value) {
+        const select = document.getElementById(`${provider}_default_model`);
+        if (select) {
+            select.value = value || "";
+        }
+    }
+
+    function showStatus(message, type = "success") {
+        const statusDiv = document.getElementById("statusMessage");
+        statusDiv.className = `alert alert-${type}`;
+        statusDiv.innerHTML = message;
+        statusDiv.style.display = "block";
+
+        setTimeout(() => {
+            statusDiv.style.display = "none";
+        }, 5000);
+    }
+
+    function testLMStudio() {
+        const url = document.getElementById("lm_studio_url").value;
+        const statusIndicator = document.getElementById("lmstudio-status");
+
+        statusIndicator.className = "status-indicator";
+
+        fetch("/test_lm_studio", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: url }),
         })
-        .catch(error => {
-            showStatus('Failed to load configuration: ' + error.message, 'danger');
-        });
-}
-
-function testOllama() {
-    const url = document.getElementById('ollama_url').value;
-    const statusIndicator = document.getElementById('ollama-status');
-    
-    statusIndicator.className = 'status-indicator';
-    
-    fetch('/test_ollama', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: url })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            statusIndicator.classList.add('online');
-            showStatus('Ollama connection successful!', 'success');
-        } else {
-            statusIndicator.classList.add('offline');
-            showStatus('Ollama connection failed: ' + data.error, 'danger');
-        }
-    })
-    .catch(error => {
-        statusIndicator.classList.add('offline');
-        showStatus('Connection test failed: ' + error.message, 'danger');
-    });
-}
-
-function checkAllAPIs() {
-    const statusIndicators = {
-        'openrouter-status': document.getElementById('openrouter-status'),
-        'claude-status': document.getElementById('claude-status'),
-        'gemini-status': document.getElementById('gemini-status'),
-        'openai-status': document.getElementById('openai-status'),
-        'lmstudio-status': document.getElementById('lmstudio-status'),
-        'ollama-status': document.getElementById('ollama-status')
-    };
-    
-    // Reset all status indicators
-    Object.values(statusIndicators).forEach(indicator => {
-        indicator.className = 'status-indicator';
-    });
-    
-    // Test OpenRouter
-    const openrouterKey = document.getElementById('openrouter_api_key').value;
-    if (openrouterKey) {
-        statusIndicators['openrouter-status'].classList.add('online');
-    } else {
-        statusIndicators['openrouter-status'].classList.add('offline');
-    }
-    
-    // Test Claude API
-    const claudeKey = document.getElementById('claude_api_key').value;
-    if (claudeKey) {
-        statusIndicators['claude-status'].classList.add('online');
-    } else {
-        statusIndicators['claude-status'].classList.add('offline');
-    }
-    
-    // Test Gemini API
-    const geminiKey = document.getElementById('gemini_api_key').value;
-    if (geminiKey) {
-        statusIndicators['gemini-status'].classList.add('online');
-    } else {
-        statusIndicators['gemini-status'].classList.add('offline');
-    }
-    
-    // Test OpenAI API
-    const openaiKey = document.getElementById('openai_api_key').value;
-    if (openaiKey) {
-        statusIndicators['openai-status'].classList.add('online');
-    } else {
-        statusIndicators['openai-status'].classList.add('offline');
-    }
-    
-    // Test LM Studio
-    testLMStudio();
-    
-    // Test Ollama
-    testOllama();
-    
-    showStatus('API status check completed', 'info');
-}
-
-function testAPIKey(provider) {
-    const apiKeyField = document.getElementById(`${provider}_api_key`);
-    const statusIndicator = document.getElementById(`${provider}-status`);
-    const apiKey = apiKeyField.value;
-
-    statusIndicator.className = 'status-indicator';
-
-    if (!apiKey) {
-        statusIndicator.classList.add('offline');
-        showStatus(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key not set.`, 'warning');
-        return;
-    }
-
-    // Show loading state
-    statusIndicator.className = 'status-indicator';
-    showStatus(`Testing ${provider.charAt(0).toUpperCase() + provider.slice(1)} API key...`, 'info');
-
-    fetch('/test_api_key', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-            type: provider, 
-            key: apiKey 
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            statusIndicator.classList.add('online');
-            showStatus(data.message, 'success');
-        } else {
-            statusIndicator.classList.add('offline');
-            showStatus(data.error, 'danger');
-        }
-    })
-    .catch(error => {
-        statusIndicator.classList.add('offline');
-        showStatus(`${provider.charAt(0).toUpperCase() + provider.slice(1)} API key test failed: ${error.message}`, 'danger');
-    });
-}
-
-// Dynamic model loading functions
-function loadModelsForProvider(provider) {
-    const select = document.getElementById(`${provider}_default_model`);
-    const statusIndicator = document.getElementById(`${provider}-status`);
-    const loadingIndicator = document.getElementById(`${provider}-loading`);
-    const refreshButton = document.getElementById(`${provider}-refresh-btn`);
-    const refreshText = document.getElementById(`${provider}-refresh-text`);
-    
-    // Show loading state
-    select.innerHTML = '<option value="">Loading models...</option>';
-    select.disabled = true;
-    
-    // Show loading spinner
-    if (loadingIndicator) {
-        loadingIndicator.classList.remove('d-none');
-    }
-    
-    // Update refresh button
-    if (refreshButton) {
-        refreshButton.disabled = true;
-    }
-    if (refreshText) {
-        refreshText.textContent = 'Refreshing...';
-    }
-    
-    fetch(`/api/models/${provider}`)
-        .then(response => response.json())
-        .then(data => {
-            // Clear existing options
-            select.innerHTML = '';
-            
-            if (Array.isArray(data)) {
-                // Add default option
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Use System Default';
-                select.appendChild(defaultOption);
-                
-                // Add models
-                data.forEach(model => {
-                    const option = document.createElement('option');
-                    option.value = model.id;
-                    option.textContent = model.name;
-                    select.appendChild(option);
-                });
-                
-                select.disabled = false;
-                if (statusIndicator) {
-                    statusIndicator.classList.remove('offline');
-                    statusIndicator.classList.add('online');
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    statusIndicator.classList.add("online");
+                    showStatus("LM Studio connection successful!", "success");
+                } else {
+                    statusIndicator.classList.add("offline");
+                    showStatus(
+                        "LM Studio connection failed: " + data.error,
+                        "danger",
+                    );
                 }
-            } else {
-                // Handle error case
-                const errorOption = document.createElement('option');
-                errorOption.value = '';
-                errorOption.textContent = 'Error loading models';
-                select.appendChild(errorOption);
+            })
+            .catch((error) => {
+                statusIndicator.classList.add("offline");
+                showStatus(
+                    "Connection test failed: " + error.message,
+                    "danger",
+                );
+            });
+    }
+
+    function loadFromEnv() {
+        // Load values from environment variables via API
+        fetch("/load_config")
+            .then((response) => response.json())
+            .then((data) => {
+                document.getElementById("openrouter_api_key").value =
+                    data.openrouter_api_key || "";
+                document.getElementById("claude_api_key").value =
+                    data.claude_api_key || "";
+                document.getElementById("gemini_api_key").value =
+                    data.gemini_api_key || "";
+                document.getElementById("openai_api_key").value =
+                    data.openai_api_key || "";
+                document.getElementById("lm_studio_url").value =
+                    data.lm_studio_url || "http://localhost:1234/v1";
+                document.getElementById("ollama_url").value =
+                    data.ollama_url || "http://localhost:11434";
+                document.getElementById("default_prompt").value =
+                    data.default_prompt || "";
+
+                // Load default model configurations
+                setDefaultModelValue(
+                    "openrouter",
+                    data.openrouter_default_model,
+                );
+                setDefaultModelValue("claude", data.claude_default_model);
+                setDefaultModelValue("gemini", data.gemini_default_model);
+                setDefaultModelValue("openai", data.openai_default_model);
+                setDefaultModelValue("lm_studio", data.lm_studio_default_model);
+                setDefaultModelValue("ollama", data.ollama_default_model);
+
+                showStatus("Configuration loaded successfully", "success");
+            })
+            .catch((error) => {
+                showStatus(
+                    "Failed to load configuration: " + error.message,
+                    "danger",
+                );
+            });
+    }
+
+    function testOllama() {
+        const url = document.getElementById("ollama_url").value;
+        const statusIndicator = document.getElementById("ollama-status");
+
+        statusIndicator.className = "status-indicator";
+
+        fetch("/test_ollama", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url: url }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    statusIndicator.classList.add("online");
+                    showStatus("Ollama connection successful!", "success");
+                } else {
+                    statusIndicator.classList.add("offline");
+                    showStatus(
+                        "Ollama connection failed: " + data.error,
+                        "danger",
+                    );
+                }
+            })
+            .catch((error) => {
+                statusIndicator.classList.add("offline");
+                showStatus(
+                    "Connection test failed: " + error.message,
+                    "danger",
+                );
+            });
+    }
+
+    function checkAllAPIs() {
+        const statusIndicators = {
+            "openrouter-status": document.getElementById("openrouter-status"),
+            "claude-status": document.getElementById("claude-status"),
+            "gemini-status": document.getElementById("gemini-status"),
+            "openai-status": document.getElementById("openai-status"),
+            "lmstudio-status": document.getElementById("lmstudio-status"),
+            "ollama-status": document.getElementById("ollama-status"),
+        };
+
+        // Reset all status indicators
+        Object.values(statusIndicators).forEach((indicator) => {
+            indicator.className = "status-indicator";
+        });
+
+        // Test OpenRouter
+        const openrouterKey =
+            document.getElementById("openrouter_api_key").value;
+        if (openrouterKey) {
+            statusIndicators["openrouter-status"].classList.add("online");
+        } else {
+            statusIndicators["openrouter-status"].classList.add("offline");
+        }
+
+        // Test Claude API
+        const claudeKey = document.getElementById("claude_api_key").value;
+        if (claudeKey) {
+            statusIndicators["claude-status"].classList.add("online");
+        } else {
+            statusIndicators["claude-status"].classList.add("offline");
+        }
+
+        // Test Gemini API
+        const geminiKey = document.getElementById("gemini_api_key").value;
+        if (geminiKey) {
+            statusIndicators["gemini-status"].classList.add("online");
+        } else {
+            statusIndicators["gemini-status"].classList.add("offline");
+        }
+
+        // Test OpenAI API
+        const openaiKey = document.getElementById("openai_api_key").value;
+        if (openaiKey) {
+            statusIndicators["openai-status"].classList.add("online");
+        } else {
+            statusIndicators["openai-status"].classList.add("offline");
+        }
+
+        // Test LM Studio
+        testLMStudio();
+
+        // Test Ollama
+        testOllama();
+
+        showStatus("API status check completed", "info");
+    }
+
+    function testAPIKey(provider) {
+        const apiKeyField = document.getElementById(`${provider}_api_key`);
+        const statusIndicator = document.getElementById(`${provider}-status`);
+        const apiKey = apiKeyField.value;
+
+        statusIndicator.className = "status-indicator";
+
+        if (!apiKey) {
+            statusIndicator.classList.add("offline");
+            showStatus(
+                `${provider.charAt(0).toUpperCase() + provider.slice(1)} API key not set.`,
+                "warning",
+            );
+            return;
+        }
+
+        // Show loading state
+        statusIndicator.className = "status-indicator";
+        showStatus(
+            `Testing ${provider.charAt(0).toUpperCase() + provider.slice(1)} API key...`,
+            "info",
+        );
+
+        fetch("/test_api_key", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                type: provider,
+                key: apiKey,
+            }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    statusIndicator.classList.add("online");
+                    showStatus(data.message, "success");
+                } else {
+                    statusIndicator.classList.add("offline");
+                    showStatus(data.error, "danger");
+                }
+            })
+            .catch((error) => {
+                statusIndicator.classList.add("offline");
+                showStatus(
+                    `${provider.charAt(0).toUpperCase() + provider.slice(1)} API key test failed: ${error.message}`,
+                    "danger",
+                );
+            });
+    }
+
+    // Dynamic model loading functions
+    function loadModelsForProvider(provider) {
+        const select = document.getElementById(`${provider}_default_model`);
+        const statusIndicator = document.getElementById(`${provider}-status`);
+        const loadingIndicator = document.getElementById(`${provider}-loading`);
+        const refreshButton = document.getElementById(
+            `${provider}-refresh-btn`,
+        );
+        const refreshText = document.getElementById(`${provider}-refresh-text`);
+
+        // Show loading state
+        select.innerHTML = '<option value="">Loading models...</option>';
+        select.disabled = true;
+
+        // Show loading spinner
+        if (loadingIndicator) {
+            loadingIndicator.classList.remove("d-none");
+        }
+
+        // Update refresh button
+        if (refreshButton) {
+            refreshButton.disabled = true;
+        }
+        if (refreshText) {
+            refreshText.textContent = "Refreshing...";
+        }
+
+        fetch(`/api/models/${provider}`)
+            .then((response) => response.json())
+            .then((data) => {
+                // Clear existing options
+                select.innerHTML = "";
+
+                // Handle the actual API response format: {popular: [], default: ""}
+                if (data && data.popular && Array.isArray(data.popular)) {
+                    // Add default option
+                    const defaultOption = document.createElement("option");
+                    defaultOption.value = "";
+                    defaultOption.textContent = "Use System Default";
+                    select.appendChild(defaultOption);
+
+                    // Add models from popular array
+                    data.popular.forEach((modelId) => {
+                        const option = document.createElement("option");
+                        option.value = modelId;
+                        option.textContent = modelId;
+                        select.appendChild(option);
+                    });
+
+                    // Set the default model if it exists
+                    if (data.default) {
+                        select.value = data.default;
+                    }
+
+                    select.disabled = false;
+                    if (statusIndicator) {
+                        statusIndicator.classList.remove("offline");
+                        statusIndicator.classList.add("online");
+                    }
+                } else if (data.error) {
+                    // Handle error case
+                    const errorOption = document.createElement("option");
+                    errorOption.value = "";
+                    errorOption.textContent = "Error loading models";
+                    select.appendChild(errorOption);
+                    select.disabled = true;
+                    if (statusIndicator) {
+                        statusIndicator.classList.remove("online");
+                        statusIndicator.classList.add("offline");
+                    }
+                    showStatus(
+                        `Failed to load models for ${provider}: ${data.error}`,
+                        "danger",
+                    );
+                } else {
+                    // Handle unexpected response format
+                    const errorOption = document.createElement("option");
+                    errorOption.value = "";
+                    errorOption.textContent = "Invalid response format";
+                    select.appendChild(errorOption);
+                    select.disabled = true;
+                    if (statusIndicator) {
+                        statusIndicator.classList.remove("online");
+                        statusIndicator.classList.add("offline");
+                    }
+                    showStatus(
+                        `Failed to load models for ${provider}: Invalid response format`,
+                        "danger",
+                    );
+                }
+            })
+            .catch((error) => {
+                select.innerHTML =
+                    '<option value="">Failed to load models</option>';
                 select.disabled = true;
                 if (statusIndicator) {
-                    statusIndicator.classList.remove('online');
-                    statusIndicator.classList.add('offline');
+                    statusIndicator.classList.remove("online");
+                    statusIndicator.classList.add("offline");
                 }
-                showStatus(`Failed to load models for ${provider}: ${data.error || 'Unknown error'}`, 'danger');
-            }
-        })
-        .catch(error => {
-            select.innerHTML = '<option value="">Failed to load models</option>';
-            select.disabled = true;
-            if (statusIndicator) {
-                statusIndicator.classList.remove('online');
-                statusIndicator.classList.add('offline');
-            }
-            showStatus(`Network error loading models for ${provider}: ${error.message}`, 'danger');
-        })
-        .finally(() => {
-            // Hide loading spinner
-            if (loadingIndicator) {
-                loadingIndicator.classList.add('d-none');
-            }
-            
-            // Restore refresh button
-            if (refreshButton) {
-                refreshButton.disabled = false;
-            }
-            if (refreshText) {
-                refreshText.textContent = 'Refresh Models';
-            }
-        });
-}
+                showStatus(
+                    `Network error loading models for ${provider}: ${error.message}`,
+                    "danger",
+                );
+            })
+            .finally(() => {
+                // Hide loading spinner
+                if (loadingIndicator) {
+                    loadingIndicator.classList.add("d-none");
+                }
 
-function refreshAllModels() {
-    const providers = ['openrouter', 'claude', 'gemini', 'openai', 'lm_studio', 'ollama'];
-    
-    showStatus('Refreshing all model lists...', 'info');
-    
-    // Create a promise for each provider
-    const promises = providers.map(provider => {
-        return new Promise((resolve) => {
-            loadModelsForProvider(provider);
-            // Small delay to allow UI updates
-            setTimeout(resolve, 100);
+                // Restore refresh button
+                if (refreshButton) {
+                    refreshButton.disabled = false;
+                }
+                if (refreshText) {
+                    refreshText.textContent = "Refresh Models";
+                }
+            });
+    }
+
+    function refreshAllModels() {
+        const providers = [
+            "openrouter",
+            "claude",
+            "gemini",
+            "openai",
+            "lm_studio",
+            "ollama",
+        ];
+
+        showStatus("Refreshing all model lists...", "info");
+
+        // Create a promise for each provider
+        const promises = providers.map((provider) => {
+            return new Promise((resolve) => {
+                loadModelsForProvider(provider);
+                // Small delay to allow UI updates
+                setTimeout(resolve, 100);
+            });
+        });
+
+        // Wait for all providers to finish loading
+        Promise.all(promises)
+            .then(() => {
+                showStatus(
+                    "All model lists refreshed successfully!",
+                    "success",
+                );
+            })
+            .catch((error) => {
+                showStatus("Some model lists failed to refresh", "warning");
+            });
+    }
+
+    // Initialize dynamic model loading on page load
+    document.addEventListener("DOMContentLoaded", function () {
+        // Load models for all providers
+        refreshAllModels();
+    });
+
+    $(document).ready(function () {
+        // Load current configuration on page load
+        loadFromEnv();
+
+        $("#configForm").on("submit", function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            // Show loading state
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalText = submitBtn.html();
+            submitBtn.html(
+                '<i class="fas fa-spinner fa-spin me-2"></i>Saving...',
+            );
+            submitBtn.prop("disabled", true);
+
+            $.ajax({
+                url: "/save_config",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    if (response.success) {
+                        showStatus(
+                            "Configuration saved successfully!",
+                            "success",
+                        );
+                    } else {
+                        showStatus(
+                            "Failed to save configuration: " + response.message,
+                            "danger",
+                        );
+                    }
+                },
+                error: function (xhr) {
+                    let errorMessage =
+                        "An error occurred while saving configuration";
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    showStatus(errorMessage, "danger");
+                },
+                complete: function () {
+                    // Restore button state
+                    submitBtn.html(originalText);
+                    submitBtn.prop("disabled", false);
+                },
+            });
         });
     });
-    
-    // Wait for all providers to finish loading
-    Promise.all(promises).then(() => {
-        showStatus('All model lists refreshed successfully!', 'success');
-    }).catch(error => {
-        showStatus('Some model lists failed to refresh', 'warning');
-    });
-}
-
-// Initialize dynamic model loading on page load
-document.addEventListener('DOMContentLoaded', function() {
-    // Load models for all providers
-    refreshAllModels();
-});
-
-$(document).ready(function() {
-    // Load current configuration on page load
-    loadFromEnv();
-    
-    $('#configForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        
-        // Show loading state
-        const submitBtn = $(this).find('button[type="submit"]');
-        const originalText = submitBtn.html();
-        submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
-        submitBtn.prop('disabled', true);
-        
-        $.ajax({
-            url: '/save_config',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    showStatus('Configuration saved successfully!', 'success');
-                } else {
-                    showStatus('Failed to save configuration: ' + response.message, 'danger');
-                }
-            },
-            error: function(xhr) {
-                let errorMessage = 'An error occurred while saving configuration';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
-                }
-                showStatus(errorMessage, 'danger');
-            },
-            complete: function() {
-                // Restore button state
-                submitBtn.html(originalText);
-                submitBtn.prop('disabled', false);
-            }
-        });
-    });
-});
 </script>
 {% endblock %}
