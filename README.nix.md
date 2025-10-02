@@ -8,14 +8,18 @@ This project includes a Nix development environment that sets up all required se
 
 ## Quick Start
 
-### Using `nix-shell`
+### Using `nix develop` (recommended)
 
 ```bash
 # Enter the development environment
-nix-shell
-
-# Or if you have flakes enabled:
 nix develop
+```
+
+### Using `nix-shell` (legacy)
+
+```bash
+# Enter the development environment (legacy method)
+nix-shell
 ```
 
 ### Using `direnv` (recommended)
@@ -33,7 +37,7 @@ nix develop
 
 3. Create `.envrc` file:
    ```bash
-   echo "use nix" > .envrc
+   echo "use flake" > .envrc
    direnv allow
    ```
 
@@ -43,7 +47,7 @@ Now when you `cd` into the project directory, the environment will be automatica
 
 The Nix environment automatically starts these services:
 
-- **PostgreSQL**: localhost:5432 (database: `grading_app`, user: `postgres`)
+- **PostgreSQL**: localhost:5433 (database: `grading_app`, user: current user)
 - **Redis**: localhost:6379
 
 ## Environment Variables
@@ -53,7 +57,7 @@ The environment sets up these default variables:
 ```bash
 FLASK_ENV=development
 FLASK_DEBUG=1
-DATABASE_URL=sqlite:///grading_app.db
+DATABASE_URL=postgresql://$USER@localhost:5433/grading_app
 SECRET_KEY=dev-secret-key-change-in-production
 REDIS_HOST=localhost
 REDIS_PORT=6379
@@ -97,17 +101,13 @@ flake8 .
 isort .
 ```
 
-## Database Options
+## Database Configuration
 
-The environment supports both SQLite and PostgreSQL:
+The environment uses PostgreSQL by default:
 
-- **SQLite** (default): `DATABASE_URL=sqlite:///grading_app.db`
-- **PostgreSQL**: `DATABASE_URL=postgresql://postgres@localhost:5432/grading_app`
+- **PostgreSQL**: `DATABASE_URL=postgresql://$USER@localhost:5433/grading_app`
 
-To use PostgreSQL, set the environment variable:
-```bash
-export DATABASE_URL=postgresql://postgres@localhost:5432/grading_app
-```
+The database is automatically created and configured when you enter the development environment.
 
 ## Service Management
 
