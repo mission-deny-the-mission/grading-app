@@ -1,8 +1,5 @@
-{% extends "base.html" %}
-
-{% block title %}Document Grading - Upload{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Document Grading - Upload{% endblock
+%} {% block content %}
 <div class="row">
     <div class="col-lg-8 mx-auto">
         <div class="text-center mb-4">
@@ -11,7 +8,8 @@
                 Document Grading System
             </h1>
             <p class="lead text-muted">
-                Upload your Word documents or PDFs to get AI-powered grading and feedback
+                Upload your Word documents or PDFs to get AI-powered grading and
+                feedback
             </p>
         </div>
 
@@ -22,21 +20,36 @@
                         <label for="file" class="form-label fw-bold">
                             <i class="fas fa-upload me-2"></i>Select Document
                         </label>
-                        <input type="file" class="form-control" id="file" name="file" 
-                               accept=".docx,.pdf,.txt" required>
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="file"
+                            name="file"
+                            accept=".docx,.pdf,.txt"
+                            required
+                        />
                         <div class="form-text">
-                            Supported formats: .docx (Word), .pdf (PDF), .txt (Text) - Max size: 16MB
+                            Supported formats: .docx (Word), .pdf (PDF), .txt
+                            (Text) - Max size: 16MB
                         </div>
                     </div>
 
                     <div class="mb-4">
                         <label for="marking_scheme" class="form-label fw-bold">
-                            <i class="fas fa-clipboard-check me-2"></i>Marking Scheme (Optional)
+                            <i class="fas fa-clipboard-check me-2"></i>Marking
+                            Scheme (Optional)
                         </label>
-                        <input type="file" class="form-control" id="marking_scheme" name="marking_scheme" 
-                               accept=".docx,.pdf,.txt">
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="marking_scheme"
+                            name="marking_scheme"
+                            accept=".docx,.pdf,.txt"
+                        />
                         <div class="form-text">
-                            Upload a marking scheme or rubric to guide the grading process. Supported formats: .docx, .pdf, .txt
+                            Upload a marking scheme or rubric to guide the
+                            grading process. Supported formats: .docx, .pdf,
+                            .txt
                         </div>
                     </div>
 
@@ -44,11 +57,24 @@
                         <label for="provider" class="form-label fw-bold">
                             <i class="fas fa-robot me-2"></i>AI Provider
                         </label>
-                        <select class="form-select" id="provider" name="provider" required>
-                            <option value="openrouter">OpenRouter (Multi-Model)</option>
+                        <select
+                            class="form-select"
+                            id="provider"
+                            name="provider"
+                            required
+                        >
+                            <option value="openrouter">
+                                OpenRouter (Multi-Model)
+                            </option>
                             <option value="claude">Claude API (Direct)</option>
                             <option value="gemini">Google Gemini</option>
                             <option value="openai">OpenAI (Direct)</option>
+                            <option value="chutes">Chutes AI</option>
+                            <option value="z.ai">Z.AI (Normal API)</option>
+                            <option value="z.ai_coding_plan">
+                                Z.AI (Coding Plan)
+                            </option>
+                            <option value="nanogpt">NanoGPT</option>
                             <option value="lm_studio">LM Studio (Local)</option>
                             <option value="ollama">Ollama (Local)</option>
                         </select>
@@ -57,78 +83,148 @@
                         </div>
                     </div>
 
-                     <div class="mb-4">
-                         <label for="modelSelect" class="form-label fw-bold">
-                             <i class="fas fa-cog me-2"></i>Model Selection
-                         </label>
-                         <div class="d-flex align-items-center">
-                             <select class="form-select" id="modelSelect" name="modelSelect" onchange="toggleCustomModel()">
-                                 <option value="default">Use Default Model</option>
-                             </select>
-                             <div class="spinner-border spinner-border-sm text-primary ms-2" 
-                                  id="modelSelectSpinner" style="display: none;" role="status">
-                                 <span class="visually-hidden">Loading...</span>
-                             </div>
-                             <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
-                                     onclick="refreshMainProviderModels()" 
-                                     id="refreshMainModelsBtn" 
-                                     title="Refresh available models">
-                                 <i class="fas fa-sync-alt"></i>
-                             </button>
-                         </div>
-                         <div class="mt-1">
-                             <small class="text-muted" id="mainModelLoadingStatus">Ready</small>
-                         </div>
-                         <div class="invalid-feedback" id="mainModelError" style="display: none;"></div>
-                         <div class="form-text mb-2">
-                             Select a specific model or use the provider's default
-                         </div>
-                         <input type="text" class="form-control" id="customModel" name="customModel" 
-                                placeholder="Enter custom model name (e.g., openai/gpt-5, anthropic/claude-4)"
-                                style="display: none;" disabled>
-                         <div class="form-text" id="customModelHelp" style="display: none;">
-                             Enter any model name supported by your provider
-                         </div>
-                     </div>
+                    <div class="mb-4">
+                        <label for="modelSelect" class="form-label fw-bold">
+                            <i class="fas fa-cog me-2"></i>Model Selection
+                        </label>
+                        <div class="d-flex align-items-center">
+                            <select
+                                class="form-select"
+                                id="modelSelect"
+                                name="modelSelect"
+                                onchange="toggleCustomModel()"
+                            >
+                                <option value="default">
+                                    Use Default Model
+                                </option>
+                            </select>
+                            <div
+                                class="spinner-border spinner-border-sm text-primary ms-2"
+                                id="modelSelectSpinner"
+                                style="display: none"
+                                role="status"
+                            >
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary ms-2"
+                                onclick="refreshMainProviderModels()"
+                                id="refreshMainModelsBtn"
+                                title="Refresh available models"
+                            >
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="mt-1">
+                            <small
+                                class="text-muted"
+                                id="mainModelLoadingStatus"
+                                >Ready</small
+                            >
+                        </div>
+                        <div
+                            class="invalid-feedback"
+                            id="mainModelError"
+                            style="display: none"
+                        ></div>
+                        <div class="form-text mb-2">
+                            Select a specific model or use the provider's
+                            default
+                        </div>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="customModel"
+                            name="customModel"
+                            placeholder="Enter custom model name (e.g., openai/gpt-5, anthropic/claude-4)"
+                            style="display: none"
+                            disabled
+                        />
+                        <div
+                            class="form-text"
+                            id="customModelHelp"
+                            style="display: none"
+                        >
+                            Enter any model name supported by your provider
+                        </div>
+                    </div>
 
                     <div class="mb-4">
                         <label class="form-label fw-bold">
-                            <i class="fas fa-layer-group me-2"></i>Models to Compare
+                            <i class="fas fa-layer-group me-2"></i>Models to
+                            Compare
                         </label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="enableComparison" name="enableComparison">
-                            <label class="form-check-label" for="enableComparison">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="enableComparison"
+                                name="enableComparison"
+                            />
+                            <label
+                                class="form-check-label"
+                                for="enableComparison"
+                            >
                                 Enable multi-model comparison
                             </label>
                         </div>
-                        <div id="modelSelection" class="mt-3" style="display: none;">
+                        <div
+                            id="modelSelection"
+                            class="mt-3"
+                            style="display: none"
+                        >
                             <!-- Unified Model Selection Interface -->
                             <div class="unified-model-selection">
                                 <div class="selection-header mb-3">
                                     <div class="row align-items-center">
                                         <div class="col-md-4">
                                             <div class="provider-filters">
-                                                <label class="form-label mb-1">Filter by Providers:</label>
-                                                <div id="providerFilters" class="d-flex flex-wrap gap-2">
+                                                <label class="form-label mb-1"
+                                                    >Filter by Providers:</label
+                                                >
+                                                <div
+                                                    id="providerFilters"
+                                                    class="d-flex flex-wrap gap-2"
+                                                >
                                                     <!-- Provider filter checkboxes will be loaded dynamically -->
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="search-bar">
-                                                <label class="form-label mb-1">Search Models:</label>
-                                                <input type="text" class="form-control" id="modelSearch"
-                                                       placeholder="Search across all models...">
+                                                <label class="form-label mb-1"
+                                                    >Search Models:</label
+                                                >
+                                                <input
+                                                    type="text"
+                                                    class="form-control"
+                                                    id="modelSearch"
+                                                    placeholder="Search across all models..."
+                                                />
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="selection-info">
-                                                <label class="form-label mb-1">Selected Models:</label>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span id="selectedCount" class="badge bg-primary">0</span>
+                                                <label class="form-label mb-1"
+                                                    >Selected Models:</label
+                                                >
+                                                <div
+                                                    class="d-flex align-items-center gap-2"
+                                                >
+                                                    <span
+                                                        id="selectedCount"
+                                                        class="badge bg-primary"
+                                                        >0</span
+                                                    >
                                                     <span>models selected</span>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-auto"
-                                                            onclick="clearAllModelSelections()">Clear All</button>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-sm btn-outline-secondary ms-auto"
+                                                        onclick="clearAllModelSelections()"
+                                                    >
+                                                        Clear All
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -143,24 +239,42 @@
                                     <h6>Custom Models:</h6>
                                     <div class="row">
                                         <div class="col-md-4 mb-2">
-                                            <input type="text" class="form-control" id="customModel1" name="customModels[]"
-                                                   placeholder="Enter custom model name">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                id="customModel1"
+                                                name="customModels[]"
+                                                placeholder="Enter custom model name"
+                                            />
                                         </div>
                                         <div class="col-md-4 mb-2">
-                                            <input type="text" class="form-control" id="customModel2" name="customModels[]"
-                                                   placeholder="Enter custom model name">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                id="customModel2"
+                                                name="customModels[]"
+                                                placeholder="Enter custom model name"
+                                            />
                                         </div>
                                         <div class="col-md-4 mb-2">
-                                            <input type="text" class="form-control" id="customModel3" name="customModels[]"
-                                                   placeholder="Enter custom model name">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                id="customModel3"
+                                                name="customModels[]"
+                                                placeholder="Enter custom model name"
+                                            />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mt-2">
                                     <small class="text-muted">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Select 2 or more models from different providers to compare their grading results.
-                                        Use provider filters to focus on specific providers, or search to find specific models.
+                                        Select 2 or more models from different
+                                        providers to compare their grading
+                                        results. Use provider filters to focus
+                                        on specific providers, or search to find
+                                        specific models.
                                     </small>
                                 </div>
                             </div>
@@ -169,43 +283,87 @@
 
                     <div class="mb-4">
                         <label for="prompt" class="form-label fw-bold">
-                            <i class="fas fa-comment me-2"></i>Grading Instructions
+                            <i class="fas fa-comment me-2"></i>Grading
+                            Instructions
                         </label>
-                        <textarea class="form-control" id="prompt" name="prompt" rows="4" 
-                                  placeholder="Enter your grading criteria and instructions here...">{{ default_prompt }}</textarea>
+                        <textarea
+                            class="form-control"
+                            id="prompt"
+                            name="prompt"
+                            rows="4"
+                            placeholder="Enter your grading criteria and instructions here..."
+                        >
+{{ default_prompt }}</textarea
+                        >
                         <div class="form-text">
-                            Customize the grading criteria and instructions for the AI
+                            Customize the grading criteria and instructions for
+                            the AI
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-4">
-                                <label for="temperature" class="form-label fw-bold">
-                                    <i class="fas fa-thermometer-half me-2"></i>Temperature
+                                <label
+                                    for="temperature"
+                                    class="form-label fw-bold"
+                                >
+                                    <i class="fas fa-thermometer-half me-2"></i
+                                    >Temperature
                                 </label>
-                                <input type="range" class="form-range" id="temperature" name="temperature" 
-                                       min="0" max="2" step="0.1" value="0.3" 
-                                       oninput="updateTemperatureValue(this.value)">
+                                <input
+                                    type="range"
+                                    class="form-range"
+                                    id="temperature"
+                                    name="temperature"
+                                    min="0"
+                                    max="2"
+                                    step="0.1"
+                                    value="0.3"
+                                    oninput="updateTemperatureValue(this.value)"
+                                />
                                 <div class="d-flex justify-content-between">
-                                    <small class="text-muted">0.0 (Focused)</small>
-                                    <small class="text-muted" id="temperatureValue">0.3</small>
-                                    <small class="text-muted">2.0 (Creative)</small>
+                                    <small class="text-muted"
+                                        >0.0 (Focused)</small
+                                    >
+                                    <small
+                                        class="text-muted"
+                                        id="temperatureValue"
+                                        >0.3</small
+                                    >
+                                    <small class="text-muted"
+                                        >2.0 (Creative)</small
+                                    >
                                 </div>
                                 <div class="form-text">
-                                    Controls randomness in AI responses. Lower values = more focused, higher values = more creative
+                                    Controls randomness in AI responses. Lower
+                                    values = more focused, higher values = more
+                                    creative
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-4">
-                                <label for="max_tokens" class="form-label fw-bold">
-                                    <i class="fas fa-text-width me-2"></i>Maximum Output Length
+                                <label
+                                    for="max_tokens"
+                                    class="form-label fw-bold"
+                                >
+                                    <i class="fas fa-text-width me-2"></i
+                                    >Maximum Output Length
                                 </label>
-                                <input type="number" class="form-control" id="max_tokens" name="max_tokens" 
-                                       min="100" max="8000" value="2000" step="100">
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="max_tokens"
+                                    name="max_tokens"
+                                    min="100"
+                                    max="8000"
+                                    value="2000"
+                                    step="100"
+                                />
                                 <div class="form-text">
-                                    Maximum number of tokens in the AI response (100-8000)
+                                    Maximum number of tokens in the AI response
+                                    (100-8000)
                                 </div>
                             </div>
                         </div>
@@ -228,16 +386,26 @@
                 </div>
 
                 <!-- Results container -->
-                <div id="results" class="result-container" style="display: none;">
+                <div
+                    id="results"
+                    class="result-container"
+                    style="display: none"
+                >
                     <h4 class="text-primary mb-3">
                         <i class="fas fa-star me-2"></i>Grading Results
                     </h4>
                     <div id="resultContent"></div>
                     <div class="mt-3">
-                        <button class="btn btn-outline-primary" onclick="downloadResults()">
+                        <button
+                            class="btn btn-outline-primary"
+                            onclick="downloadResults()"
+                        >
                             <i class="fas fa-download me-2"></i>Download Results
                         </button>
-                        <button class="btn btn-outline-secondary" onclick="clearResults()">
+                        <button
+                            class="btn btn-outline-secondary"
+                            onclick="clearResults()"
+                        >
                             <i class="fas fa-times me-2"></i>Clear Results
                         </button>
                     </div>
@@ -258,8 +426,17 @@
                         <div class="card h-100">
                             <div class="card-body">
                                 <h6 class="card-title">Academic Essay</h6>
-                                <p class="card-text small">Evaluate thesis clarity, argument strength, evidence quality, and academic writing standards.</p>
-                                <button class="btn btn-sm btn-outline-primary" onclick="usePrompt('academic')">Use This</button>
+                                <p class="card-text small">
+                                    Evaluate thesis clarity, argument strength,
+                                    evidence quality, and academic writing
+                                    standards.
+                                </p>
+                                <button
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="usePrompt('academic')"
+                                >
+                                    Use This
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -267,8 +444,17 @@
                         <div class="card h-100">
                             <div class="card-body">
                                 <h6 class="card-title">Business Report</h6>
-                                <p class="card-text small">Assess executive summary, data analysis, recommendations, and professional presentation.</p>
-                                <button class="btn btn-sm btn-outline-primary" onclick="usePrompt('business')">Use This</button>
+                                <p class="card-text small">
+                                    Assess executive summary, data analysis,
+                                    recommendations, and professional
+                                    presentation.
+                                </p>
+                                <button
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="usePrompt('business')"
+                                >
+                                    Use This
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -276,8 +462,17 @@
                         <div class="card h-100">
                             <div class="card-body">
                                 <h6 class="card-title">Creative Writing</h6>
-                                <p class="card-text small">Review narrative structure, character development, dialogue, and creative elements.</p>
-                                <button class="btn btn-sm btn-outline-primary" onclick="usePrompt('creative')">Use This</button>
+                                <p class="card-text small">
+                                    Review narrative structure, character
+                                    development, dialogue, and creative
+                                    elements.
+                                </p>
+                                <button
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="usePrompt('creative')"
+                                >
+                                    Use This
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -285,8 +480,16 @@
                         <div class="card h-100">
                             <div class="card-body">
                                 <h6 class="card-title">Technical Document</h6>
-                                <p class="card-text small">Evaluate technical accuracy, clarity, organization, and user-friendliness.</p>
-                                <button class="btn btn-sm btn-outline-primary" onclick="usePrompt('technical')">Use This</button>
+                                <p class="card-text small">
+                                    Evaluate technical accuracy, clarity,
+                                    organization, and user-friendliness.
+                                </p>
+                                <button
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="usePrompt('technical')"
+                                >
+                                    Use This
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -295,12 +498,10 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-const samplePrompts = {
-    academic: `Please evaluate this academic essay based on the following criteria:
+    const samplePrompts = {
+        academic: `Please evaluate this academic essay based on the following criteria:
 1. Thesis Statement: Is it clear, specific, and arguable?
 2. Argument Development: Are arguments logical and well-supported with evidence?
 3. Research Quality: Are sources credible and properly integrated?
@@ -310,7 +511,7 @@ const samplePrompts = {
 
 Provide specific examples from the text and constructive suggestions for improvement.`,
 
-    business: `Please assess this business report using the following criteria:
+        business: `Please assess this business report using the following criteria:
 1. Executive Summary: Is it concise and captures key points?
 2. Data Analysis: Are findings clearly presented and supported by data?
 3. Recommendations: Are they actionable and well-justified?
@@ -320,7 +521,7 @@ Provide specific examples from the text and constructive suggestions for improve
 
 Provide specific feedback with examples and improvement suggestions.`,
 
-    creative: `Please review this creative writing piece considering:
+        creative: `Please review this creative writing piece considering:
 1. Narrative Structure: Is the story well-paced and engaging?
 2. Character Development: Are characters believable and well-developed?
 3. Dialogue: Is it natural and advances the story?
@@ -330,7 +531,7 @@ Provide specific feedback with examples and improvement suggestions.`,
 
 Provide constructive feedback that encourages creativity while improving craft.`,
 
-    technical: `Please evaluate this technical document based on:
+        technical: `Please evaluate this technical document based on:
 1. Technical Accuracy: Are the facts and procedures correct?
 2. Clarity: Is the information presented clearly for the target audience?
 3. Organization: Is the structure logical and easy to follow?
@@ -338,290 +539,300 @@ Provide constructive feedback that encourages creativity while improving craft.`
 5. User-Friendliness: Is it accessible to the intended users?
 6. Formatting: Is the presentation professional and readable?
 
-Provide specific suggestions for technical improvements and clarity enhancements.`
-};
+Provide specific suggestions for technical improvements and clarity enhancements.`,
+    };
 
-function usePrompt(type) {
-    document.getElementById('prompt').value = samplePrompts[type];
-}
-
-function downloadResults() {
-    const content = document.getElementById('resultContent').innerText;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'grading_results.txt';
-    a.click();
-    window.URL.revokeObjectURL(url);
-}
-
-function updateTemperatureValue(value) {
-    document.getElementById('temperatureValue').textContent = value;
-}
-
-function toggleCustomModel() {
-    const modelSelect = document.getElementById('modelSelect');
-    const customModelInput = document.getElementById('customModel');
-    const customModelHelp = document.getElementById('customModelHelp');
-    
-    if (modelSelect.value === 'custom') {
-        customModelInput.style.display = 'block';
-        customModelInput.disabled = false;
-        customModelHelp.style.display = 'block';
-    } else {
-        customModelInput.style.display = 'none';
-        customModelInput.disabled = true;
-        customModelInput.value = '';
-        customModelHelp.style.display = 'none';
+    function usePrompt(type) {
+        document.getElementById("prompt").value = samplePrompts[type];
     }
-}
 
-function clearResults() {
-    document.getElementById('results').style.display = 'none';
-    document.getElementById('resultContent').innerHTML = '';
-    document.getElementById('uploadForm').reset();
-    // Reset model selection
-    document.getElementById('enableComparison').checked = false;
-    document.getElementById('modelSelection').style.display = 'none';
-    document.getElementById('modelSelect').value = 'default';
-    toggleCustomModel(); // Hide custom model input
-    // Clear custom model inputs
-    document.querySelectorAll('input[name="customModels[]"]').forEach(input => {
-        input.value = '';
-    });
-    // Clear unified model selections
-    document.querySelectorAll('.unified-model-checkbox').forEach(input => {
-        input.checked = false;
-    });
-    // Clear provider filters
-    document.querySelectorAll('.provider-filter').forEach(input => {
-        input.checked = true;
-    });
-    document.querySelectorAll('.provider-select-all').forEach(input => {
-        input.checked = true;
-    });
-    // Reset selected count
-    updateSelectedModelCount();
-    // Reset temperature display
-    document.getElementById('temperatureValue').textContent = '0.3';
-    // Load available models again
-    loadAvailableModels();
-}
+    function downloadResults() {
+        const content = document.getElementById("resultContent").innerText;
+        const blob = new Blob([content], { type: "text/plain" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "grading_results.txt";
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
 
-function loadAvailableModels() {
-    const provider = document.getElementById('provider').value;
-    const popularModelsDiv = document.getElementById('popularModels');
-    const modelSelect = document.getElementById('modelSelect');
-    const spinner = document.getElementById('modelSelectSpinner');
-    const status = document.getElementById('mainModelLoadingStatus');
-    const errorDiv = document.getElementById('mainModelError');
-    
-    // Show loading state
-    spinner.style.display = 'block';
-    status.textContent = 'Loading models...';
-    errorDiv.style.display = 'none';
-    
-    // Clear existing options (keep default option)
-    modelSelect.innerHTML = '<option value="default">Use Default Model</option>';
-    
-    // Fetch available models for the selected provider
-    fetch(`/api/models/${provider}`)
-        .then(response => response.json())
-        .then(data => {
-            popularModelsDiv.innerHTML = '';
-            
-            if (data.popular && data.popular.length > 0) {
-                // Add popular models to single model select
-                data.popular.forEach(model => {
-                    const displayName = getModelDisplayName(model);
-                    const option = document.createElement('option');
-                    option.value = model;
-                    option.textContent = displayName;
-                    modelSelect.appendChild(option);
-                });
-                
-                // Add separator if there are other models
-                if (data.other && data.other.length > 0) {
-                    const separator = document.createElement('option');
-                    separator.disabled = true;
-                    separator.textContent = '──────────────';
-                    modelSelect.appendChild(separator);
-                    
-                    data.other.forEach(model => {
+    function updateTemperatureValue(value) {
+        document.getElementById("temperatureValue").textContent = value;
+    }
+
+    function toggleCustomModel() {
+        const modelSelect = document.getElementById("modelSelect");
+        const customModelInput = document.getElementById("customModel");
+        const customModelHelp = document.getElementById("customModelHelp");
+
+        if (modelSelect.value === "custom") {
+            customModelInput.style.display = "block";
+            customModelInput.disabled = false;
+            customModelHelp.style.display = "block";
+        } else {
+            customModelInput.style.display = "none";
+            customModelInput.disabled = true;
+            customModelInput.value = "";
+            customModelHelp.style.display = "none";
+        }
+    }
+
+    function clearResults() {
+        document.getElementById("results").style.display = "none";
+        document.getElementById("resultContent").innerHTML = "";
+        document.getElementById("uploadForm").reset();
+        // Reset model selection
+        document.getElementById("enableComparison").checked = false;
+        document.getElementById("modelSelection").style.display = "none";
+        document.getElementById("modelSelect").value = "default";
+        toggleCustomModel(); // Hide custom model input
+        // Clear custom model inputs
+        document
+            .querySelectorAll('input[name="customModels[]"]')
+            .forEach((input) => {
+                input.value = "";
+            });
+        // Clear unified model selections
+        document
+            .querySelectorAll(".unified-model-checkbox")
+            .forEach((input) => {
+                input.checked = false;
+            });
+        // Clear provider filters
+        document.querySelectorAll(".provider-filter").forEach((input) => {
+            input.checked = true;
+        });
+        document.querySelectorAll(".provider-select-all").forEach((input) => {
+            input.checked = true;
+        });
+        // Reset selected count
+        updateSelectedModelCount();
+        // Reset temperature display
+        document.getElementById("temperatureValue").textContent = "0.3";
+        // Load available models again
+        loadAvailableModels();
+    }
+
+    function loadAvailableModels() {
+        const provider = document.getElementById("provider").value;
+        const popularModelsDiv = document.getElementById("popularModels");
+        const modelSelect = document.getElementById("modelSelect");
+        const spinner = document.getElementById("modelSelectSpinner");
+        const status = document.getElementById("mainModelLoadingStatus");
+        const errorDiv = document.getElementById("mainModelError");
+
+        // Show loading state
+        spinner.style.display = "block";
+        status.textContent = "Loading models...";
+        errorDiv.style.display = "none";
+
+        // Clear existing options (keep default option)
+        modelSelect.innerHTML =
+            '<option value="default">Use Default Model</option>';
+
+        // Fetch available models for the selected provider
+        fetch(`/api/models/${provider}`)
+            .then((response) => response.json())
+            .then((data) => {
+                popularModelsDiv.innerHTML = "";
+
+                if (data.popular && data.popular.length > 0) {
+                    // Add popular models to single model select
+                    data.popular.forEach((model) => {
                         const displayName = getModelDisplayName(model);
-                        const option = document.createElement('option');
+                        const option = document.createElement("option");
                         option.value = model;
                         option.textContent = displayName;
                         modelSelect.appendChild(option);
                     });
-                }
-                
-                // Add custom model option
-                const customOption = document.createElement('option');
-                customOption.value = 'custom';
-                customOption.textContent = 'Custom Model...';
-                modelSelect.appendChild(customOption);
-                
-                // Add models to comparison section
-                data.popular.forEach(model => {
-                    const modelId = model.replace(/[^a-zA-Z0-9]/g, '_');
-                    const displayName = getModelDisplayName(model);
-                    
-                    const div = document.createElement('div');
-                    div.className = 'form-check';
-                    div.innerHTML = `
+
+                    // Add separator if there are other models
+                    if (data.other && data.other.length > 0) {
+                        const separator = document.createElement("option");
+                        separator.disabled = true;
+                        separator.textContent = "──────────────";
+                        modelSelect.appendChild(separator);
+
+                        data.other.forEach((model) => {
+                            const displayName = getModelDisplayName(model);
+                            const option = document.createElement("option");
+                            option.value = model;
+                            option.textContent = displayName;
+                            modelSelect.appendChild(option);
+                        });
+                    }
+
+                    // Add custom model option
+                    const customOption = document.createElement("option");
+                    customOption.value = "custom";
+                    customOption.textContent = "Custom Model...";
+                    modelSelect.appendChild(customOption);
+
+                    // Add models to comparison section
+                    data.popular.forEach((model) => {
+                        const modelId = model.replace(/[^a-zA-Z0-9]/g, "_");
+                        const displayName = getModelDisplayName(model);
+
+                        const div = document.createElement("div");
+                        div.className = "form-check";
+                        div.innerHTML = `
                         <input class="form-check-input model-checkbox" type="checkbox"
                                name="models_to_compare[]" value="${model}" id="${modelId}">
                         <label class="form-check-label" for="${modelId}">
                             ${displayName}
                         </label>
                     `;
-                    popularModelsDiv.appendChild(div);
-                });
-                
-                status.textContent = 'Models loaded successfully';
-            } else {
-                status.textContent = 'No models available';
-                errorDiv.textContent = 'No models available for this provider';
-                errorDiv.style.display = 'block';
-                
+                        popularModelsDiv.appendChild(div);
+                    });
+
+                    status.textContent = "Models loaded successfully";
+                } else {
+                    status.textContent = "No models available";
+                    errorDiv.textContent =
+                        "No models available for this provider";
+                    errorDiv.style.display = "block";
+
+                    // Add fallback models
+                    const fallbackModels = getMainFallbackModels(provider);
+                    fallbackModels.forEach((model) => {
+                        const option = document.createElement("option");
+                        option.value = model.id;
+                        option.textContent = model.name;
+                        modelSelect.appendChild(option);
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Error loading models:", error);
+                popularModelsDiv.innerHTML =
+                    '<p class="text-muted">Error loading models</p>';
+                status.textContent = "Error loading models";
+                errorDiv.textContent =
+                    "Failed to load models. Please try again.";
+                errorDiv.style.display = "block";
+
                 // Add fallback models
                 const fallbackModels = getMainFallbackModels(provider);
-                fallbackModels.forEach(model => {
-                    const option = document.createElement('option');
+                fallbackModels.forEach((model) => {
+                    const option = document.createElement("option");
                     option.value = model.id;
                     option.textContent = model.name;
                     modelSelect.appendChild(option);
                 });
-            }
-        })
-        .catch(error => {
-            console.error('Error loading models:', error);
-            popularModelsDiv.innerHTML = '<p class="text-muted">Error loading models</p>';
-            status.textContent = 'Error loading models';
-            errorDiv.textContent = 'Failed to load models. Please try again.';
-            errorDiv.style.display = 'block';
-            
-            // Add fallback models
-            const fallbackModels = getMainFallbackModels(provider);
-            fallbackModels.forEach(model => {
-                const option = document.createElement('option');
-                option.value = model.id;
-                option.textContent = model.name;
-                modelSelect.appendChild(option);
+            })
+            .finally(() => {
+                spinner.style.display = "none";
+                setTimeout(() => (status.textContent = "Ready"), 2000);
             });
-        })
-        .finally(() => {
-            spinner.style.display = 'none';
-            setTimeout(() => status.textContent = 'Ready', 2000);
-        });
-}
+    }
 
-function refreshMainProviderModels() {
-    const provider = document.getElementById('provider').value;
-    const refreshBtn = document.getElementById('refreshMainModelsBtn');
-    const status = document.getElementById('mainModelLoadingStatus');
-    
-    // Show loading state on refresh button
-    refreshBtn.disabled = true;
-    refreshBtn.querySelector('i').classList.add('fa-spin');
-    status.textContent = 'Refreshing models...';
-    
-    // Clear cache by making a fresh request
-    fetch(`/api/models/${provider}?t=${Date.now()}`)
-        .then(response => response.json())
-        .then(data => {
-            loadAvailableModels(); // Reload models
-            status.textContent = 'Models refreshed successfully';
-        })
-        .catch(error => {
-            console.error('Error refreshing models:', error);
-            status.textContent = 'Error refreshing models';
-        })
-        .finally(() => {
-            refreshBtn.disabled = false;
-            refreshBtn.querySelector('i').classList.remove('fa-spin');
-            setTimeout(() => status.textContent = 'Ready', 2000);
-        });
-}
+    function refreshMainProviderModels() {
+        const provider = document.getElementById("provider").value;
+        const refreshBtn = document.getElementById("refreshMainModelsBtn");
+        const status = document.getElementById("mainModelLoadingStatus");
 
-function getMainFallbackModels(provider) {
-    const fallbackModels = {
-        'openrouter': [
-            {id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4'},
-            {id: 'openai/gpt-4o', name: 'GPT-4o'},
-            {id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet'}
-        ],
-        'claude': [
-            {id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'},
-            {id: 'claude-3-opus-20240229', name: 'Claude 3 Opus'},
-            {id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku'}
-        ],
-        'gemini': [
-            {id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash'},
-            {id: 'gemini-pro', name: 'Gemini Pro'}
-        ],
-        'openai': [
-            {id: 'gpt-4o', name: 'GPT-4o'},
-            {id: 'gpt-4o-mini', name: 'GPT-4o Mini'},
-            {id: 'gpt-4-turbo', name: 'GPT-4 Turbo'}
-        ],
-        'lm_studio': [
-            {id: 'local-model', name: 'Local Model'}
-        ],
-        'ollama': [
-            {id: 'llama2', name: 'Llama 2'},
-            {id: 'llama3', name: 'Llama 3'}
-        ]
-    };
-    return fallbackModels[provider] || [];
-}
+        // Show loading state on refresh button
+        refreshBtn.disabled = true;
+        refreshBtn.querySelector("i").classList.add("fa-spin");
+        status.textContent = "Refreshing models...";
 
-function loadAllProvidersModels() {
-    // Load all models from all providers for unified selection
-    const allModelsContainer = document.getElementById('allModelsContainer');
-    const providerFilters = document.getElementById('providerFilters');
-    
-    // Fetch all models
-    fetch('/api/models/all')
-        .then(response => response.json())
-        .then(data => {
-            // Clear previous content
-            allModelsContainer.innerHTML = '';
-            providerFilters.innerHTML = '';
-            
-            // Create provider filter checkboxes
-            const allProviderFilter = document.createElement('div');
-            allProviderFilter.className = 'form-check form-check-inline';
-            allProviderFilter.innerHTML = `
+        // Clear cache by making a fresh request
+        fetch(`/api/models/${provider}?t=${Date.now()}`)
+            .then((response) => response.json())
+            .then((data) => {
+                loadAvailableModels(); // Reload models
+                status.textContent = "Models refreshed successfully";
+            })
+            .catch((error) => {
+                console.error("Error refreshing models:", error);
+                status.textContent = "Error refreshing models";
+            })
+            .finally(() => {
+                refreshBtn.disabled = false;
+                refreshBtn.querySelector("i").classList.remove("fa-spin");
+                setTimeout(() => (status.textContent = "Ready"), 2000);
+            });
+    }
+
+    function getMainFallbackModels(provider) {
+        const fallbackModels = {
+            openrouter: [
+                { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4" },
+                { id: "openai/gpt-4o", name: "GPT-4o" },
+                {
+                    id: "anthropic/claude-3.5-sonnet",
+                    name: "Claude 3.5 Sonnet",
+                },
+            ],
+            claude: [
+                { id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet" },
+                { id: "claude-3-opus-20240229", name: "Claude 3 Opus" },
+                { id: "claude-3-haiku-20240307", name: "Claude 3 Haiku" },
+            ],
+            gemini: [
+                { id: "gemini-2.0-flash-exp", name: "Gemini 2.0 Flash" },
+                { id: "gemini-pro", name: "Gemini Pro" },
+            ],
+            openai: [
+                { id: "gpt-4o", name: "GPT-4o" },
+                { id: "gpt-4o-mini", name: "GPT-4o Mini" },
+                { id: "gpt-4-turbo", name: "GPT-4 Turbo" },
+            ],
+            lm_studio: [{ id: "local-model", name: "Local Model" }],
+            ollama: [
+                { id: "llama2", name: "Llama 2" },
+                { id: "llama3", name: "Llama 3" },
+            ],
+        };
+        return fallbackModels[provider] || [];
+    }
+
+    function loadAllProvidersModels() {
+        // Load all models from all providers for unified selection
+        const allModelsContainer =
+            document.getElementById("allModelsContainer");
+        const providerFilters = document.getElementById("providerFilters");
+
+        // Fetch all models
+        fetch("/api/models/all")
+            .then((response) => response.json())
+            .then((data) => {
+                // Clear previous content
+                allModelsContainer.innerHTML = "";
+                providerFilters.innerHTML = "";
+
+                // Create provider filter checkboxes
+                const allProviderFilter = document.createElement("div");
+                allProviderFilter.className = "form-check form-check-inline";
+                allProviderFilter.innerHTML = `
                 <input class="form-check-input provider-filter" type="checkbox"
                        id="provider-all" value="all" checked>
                 <label class="form-check-label" for="provider-all">
                     <strong>All Providers</strong>
                 </label>
             `;
-            providerFilters.appendChild(allProviderFilter);
-            
-            // Create provider sections
-            Object.entries(data).forEach(([providerKey, providerData]) => {
-                // Add provider filter checkbox
-                const providerFilter = document.createElement('div');
-                providerFilter.className = 'form-check form-check-inline';
-                providerFilter.innerHTML = `
+                providerFilters.appendChild(allProviderFilter);
+
+                // Create provider sections
+                Object.entries(data).forEach(([providerKey, providerData]) => {
+                    // Add provider filter checkbox
+                    const providerFilter = document.createElement("div");
+                    providerFilter.className = "form-check form-check-inline";
+                    providerFilter.innerHTML = `
                     <input class="form-check-input provider-filter" type="checkbox"
                            id="provider-${providerKey}" value="${providerKey}" checked>
                     <label class="form-check-label" for="provider-${providerKey}">
                         ${getProviderDisplayName(providerKey)}
                     </label>
                 `;
-                providerFilters.appendChild(providerFilter);
-                
-                // Create provider section
-                const providerSection = document.createElement('div');
-                providerSection.className = 'provider-section mb-4';
-                providerSection.setAttribute('data-provider', providerKey);
-                providerSection.innerHTML = `
+                    providerFilters.appendChild(providerFilter);
+
+                    // Create provider section
+                    const providerSection = document.createElement("div");
+                    providerSection.className = "provider-section mb-4";
+                    providerSection.setAttribute("data-provider", providerKey);
+                    providerSection.innerHTML = `
                     <div class="provider-header d-flex align-items-center mb-2 p-2 bg-light rounded">
                         <input class="form-check-input provider-select-all me-2" type="checkbox"
                                id="select-all-${providerKey}" checked>
@@ -635,17 +846,19 @@ function loadAllProvidersModels() {
                         <!-- Individual model checkboxes will be added here -->
                     </div>
                 `;
-                allModelsContainer.appendChild(providerSection);
-                
-                // Add models to this provider section
-                const modelsGrid = document.getElementById(`models-grid-${providerKey}`);
-                providerData.popular.forEach(model => {
-                    const modelId = `${providerKey}-${model.replace(/[^a-zA-Z0-9]/g, '_')}`;
-                    const displayName = getModelDisplayName(model);
-                    
-                    const modelDiv = document.createElement('div');
-                    modelDiv.className = 'col-md-6 col-lg-4 mb-2';
-                    modelDiv.innerHTML = `
+                    allModelsContainer.appendChild(providerSection);
+
+                    // Add models to this provider section
+                    const modelsGrid = document.getElementById(
+                        `models-grid-${providerKey}`,
+                    );
+                    providerData.popular.forEach((model) => {
+                        const modelId = `${providerKey}-${model.replace(/[^a-zA-Z0-9]/g, "_")}`;
+                        const displayName = getModelDisplayName(model);
+
+                        const modelDiv = document.createElement("div");
+                        modelDiv.className = "col-md-6 col-lg-4 mb-2";
+                        modelDiv.innerHTML = `
                         <div class="form-check">
                             <input class="form-check-input model-checkbox unified-model-checkbox" type="checkbox"
                                    name="models_to_compare[]" value="${providerKey}:${model}" id="${modelId}">
@@ -655,255 +868,292 @@ function loadAllProvidersModels() {
                             </label>
                         </div>
                     `;
-                    modelsGrid.appendChild(modelDiv);
+                        modelsGrid.appendChild(modelDiv);
+                    });
                 });
+
+                // Add event listeners for provider filters
+                addProviderFilterListeners();
+
+                // Add event listeners for provider select-all checkboxes
+                addProviderSelectAllListeners();
+
+                // Add event listener for model search
+                addModelSearchListener();
+
+                // Update selected count
+                updateSelectedModelCount();
+            })
+            .catch((error) => {
+                console.error("Error loading all models:", error);
+                document.getElementById("allModelsContainer").innerHTML =
+                    '<p class="text-muted">Error loading models</p>';
             });
-            
-            // Add event listeners for provider filters
-            addProviderFilterListeners();
-            
-            // Add event listeners for provider select-all checkboxes
-            addProviderSelectAllListeners();
-            
-            // Add event listener for model search
-            addModelSearchListener();
-            
-            // Update selected count
-            updateSelectedModelCount();
-        })
-        .catch(error => {
-            console.error('Error loading all models:', error);
-            document.getElementById('allModelsContainer').innerHTML = '<p class="text-muted">Error loading models</p>';
-        });
-}
+    }
 
-function addProviderFilterListeners() {
-    const providerFilters = document.querySelectorAll('.provider-filter');
-    providerFilters.forEach(filter => {
-        filter.addEventListener('change', function() {
-            const providerKey = this.value;
-            const isChecked = this.checked;
-            
-            if (providerKey === 'all') {
-                // Show/hide all provider sections
-                const allSections = document.querySelectorAll('.provider-section');
-                allSections.forEach(section => {
-                    section.style.display = isChecked ? 'block' : 'none';
-                });
-                
-                // Update other checkboxes
-                document.querySelectorAll('.provider-filter:not([value="all"])').forEach(cb => {
-                    cb.checked = isChecked;
-                });
-            } else {
-                // Show/hide specific provider section
-                const providerSection = document.querySelector(`[data-provider="${providerKey}"]`);
-                if (providerSection) {
-                    providerSection.style.display = isChecked ? 'block' : 'none';
+    function addProviderFilterListeners() {
+        const providerFilters = document.querySelectorAll(".provider-filter");
+        providerFilters.forEach((filter) => {
+            filter.addEventListener("change", function () {
+                const providerKey = this.value;
+                const isChecked = this.checked;
+
+                if (providerKey === "all") {
+                    // Show/hide all provider sections
+                    const allSections =
+                        document.querySelectorAll(".provider-section");
+                    allSections.forEach((section) => {
+                        section.style.display = isChecked ? "block" : "none";
+                    });
+
+                    // Update other checkboxes
+                    document
+                        .querySelectorAll('.provider-filter:not([value="all"])')
+                        .forEach((cb) => {
+                            cb.checked = isChecked;
+                        });
+                } else {
+                    // Show/hide specific provider section
+                    const providerSection = document.querySelector(
+                        `[data-provider="${providerKey}"]`,
+                    );
+                    if (providerSection) {
+                        providerSection.style.display = isChecked
+                            ? "block"
+                            : "none";
+                    }
+
+                    // Check if all providers are selected/deselected
+                    const allProviderCheckbox =
+                        document.getElementById("provider-all");
+                    const allProviderFilters = document.querySelectorAll(
+                        '.provider-filter:not([value="all"])',
+                    );
+                    const allChecked = Array.from(allProviderFilters).every(
+                        (cb) => cb.checked,
+                    );
+                    allProviderCheckbox.checked = allChecked;
                 }
-                
-                // Check if all providers are selected/deselected
-                const allProviderCheckbox = document.getElementById('provider-all');
-                const allProviderFilters = document.querySelectorAll('.provider-filter:not([value="all"])');
-                const allChecked = Array.from(allProviderFilters).every(cb => cb.checked);
-                allProviderCheckbox.checked = allChecked;
-            }
-        });
-    });
-}
-
-function addProviderSelectAllListeners() {
-    const selectAllCheckboxes = document.querySelectorAll('.provider-select-all');
-    selectAllCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const providerKey = this.getAttribute('id').replace('select-all-', '');
-            const isChecked = this.checked;
-            const providerSection = document.querySelector(`[data-provider="${providerKey}"]`);
-            
-            if (providerSection) {
-                const modelCheckboxes = providerSection.querySelectorAll('.unified-model-checkbox');
-                modelCheckboxes.forEach(modelCheckbox => {
-                    modelCheckbox.checked = isChecked;
-                });
-            }
-            
-            updateSelectedModelCount();
-        });
-    });
-}
-
-function addModelSearchListener() {
-    const searchInput = document.getElementById('modelSearch');
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        const modelLabels = document.querySelectorAll('.unified-model-checkbox + label');
-        
-        modelLabels.forEach(label => {
-            const modelName = label.textContent.toLowerCase();
-            const modelCheckbox = label.previousElementSibling;
-            const providerSection = label.closest('.provider-section');
-            
-            if (modelName.includes(searchTerm)) {
-                label.style.display = 'block';
-                if (providerSection) {
-                    providerSection.style.display = 'block';
-                }
-            } else {
-                label.style.display = 'none';
-            }
-        });
-    });
-}
-
-function updateSelectedModelCount() {
-    const selectedCheckboxes = document.querySelectorAll('.unified-model-checkbox:checked');
-    const count = selectedCheckboxes.length;
-    document.getElementById('selectedCount').textContent = count;
-    
-    // Update the count badge color
-    const countBadge = document.getElementById('selectedCount');
-    countBadge.className = count >= 2 ? 'badge bg-success' : count === 1 ? 'badge bg-warning' : 'badge bg-secondary';
-}
-
-function clearAllModelSelections() {
-    const modelCheckboxes = document.querySelectorAll('.unified-model-checkbox');
-    modelCheckboxes.forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    updateSelectedModelCount();
-}
-
-function getProviderDisplayName(providerKey) {
-    const displayNames = {
-        'openrouter': 'OpenRouter',
-        'claude': 'Claude',
-        'lm_studio': 'LM Studio',
-        'ollama': 'Ollama',
-        'gemini': 'Gemini',
-        'openai': 'OpenAI'
-    };
-    return displayNames[providerKey] || providerKey;
-}
-
-function getProviderIcon(providerKey) {
-    const icons = {
-        'openrouter': 'globe',
-        'claude': 'robot',
-        'lm_studio': 'server',
-        'ollama': 'microchip',
-        'gemini': 'gem',
-        'openai': 'bolt'
-    };
-    return icons[providerKey] || 'question';
-}
-
-function getModelDisplayName(modelName) {
-    // Create a more readable display name from the model identifier
-    const nameMap = {
-        'anthropic/claude-opus-4-1': 'Claude Opus 4.1 (Latest)',
-        'openai/gpt-5': 'GPT-5',
-        'openai/gpt-4o': 'GPT-4o',
-        'openai/gpt-4o-mini': 'GPT-4o Mini',
-        'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
-        'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
-        'google/gemini-2.5-pro': 'Gemini 2.5 Pro (Latest)',
-        'google/gemini-pro-1.5': 'Gemini Pro 1.5',
-        'mistralai/mistral-7b-instruct': 'Mistral 7B',
-        'openai/gpt-4-turbo': 'GPT-4 Turbo',
-        'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku',
-        'claude-4-opus-20250805': 'Claude 4 Opus (Latest)',
-        'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
-        'claude-3-opus-20240229': 'Claude 3 Opus',
-        'claude-3-sonnet-20240229': 'Claude 3 Sonnet',
-        'claude-3-haiku-20240307': 'Claude 3 Haiku',
-        'local-model': 'Local Model',
-        'llama-3.1-70b-instruct': 'Llama 3.1 70B',
-        'mistral-7b-instruct': 'Mistral 7B',
-        'codellama-34b-instruct': 'Code Llama 34B'
-    };
-    
-    return nameMap[modelName] || modelName;
-}
-
-function toggleModelSelection() {
-    const enableComparison = document.getElementById('enableComparison');
-    const modelSelection = document.getElementById('modelSelection');
-    
-    if (enableComparison.checked) {
-        modelSelection.style.display = 'block';
-    } else {
-        modelSelection.style.display = 'none';
-        // Uncheck all model checkboxes
-        document.querySelectorAll('.model-checkbox').forEach(checkbox => {
-            checkbox.checked = false;
+            });
         });
     }
-}
 
-$(document).ready(function() {
-    // Load available models when page loads
-    loadAvailableModels();
-    
-    // Add event listener for comparison toggle
-    $('#enableComparison').on('change', toggleModelSelection);
-    
-    // Add event listener for provider change
-    $('#provider').on('change', function() {
-        loadAvailableModels();
-    });
-    
-    // Add event listener for unified model selection
-    $('#enableComparison').on('change', function() {
-        if ($(this).is(':checked')) {
-            loadAllProvidersModels();
-        }
-    });
-    
-    // Add event listeners for model checkboxes to update count
-    $(document).on('change', '.unified-model-checkbox', function() {
+    function addProviderSelectAllListeners() {
+        const selectAllCheckboxes = document.querySelectorAll(
+            ".provider-select-all",
+        );
+        selectAllCheckboxes.forEach((checkbox) => {
+            checkbox.addEventListener("change", function () {
+                const providerKey = this.getAttribute("id").replace(
+                    "select-all-",
+                    "",
+                );
+                const isChecked = this.checked;
+                const providerSection = document.querySelector(
+                    `[data-provider="${providerKey}"]`,
+                );
+
+                if (providerSection) {
+                    const modelCheckboxes = providerSection.querySelectorAll(
+                        ".unified-model-checkbox",
+                    );
+                    modelCheckboxes.forEach((modelCheckbox) => {
+                        modelCheckbox.checked = isChecked;
+                    });
+                }
+
+                updateSelectedModelCount();
+            });
+        });
+    }
+
+    function addModelSearchListener() {
+        const searchInput = document.getElementById("modelSearch");
+        searchInput.addEventListener("input", function () {
+            const searchTerm = this.value.toLowerCase();
+            const modelLabels = document.querySelectorAll(
+                ".unified-model-checkbox + label",
+            );
+
+            modelLabels.forEach((label) => {
+                const modelName = label.textContent.toLowerCase();
+                const modelCheckbox = label.previousElementSibling;
+                const providerSection = label.closest(".provider-section");
+
+                if (modelName.includes(searchTerm)) {
+                    label.style.display = "block";
+                    if (providerSection) {
+                        providerSection.style.display = "block";
+                    }
+                } else {
+                    label.style.display = "none";
+                }
+            });
+        });
+    }
+
+    function updateSelectedModelCount() {
+        const selectedCheckboxes = document.querySelectorAll(
+            ".unified-model-checkbox:checked",
+        );
+        const count = selectedCheckboxes.length;
+        document.getElementById("selectedCount").textContent = count;
+
+        // Update the count badge color
+        const countBadge = document.getElementById("selectedCount");
+        countBadge.className =
+            count >= 2
+                ? "badge bg-success"
+                : count === 1
+                  ? "badge bg-warning"
+                  : "badge bg-secondary";
+    }
+
+    function clearAllModelSelections() {
+        const modelCheckboxes = document.querySelectorAll(
+            ".unified-model-checkbox",
+        );
+        modelCheckboxes.forEach((checkbox) => {
+            checkbox.checked = false;
+        });
         updateSelectedModelCount();
-    });
-    
-    $('#uploadForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const fileInput = document.getElementById('file');
-        
-        if (!fileInput.files[0]) {
-            alert('Please select a file to upload.');
-            return;
+    }
+
+    function getProviderDisplayName(providerKey) {
+        const displayNames = {
+            openrouter: "OpenRouter",
+            claude: "Claude",
+            lm_studio: "LM Studio",
+            ollama: "Ollama",
+            gemini: "Gemini",
+            openai: "OpenAI",
+        };
+        return displayNames[providerKey] || providerKey;
+    }
+
+    function getProviderIcon(providerKey) {
+        const icons = {
+            openrouter: "globe",
+            claude: "robot",
+            lm_studio: "server",
+            ollama: "microchip",
+            gemini: "gem",
+            openai: "bolt",
+        };
+        return icons[providerKey] || "question";
+    }
+
+    function getModelDisplayName(modelName) {
+        // Create a more readable display name from the model identifier
+        const nameMap = {
+            "anthropic/claude-opus-4-1": "Claude Opus 4.1 (Latest)",
+            "openai/gpt-5": "GPT-5",
+            "openai/gpt-4o": "GPT-4o",
+            "openai/gpt-4o-mini": "GPT-4o Mini",
+            "anthropic/claude-3-opus-20240229": "Claude 3 Opus",
+            "meta-llama/llama-3.1-70b-instruct": "Llama 3.1 70B",
+            "google/gemini-2.5-pro": "Gemini 2.5 Pro (Latest)",
+            "google/gemini-pro-1.5": "Gemini Pro 1.5",
+            "mistralai/mistral-7b-instruct": "Mistral 7B",
+            "openai/gpt-4-turbo": "GPT-4 Turbo",
+            "anthropic/claude-3-haiku-20240307": "Claude 3 Haiku",
+            "claude-4-opus-20250805": "Claude 4 Opus (Latest)",
+            "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
+            "claude-3-opus-20240229": "Claude 3 Opus",
+            "claude-3-sonnet-20240229": "Claude 3 Sonnet",
+            "claude-3-haiku-20240307": "Claude 3 Haiku",
+            "local-model": "Local Model",
+            "llama-3.1-70b-instruct": "Llama 3.1 70B",
+            "mistral-7b-instruct": "Mistral 7B",
+            "codellama-34b-instruct": "Code Llama 34B",
+        };
+
+        return nameMap[modelName] || modelName;
+    }
+
+    function toggleModelSelection() {
+        const enableComparison = document.getElementById("enableComparison");
+        const modelSelection = document.getElementById("modelSelection");
+
+        if (enableComparison.checked) {
+            modelSelection.style.display = "block";
+        } else {
+            modelSelection.style.display = "none";
+            // Uncheck all model checkboxes
+            document.querySelectorAll(".model-checkbox").forEach((checkbox) => {
+                checkbox.checked = false;
+            });
         }
-        
-        // Show loading
-        $('#loading').show();
-        $('#results').hide();
-        
-        $.ajax({
-            url: '/upload',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                $('#loading').hide();
-                
-                if (response.success) {
-                    let resultHtml = '';
-                    
-                    if (response.comparison) {
-                        // Multi-model comparison results
-                        resultHtml = `
+    }
+
+    $(document).ready(function () {
+        // Load available models when page loads
+        loadAvailableModels();
+
+        // Add event listener for comparison toggle
+        $("#enableComparison").on("change", toggleModelSelection);
+
+        // Add event listener for provider change
+        $("#provider").on("change", function () {
+            loadAvailableModels();
+        });
+
+        // Add event listener for unified model selection
+        $("#enableComparison").on("change", function () {
+            if ($(this).is(":checked")) {
+                loadAllProvidersModels();
+            }
+        });
+
+        // Add event listeners for model checkboxes to update count
+        $(document).on("change", ".unified-model-checkbox", function () {
+            updateSelectedModelCount();
+        });
+
+        $("#uploadForm").on("submit", function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const fileInput = document.getElementById("file");
+
+            if (!fileInput.files[0]) {
+                alert("Please select a file to upload.");
+                return;
+            }
+
+            // Show loading
+            $("#loading").show();
+            $("#results").hide();
+
+            $.ajax({
+                url: "/upload",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    $("#loading").hide();
+
+                    if (response.success) {
+                        let resultHtml = "";
+
+                        if (response.comparison) {
+                            // Multi-model comparison results
+                            resultHtml = `
                             <div class="alert alert-success">
                                 <strong>Comparison Results:</strong> ${response.successful_models} of ${response.total_models} models completed successfully
                             </div>
                         `;
-                        
-                        response.results.forEach((result, index) => {
-                            const statusClass = result.success ? 'success' : 'danger';
-                            const statusIcon = result.success ? 'check-circle' : 'exclamation-circle';
-                            
-                            resultHtml += `
+
+                            response.results.forEach((result, index) => {
+                                const statusClass = result.success
+                                    ? "success"
+                                    : "danger";
+                                const statusIcon = result.success
+                                    ? "check-circle"
+                                    : "exclamation-circle";
+
+                                resultHtml += `
                                 <div class="card mb-3">
                                     <div class="card-header bg-${statusClass} text-white">
                                         <h6 class="mb-0">
@@ -912,17 +1162,18 @@ $(document).ready(function() {
                                         </h6>
                                     </div>
                                     <div class="card-body">
-                                        ${result.success ? 
-                                            `<div style="white-space: pre-wrap;">${result.grade}</div>` :
-                                            `<div class="alert alert-danger">${result.error}</div>`
+                                        ${
+                                            result.success
+                                                ? `<div style="white-space: pre-wrap;">${result.grade}</div>`
+                                                : `<div class="alert alert-danger">${result.error}</div>`
                                         }
                                     </div>
                                 </div>
                             `;
-                        });
-                    } else {
-                        // Single model result (backward compatibility)
-                        resultHtml = `
+                            });
+                        } else {
+                            // Single model result (backward compatibility)
+                            resultHtml = `
                             <div class="alert alert-success">
                                 <strong>Provider:</strong> ${response.provider}<br>
                                 <strong>Model:</strong> ${response.model}
@@ -932,36 +1183,37 @@ $(document).ready(function() {
                                 <div style="white-space: pre-wrap;">${response.grade}</div>
                             </div>
                         `;
-                    }
-                    
-                    $('#resultContent').html(resultHtml);
-                    $('#results').show();
-                } else {
-                    $('#resultContent').html(`
+                        }
+
+                        $("#resultContent").html(resultHtml);
+                        $("#results").show();
+                    } else {
+                        $("#resultContent").html(`
                         <div class="alert alert-danger">
                             <strong>Error:</strong> ${response.error}
                         </div>
                     `);
-                    $('#results').show();
-                }
-            },
-            error: function(xhr) {
-                $('#loading').hide();
-                let errorMsg = 'An error occurred while processing your request.';
-                
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMsg = xhr.responseJSON.error;
-                }
-                
-                $('#resultContent').html(`
+                        $("#results").show();
+                    }
+                },
+                error: function (xhr) {
+                    $("#loading").hide();
+                    let errorMsg =
+                        "An error occurred while processing your request.";
+
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMsg = xhr.responseJSON.error;
+                    }
+
+                    $("#resultContent").html(`
                     <div class="alert alert-danger">
                         <strong>Error:</strong> ${errorMsg}
                     </div>
                 `);
-                $('#results').show();
-            }
+                    $("#results").show();
+                },
+            });
         });
     });
-});
 </script>
 {% endblock %}

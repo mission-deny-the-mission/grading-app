@@ -6,7 +6,7 @@
 <div class="container mt-4">
     <h1>Batch Management</h1>
     <p>This page will display the list of batches and allow for their management.</p>
-    
+
     <div id="loading" style="display: none;">Loading batches...</div>
     <div id="error" class="alert alert-danger" style="display: none;"></div>
 
@@ -56,7 +56,7 @@
 
     <h2 class="mt-4">Batches</h2>
     <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createBatchModal">Create New Batch</button>
-    
+
     <div class="table-responsive">
         <table class="table table-striped table-hover">
             <thead>
@@ -153,7 +153,7 @@
                         <select class="form-select" id="batchTemplate" name="template_id">
                             <option value="">No Template</option>
                             {% for template in templates %}
-                            <option value="{{ template.id }}" 
+                            <option value="{{ template.id }}"
                                     data-settings="{{ template.default_settings | tojson }}"
                                     data-job-structure="{{ template.job_structure | tojson }}"
                                     data-processing-rules="{{ template.processing_rules | tojson }}">
@@ -173,11 +173,18 @@
                                  <select class="form-select" id="batchProvider" name="provider">
                                      <option value="openrouter">OpenRouter</option>
                                      <option value="claude">Claude</option>
+                                     <option value="gemini">Google Gemini</option>
+                                     <option value="openai">OpenAI (Direct)</option>
+                                     <option value="chutes">Chutes AI</option>
+                                     <option value="z.ai">Z.AI (Normal API)</option>
+                                     <option value="z.ai_coding_plan">Z.AI (Coding Plan)</option>
+                                     <option value="nanogpt">NanoGPT</option>
                                      <option value="lm_studio">LM Studio</option>
+                                     <option value="ollama">Ollama</option>
                                  </select>
-                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
-                                         onclick="refreshBatchProviderModels()" 
-                                         id="refreshBatchModelsBtn" 
+                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                         onclick="refreshBatchProviderModels()"
+                                         id="refreshBatchModelsBtn"
                                          title="Refresh available models">
                                      <i class="fas fa-sync-alt"></i>
                                  </button>
@@ -192,7 +199,7 @@
                                  <select class="form-select" id="batchModel" name="model">
                                      <option value="">Select a model...</option>
                                  </select>
-                                 <div class="spinner-border spinner-border-sm text-primary ms-2" 
+                                 <div class="spinner-border spinner-border-sm text-primary ms-2"
                                       id="batchModelSpinner" style="display: none;" role="status">
                                      <span class="visually-hidden">Loading...</span>
                                  </div>
@@ -247,7 +254,7 @@
                         </div>
                         <small class="form-text text-muted">When enabled, jobs in this batch will run against multiple AI models for comparison</small>
                     </div>
-                    
+
                     <!-- Multi-model selection section -->
                     <div id="multiModelSection" style="display: none;" class="mb-3">
                         <label class="form-label">Select Models to Compare</label>
@@ -315,7 +322,7 @@
                         </div>
                         <small class="form-text text-muted">Select 2 or more models to enable comparison. Individual jobs can override these settings.</small>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="batchTags" class="form-label">Tags (comma-separated)</label>
                         <input type="text" class="form-control" id="batchTags" name="tags" placeholder="e.g., academic, research">
@@ -351,7 +358,7 @@
             const formData = new URLSearchParams($(this).serialize()).toString();
             window.location.search = formData; // Reload page with filters
         });
-        
+
         // Handle multi-model comparison toggle
         $('#enableMultiModelComparison').on('change', function() {
             const multiModelSection = document.getElementById('multiModelSection');
@@ -362,38 +369,38 @@
                 multiModelSection.style.display = 'none';
             }
         });
-        
+
         // Add event listeners for model checkboxes to update count
         $(document).on('change', '.unified-model-checkbox', function() {
             updateBatchSelectedModelCount();
         });
-        
+
         // Handle provider change to load models dynamically
         $('#batchProvider').on('change', function() {
             loadBatchProviderModels();
         });
-        
+
         // Load models on page load
         loadBatchProviderModels();
     });
-    
+
     function loadBatchProviderModels() {
         const provider = $('#batchProvider').val();
         const modelSelect = $('#batchModel');
         const spinner = $('#batchModelSpinner');
         const status = $('#batchModelLoadingStatus');
         const errorDiv = $('#batchModelError');
-        
+
         // Show loading state
         spinner.show();
         status.text('Loading models...');
         errorDiv.hide();
         modelSelect.prop('disabled', true);
-        
+
         // Clear existing options
         modelSelect.empty();
         modelSelect.append('<option value="">Select a model...</option>');
-        
+
         // Fetch models for the selected provider
         fetch(`/api/models/${provider}`)
             .then(response => response.json())
@@ -404,7 +411,7 @@
                         const displayName = getBatchModelDisplayName(model);
                         modelSelect.append(`<option value="${model}">${displayName}</option>`);
                     });
-                    
+
                     // Add separator if there are other models
                     if (data.other && data.other.length > 0) {
                         modelSelect.append('<option disabled>──────────────</option>');
@@ -413,7 +420,7 @@
                             modelSelect.append(`<option value="${model}">${displayName}</option>`);
                         });
                     }
-                    
+
                     status.text('Models loaded successfully');
                 } else {
                     status.text('No models available');
@@ -424,7 +431,7 @@
                 console.error('Error loading models:', error);
                 status.text('Error loading models');
                 errorDiv.text('Failed to load models. Please try again.').show();
-                
+
                 // Add fallback models
                 const fallbackModels = getBatchFallbackModels(provider);
                 fallbackModels.forEach(model => {
@@ -437,16 +444,16 @@
                 setTimeout(() => status.text('Ready'), 2000);
             });
     }
-    
+
     function refreshBatchProviderModels() {
         const provider = $('#batchProvider').val();
         const refreshBtn = $('#refreshBatchModelsBtn');
         const status = $('#batchModelLoadingStatus');
-        
+
         // Show loading state on refresh button
         refreshBtn.prop('disabled', true).find('i').addClass('fa-spin');
         status.text('Refreshing models...');
-        
+
         // Clear cache by making a fresh request
         fetch(`/api/models/${provider}?t=${Date.now()}`)
             .then(response => response.json())
@@ -463,7 +470,7 @@
                 setTimeout(() => status.text('Ready'), 2000);
             });
     }
-    
+
     function getBatchFallbackModels(provider) {
         const fallbackModels = {
             'openrouter': [
@@ -482,12 +489,12 @@
         };
         return fallbackModels[provider] || [];
     }
-    
+
     function loadBatchAllProvidersModels() {
         // Load all models from all providers for unified selection in batch creation
         const allModelsContainer = document.getElementById('batchAllModelsContainer');
         const providerFilters = document.getElementById('batchProviderFilters');
-        
+
         // Fetch all models
         fetch('/api/models/all')
             .then(response => response.json())
@@ -495,7 +502,7 @@
                 // Clear previous content
                 allModelsContainer.innerHTML = '';
                 providerFilters.innerHTML = '';
-                
+
                 // Create provider filter checkboxes
                 const allProviderFilter = document.createElement('div');
                 allProviderFilter.className = 'form-check form-check-inline';
@@ -507,7 +514,7 @@
                     </label>
                 `;
                 providerFilters.appendChild(allProviderFilter);
-                
+
                 // Create provider sections
                 Object.entries(data).forEach(([providerKey, providerData]) => {
                     // Add provider filter checkbox
@@ -521,7 +528,7 @@
                         </label>
                     `;
                     providerFilters.appendChild(providerFilter);
-                    
+
                     // Create provider section
                     const providerSection = document.createElement('div');
                     providerSection.className = 'provider-section mb-4';
@@ -541,13 +548,13 @@
                         </div>
                     `;
                     allModelsContainer.appendChild(providerSection);
-                    
+
                     // Add models to this provider section
                     const modelsGrid = document.getElementById(`batch-models-grid-${providerKey}`);
                     providerData.popular.forEach(model => {
                         const modelId = `batch-${providerKey}-${model.replace(/[^a-zA-Z0-9]/g, '_')}`;
                         const displayName = getBatchModelDisplayName(model);
-                        
+
                         const modelDiv = document.createElement('div');
                         modelDiv.className = 'col-md-6 col-lg-4 mb-2';
                         modelDiv.innerHTML = `
@@ -563,16 +570,16 @@
                         modelsGrid.appendChild(modelDiv);
                     });
                 });
-                
+
                 // Add event listeners for provider filters
                 addBatchProviderFilterListeners();
-                
+
                 // Add event listeners for provider select-all checkboxes
                 addBatchProviderSelectAllListeners();
-                
+
                 // Add event listener for model search
                 addBatchModelSearchListener();
-                
+
                 // Update selected count
                 updateBatchSelectedModelCount();
             })
@@ -581,21 +588,21 @@
                 document.getElementById('batchAllModelsContainer').innerHTML = '<p class="text-muted">Error loading models</p>';
             });
     }
-    
+
     function addBatchProviderFilterListeners() {
         const providerFilters = document.querySelectorAll('.batch-provider-filter');
         providerFilters.forEach(filter => {
             filter.addEventListener('change', function() {
                 const providerKey = this.value;
                 const isChecked = this.checked;
-                
+
                 if (providerKey === 'all') {
                     // Show/hide all provider sections
                     const allSections = document.querySelectorAll('.provider-section');
                     allSections.forEach(section => {
                         section.style.display = isChecked ? 'block' : 'none';
                     });
-                    
+
                     // Update other checkboxes
                     document.querySelectorAll('.batch-provider-filter:not([value="all"])').forEach(cb => {
                         cb.checked = isChecked;
@@ -606,7 +613,7 @@
                     if (providerSection) {
                         providerSection.style.display = isChecked ? 'block' : 'none';
                     }
-                    
+
                     // Check if all providers are selected/deselected
                     const allProviderCheckbox = document.getElementById('batch-provider-all');
                     const allProviderFilters = document.querySelectorAll('.batch-provider-filter:not([value="all"])');
@@ -616,7 +623,7 @@
             });
         });
     }
-    
+
     function addBatchProviderSelectAllListeners() {
         const selectAllCheckboxes = document.querySelectorAll('.batch-provider-select-all');
         selectAllCheckboxes.forEach(checkbox => {
@@ -624,30 +631,30 @@
                 const providerKey = this.getAttribute('id').replace('batch-select-all-', '');
                 const isChecked = this.checked;
                 const providerSection = document.querySelector(`[data-provider="${providerKey}"]`);
-                
+
                 if (providerSection) {
                     const modelCheckboxes = providerSection.querySelectorAll('.batch-unified-model-checkbox');
                     modelCheckboxes.forEach(modelCheckbox => {
                         modelCheckbox.checked = isChecked;
                     });
                 }
-                
+
                 updateBatchSelectedModelCount();
             });
         });
     }
-    
+
     function addBatchModelSearchListener() {
         const searchInput = document.getElementById('batchModelSearch');
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
             const modelLabels = document.querySelectorAll('.batch-unified-model-checkbox + label');
-            
+
             modelLabels.forEach(label => {
                 const modelName = label.textContent.toLowerCase();
                 const modelCheckbox = label.previousElementSibling;
                 const providerSection = label.closest('.provider-section');
-                
+
                 if (modelName.includes(searchTerm)) {
                     label.style.display = 'block';
                     if (providerSection) {
@@ -659,17 +666,17 @@
             });
         });
     }
-    
+
     function updateBatchSelectedModelCount() {
         const selectedCheckboxes = document.querySelectorAll('.batch-unified-model-checkbox:checked');
         const count = selectedCheckboxes.length;
         document.getElementById('batchSelectedCount').textContent = count;
-        
+
         // Update the count badge color
         const countBadge = document.getElementById('batchSelectedCount');
         countBadge.className = count >= 2 ? 'badge bg-success' : count === 1 ? 'badge bg-warning' : 'badge bg-secondary';
     }
-    
+
     function clearAllBatchModelSelections() {
         const modelCheckboxes = document.querySelectorAll('.batch-unified-model-checkbox');
         modelCheckboxes.forEach(checkbox => {
@@ -677,7 +684,7 @@
         });
         updateBatchSelectedModelCount();
     }
-    
+
     function getBatchProviderDisplayName(providerKey) {
         const displayNames = {
             'openrouter': 'OpenRouter',
@@ -689,7 +696,7 @@
         };
         return displayNames[providerKey] || providerKey;
     }
-    
+
     function getBatchProviderIcon(providerKey) {
         const icons = {
             'openrouter': 'globe',
@@ -701,7 +708,7 @@
         };
         return icons[providerKey] || 'question';
     }
-    
+
     function getBatchModelDisplayName(modelName) {
         // Create a more readable display name from the model identifier
         const nameMap = {
@@ -726,7 +733,7 @@
             'mistral-7b-instruct': 'Mistral 7B',
             'codellama-34b-instruct': 'Code Llama 34B'
         };
-        
+
         return nameMap[modelName] || modelName;
     }
 
@@ -753,7 +760,7 @@
             const tags = $('#batchTags').val().split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
             const deadline = $('#batchDeadline').val();
             const autoAssignJobs = $('#autoAssignJobs').prop('checked');
-            
+
             // Collect selected models for multi-model comparison
             const selectedModels = [];
             $('input[name="models_to_compare[]"]:checked').each(function() {
@@ -816,7 +823,7 @@
                 if (defaultSettings.max_tokens !== undefined) {
                     $('#batchMaxTokens').val(defaultSettings.max_tokens);
                 }
-                
+
                 // Apply job structure settings
                 if (jobStructure) {
                     if (jobStructure.auto_create_jobs !== undefined) {
@@ -826,16 +833,16 @@
                         $('#batchPriority').val(jobStructure.default_priority);
                     }
                 }
-                
+
                 // Apply processing rules
                 if (processingRules) {
                     // Could add processing rule application here if needed
                     console.log('Processing rules available:', processingRules);
                 }
-                
+
                 // Show template applied notification
                 showTemplateNotification('Template settings applied successfully');
-                
+
             } else {
                 // Reset to default if "No Template" is selected
                 $('#batchProvider').val('openrouter');
@@ -846,20 +853,20 @@
                 $('#autoAssignJobs').prop('checked', false);
             }
         });
-        
+
         function showTemplateNotification(message) {
             // Create and show a temporary notification
             const notification = $(`
-                <div class="alert alert-info alert-dismissible fade show position-fixed" 
+                <div class="alert alert-info alert-dismissible fade show position-fixed"
                      style="top: 20px; right: 20px; z-index: 1050; min-width: 300px;">
                     <i class="fas fa-check-circle me-2"></i>
                     ${message}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             `);
-            
+
             $('body').append(notification);
-            
+
             // Auto-dismiss after 3 seconds
             setTimeout(() => {
                 notification.alert('close');
@@ -877,28 +884,28 @@
                 $('input[name="models_to_compare[]"]').prop('checked', false);
             }
         });
-        
+
         // Load popular models for batch multi-model comparison
         function loadBatchPopularModels() {
             const batchPopularModelsDiv = document.getElementById('batchPopularModels');
             batchPopularModelsDiv.innerHTML = '<p class="text-muted">Loading models...</p>';
-            
+
             fetch('/api/models/openrouter')
                 .then(response => response.json())
                 .then(data => {
                     batchPopularModelsDiv.innerHTML = '';
-                    
+
                     if (data.popular && data.popular.length > 0) {
                         data.popular.forEach(model => {
                             // prefix values with provider and make ids unique
                             const provider = 'openrouter';
                             const modelId = (provider + '_' + model).replace(/[^a-zA-Z0-9]/g, '_');
                             const displayName = getBatchModelDisplayName(model);
-                            
+
                             const div = document.createElement('div');
                             div.className = 'form-check';
                             div.innerHTML = `
-                                <input class="form-check-input model-checkbox" type="checkbox" 
+                                <input class="form-check-input model-checkbox" type="checkbox"
                                        name="models_to_compare[]" value="${provider}:${model}" id="${modelId}">
                                 <label class="form-check-label" for="${modelId}">
                                     ${displayName}
@@ -913,7 +920,7 @@
                     batchPopularModelsDiv.innerHTML = '<p class="text-muted">Error loading models</p>';
                 });
         }
-        
+
         function getBatchModelDisplayName(modelName) {
             // Create a more readable display name from the model identifier
             const nameMap = {
@@ -929,7 +936,7 @@
                 'openai/gpt-4-turbo': 'GPT-4 Turbo',
                 'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku'
             };
-            
+
             return nameMap[modelName] || modelName;
         }
 

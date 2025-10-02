@@ -29,7 +29,7 @@ _DEFAULT_PROPRIETARY_CONCURRENCY = int(
     os.getenv("DEFAULT_PROPRIETARY_CONCURRENCY", "4")
 )
 _DEFAULT_LOCAL_CONCURRENCY = int(os.getenv("DEFAULT_LOCAL_CONCURRENCY", "1"))
-_PROPRIETARY_PROVIDERS = {"OpenRouter", "Claude", "Gemini", "OpenAI"}
+_PROPRIETARY_PROVIDERS = {"OpenRouter", "Claude", "Gemini", "OpenAI", "Chutes", "Z.AI", "NanoGPT", "Z.AI Coding Plan"}
 _LOCAL_PROVIDERS = {"LM Studio", "Ollama"}
 
 _provider_semaphores = {}
@@ -360,18 +360,18 @@ class OpenRouterLLMProvider(LLMProvider):
             openrouter_key = os.getenv("OPENROUTER_API_KEY")
             if not openrouter_key:
                 return {"success": False, "error": "API key not configured"}
-            
+
             headers = {
                 "Authorization": f"Bearer {openrouter_key}",
                 "Content-Type": "application/json",
             }
-            
+
             response = requests.get(
                 "https://openrouter.ai/api/v1/models",
                 headers=headers,
                 timeout=30
             )
-            
+
             if response.status_code == 200:
                 models_data = response.json()
                 models = []
@@ -387,7 +387,7 @@ class OpenRouterLLMProvider(LLMProvider):
                 return {"success": True, "models": models}
             else:
                 return {"success": False, "error": f"API error: {response.status_code}"}
-                
+
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -502,10 +502,10 @@ class ClaudeLLMProvider(LLMProvider):
             claude_key = os.getenv("CLAUDE_API_KEY")
             if not claude_key:
                 return {"success": False, "error": "API key not configured"}
-            
+
             anthropic = Anthropic(api_key=claude_key)
             models = anthropic.models.list()
-            
+
             model_list = []
             for model in models.data:
                 model_list.append({
@@ -516,7 +516,7 @@ class ClaudeLLMProvider(LLMProvider):
                     "provider": "Anthropic"
                 })
             return {"success": True, "models": model_list}
-                
+
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -605,13 +605,13 @@ class LMStudioLLMProvider(LLMProvider):
         """Fetch available models from LM Studio API."""
         try:
             lm_studio_url = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1")
-            
+
             response = requests.get(
                 f"{lm_studio_url}/models",
                 headers={"Content-Type": "application/json"},
                 timeout=30
             )
-            
+
             if response.status_code == 200:
                 models_data = response.json()
                 models = []
@@ -625,7 +625,7 @@ class LMStudioLLMProvider(LLMProvider):
                 return {"success": True, "models": models}
             else:
                 return {"success": False, "error": f"API error: {response.status_code}"}
-                
+
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -720,13 +720,13 @@ class OllamaLLMProvider(LLMProvider):
         """Fetch available models from Ollama API."""
         try:
             ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
-            
+
             response = requests.get(
                 f"{ollama_url}/api/tags",
                 headers={"Content-Type": "application/json"},
                 timeout=30
             )
-            
+
             if response.status_code == 200:
                 models_data = response.json()
                 models = []
@@ -740,7 +740,7 @@ class OllamaLLMProvider(LLMProvider):
                 return {"success": True, "models": models}
             else:
                 return {"success": False, "error": f"API error: {response.status_code}"}
-                
+
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -882,9 +882,9 @@ class GeminiLLMProvider(LLMProvider):
             gemini_key = os.getenv("GEMINI_API_KEY")
             if not gemini_key:
                 return {"success": False, "error": "API key not configured"}
-            
+
             genai.configure(api_key=gemini_key)
-            
+
             # List available models
             models = []
             for model in genai.list_models():
@@ -896,7 +896,7 @@ class GeminiLLMProvider(LLMProvider):
                         "provider": "Google"
                     })
             return {"success": True, "models": models}
-                
+
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -1011,10 +1011,10 @@ class OpenAILLMProvider(LLMProvider):
             openai_key = os.getenv("OPENAI_API_KEY")
             if not openai_key:
                 return {"success": False, "error": "API key not configured"}
-            
+
             client = OpenAI(api_key=openai_key)
             models = client.models.list()
-            
+
             model_list = []
             for model in models.data:
                 model_list.append({
@@ -1024,7 +1024,7 @@ class OpenAILLMProvider(LLMProvider):
                     "provider": "OpenAI"
                 })
             return {"success": True, "models": model_list}
-                
+
         except Exception as e:
             return {"success": False, "error": str(e)}
 
@@ -1114,6 +1114,498 @@ class OpenAILLMProvider(LLMProvider):
                 }
 
 
+class ZAICodingPlanLLMProvider(LLMProvider):
+    """LLM Provider for Z.AI Coding Plan subscription using Anthropic-compatible endpoint."""
+
+    def get_available_models(self):
+        """Return available models for Z.AI Coding Plan."""
+        # Z.AI Coding Plan models (limited selection for coding tools)
+        models = [
+            {"id": "glm-4.6", "name": "GLM-4.6", "description": "Latest flagship model for coding (Coding Plan)", "provider": "Z.AI Coding Plan"},
+            {"id": "glm-4.5", "name": "GLM-4.5", "description": "Foundation model for coding (Coding Plan)", "provider": "Z.AI Coding Plan"},
+            {"id": "glm-4.5-air", "name": "GLM-4.5 Air", "description": "Lightweight model for auxiliary tasks (Coding Plan)", "provider": "Z.AI Coding Plan"},
+        ]
+        return {"success": True, "models": models}
+
+    def grade_document(
+        self,
+        text,
+        prompt,
+        model="glm-4.6",
+        marking_scheme_content=None,
+        temperature=0.3,
+        max_tokens=2000,
+    ):
+        """
+        Grade document using Z.AI Coding Plan via Anthropic-compatible endpoint.
+
+        Note: This uses Z.AI's Coding Plan subscription which works through
+        an Anthropic API-compatible endpoint. Requires active Coding Plan subscription.
+        """
+        try:
+            zai_key = os.getenv("Z_AI_CODING_PLAN_API_KEY")
+            if not zai_key:
+                return {
+                    "success": False,
+                    "error": "Z.AI Coding Plan API authentication failed. Please check your API key configuration. Note: This requires an active Z.AI Coding Plan subscription.",
+                    "provider": "Z.AI Coding Plan",
+                }
+
+            # Prepare the grading prompt with marking scheme if provided
+            if marking_scheme_content:
+                enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+            else:
+                enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+
+            headers = {
+                "x-api-key": zai_key,
+                "Content-Type": "application/json",
+                "anthropic-version": "2023-06-01",
+            }
+
+            # Use Anthropic-compatible message format
+            payload = {
+                "model": model,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": f"You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.\n\n{enhanced_prompt}"
+                    }
+                ]
+            }
+
+            response = requests.post(
+                "https://api.z.ai/api/anthropic/v1/messages",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                content = data.get("content", [{}])[0].get("text", "")
+
+                return {
+                    "success": True,
+                    "grade": content,
+                    "model": model,
+                    "provider": "Z.AI Coding Plan",
+                    "usage": {
+                        "prompt_tokens": data.get("usage", {}).get("input_tokens", 0),
+                        "completion_tokens": data.get("usage", {}).get("output_tokens", 0),
+                        "total_tokens": data.get("usage", {}).get("input_tokens", 0) + data.get("usage", {}).get("output_tokens", 0),
+                    },
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Z.AI Coding Plan API error: {response.status_code} - {response.text}",
+                    "provider": "Z.AI Coding Plan",
+                }
+
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "error": f"Z.AI Coding Plan API connection error: {str(e)}",
+                "provider": "Z.AI Coding Plan",
+            }
+        except Exception as e:
+            error_msg = str(e)
+            if "auth" in error_msg.lower() or "key" in error_msg.lower() or "unauthorized" in error_msg.lower():
+                return {
+                    "success": False,
+                    "error": "Z.AI Coding Plan API authentication failed. Please check your API key and subscription status.",
+                    "provider": "Z.AI Coding Plan",
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unexpected error with Z.AI Coding Plan API: {error_msg}",
+                    "provider": "Z.AI Coding Plan",
+                }
+
+
+class ChutesLLMProvider(LLMProvider):
+    """LLM Provider for Chutes AI platform."""
+
+    def get_available_models(self):
+        """Fetch available models from Chutes AI API."""
+        try:
+            chutes_key = os.getenv("CHUTES_API_KEY")
+            if not chutes_key:
+                return {"success": False, "error": "API key not configured"}
+
+            headers = {
+                "Authorization": f"Bearer {chutes_key}",
+                "Content-Type": "application/json",
+            }
+
+            response = requests.get(
+                "https://api.chutes.ai/v1/models",
+                headers=headers,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                models_data = response.json()
+                models = []
+                for model in models_data.get("data", []):
+                    models.append({
+                        "id": model["id"],
+                        "name": model.get("name", model["id"]),
+                        "description": model.get("description", ""),
+                        "context_length": model.get("context_length", 0),
+                        "provider": "Chutes"
+                    })
+                return {"success": True, "models": models}
+            else:
+                return {"success": False, "error": f"API error: {response.status_code}"}
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def grade_document(
+        self,
+        text,
+        prompt,
+        model="microsoft/DialoGPT-medium",
+        marking_scheme_content=None,
+        temperature=0.3,
+        max_tokens=2000,
+    ):
+        try:
+            chutes_key = os.getenv("CHUTES_API_KEY")
+            if not chutes_key:
+                return {
+                    "success": False,
+                    "error": "Chutes AI API authentication failed. Please check your API key configuration.",
+                    "provider": "Chutes",
+                }
+
+            # Prepare the grading prompt with marking scheme if provided
+            if marking_scheme_content:
+                enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+            else:
+                enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+
+            headers = {
+                "Authorization": f"Bearer {chutes_key}",
+                "Content-Type": "application/json",
+            }
+
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
+                    },
+                    {"role": "user", "content": enhanced_prompt},
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+
+            response = requests.post(
+                "https://api.chutes.ai/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "success": True,
+                    "grade": data["choices"][0]["message"]["content"],
+                    "model": model,
+                    "provider": "Chutes",
+                    "usage": {
+                        "prompt_tokens": data.get("usage", {}).get("prompt_tokens", 0),
+                        "completion_tokens": data.get("usage", {}).get("completion_tokens", 0),
+                        "total_tokens": data.get("usage", {}).get("total_tokens", 0),
+                    },
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Chutes AI API error: {response.status_code} - {response.text}",
+                    "provider": "Chutes",
+                }
+
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "error": f"Chutes AI API connection error: {str(e)}",
+                "provider": "Chutes",
+            }
+        except Exception as e:
+            error_msg = str(e)
+            if "auth" in error_msg.lower() or "key" in error_msg.lower():
+                return {
+                    "success": False,
+                    "error": "Chutes AI API authentication failed. Please check your API key.",
+                    "provider": "Chutes",
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unexpected error with Chutes AI API: {error_msg}",
+                    "provider": "Chutes",
+                }
+
+
+class ZAILLMProvider(LLMProvider):
+    """LLM Provider for Z.AI platform."""
+
+    def get_available_models(self):
+        """Return available models for Z.AI platform."""
+        # Z.AI API models (not Coding Plan - those are for coding tools only)
+        # Note: Z.AI Coding Plan is separate and only works within coding tools like Claude Code
+        # This implementation uses the normal Z.AI API which is billed separately
+        models = [
+            {"id": "glm-4.6", "name": "GLM-4.6", "description": "Latest flagship model series for agent applications (API)", "provider": "Z.AI"},
+            {"id": "glm-4.5", "name": "GLM-4.5", "description": "Foundation model for intelligent agents (API)", "provider": "Z.AI"},
+            {"id": "glm-4.5-air", "name": "GLM-4.5 Air", "description": "Lightweight version of GLM-4.5 (API)", "provider": "Z.AI"},
+            {"id": "glm-4.5-x", "name": "GLM-4.5 X", "description": "Enhanced version of GLM-4.5 (API)", "provider": "Z.AI"},
+            {"id": "glm-4.5-airx", "name": "GLM-4.5 Air X", "description": "Enhanced lightweight version (API)", "provider": "Z.AI"},
+            {"id": "glm-4.5-flash", "name": "GLM-4.5 Flash", "description": "Fast response model (API)", "provider": "Z.AI"},
+            {"id": "glm-4-32b-0414-128k", "name": "GLM-4-32B-128K", "description": "Highly cost-effective foundation model with 128K context (API)", "provider": "Z.AI"},
+        ]
+        return {"success": True, "models": models}
+
+    def grade_document(
+        self,
+        text,
+        prompt,
+        model="glm-4.6",
+        marking_scheme_content=None,
+        temperature=0.3,
+        max_tokens=2000,
+    ):
+        """
+        Grade document using Z.AI API (not Coding Plan).
+
+        Note: This uses Z.AI's normal API which is billed separately per call.
+        The Z.AI Coding Plan is only for use within coding tools like Claude Code
+        and cannot be accessed via API calls.
+        """
+        try:
+            zai_key = os.getenv("Z_AI_API_KEY")
+            if not zai_key:
+                return {
+                    "success": False,
+                    "error": "Z.AI API authentication failed. Please check your API key configuration. Note: This uses Z.AI's normal API, not the Coding Plan.",
+                    "provider": "Z.AI",
+                }
+
+            # Prepare the grading prompt with marking scheme if provided
+            if marking_scheme_content:
+                enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+            else:
+                enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+
+            headers = {
+                "Authorization": f"Bearer {zai_key}",
+                "Content-Type": "application/json",
+                "Accept-Language": "en-US,en",
+            }
+
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
+                    },
+                    {"role": "user", "content": enhanced_prompt},
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "stream": False,
+            }
+
+            response = requests.post(
+                "https://api.z.ai/api/paas/v4/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "success": True,
+                    "grade": data["choices"][0]["message"]["content"],
+                    "model": model,
+                    "provider": "Z.AI",
+                    "usage": {
+                        "prompt_tokens": data.get("usage", {}).get("prompt_tokens", 0),
+                        "completion_tokens": data.get("usage", {}).get("completion_tokens", 0),
+                        "total_tokens": data.get("usage", {}).get("total_tokens", 0),
+                    },
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Z.AI API error: {response.status_code} - {response.text}",
+                    "provider": "Z.AI",
+                }
+
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "error": f"Z.AI API connection error: {str(e)}",
+                "provider": "Z.AI",
+            }
+        except Exception as e:
+            error_msg = str(e)
+            if "auth" in error_msg.lower() or "key" in error_msg.lower():
+                return {
+                    "success": False,
+                    "error": "Z.AI API authentication failed. Please check your API key. Note: This uses Z.AI's normal API, not the Coding Plan.",
+                    "provider": "Z.AI",
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unexpected error with Z.AI API: {error_msg}",
+                    "provider": "Z.AI",
+                }
+
+
+class NanoGPTLLMProvider(LLMProvider):
+    """LLM Provider for NanoGPT platform."""
+
+    def get_available_models(self):
+        """Fetch available models from NanoGPT API."""
+        try:
+            nano_key = os.getenv("NANOGPT_API_KEY")
+            if not nano_key:
+                return {"success": False, "error": "API key not configured"}
+
+            headers = {
+                "Authorization": f"Bearer {nano_key}",
+                "Content-Type": "application/json",
+            }
+
+            response = requests.get(
+                "https://nano-gpt.com/api/v1/models",
+                headers=headers,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                models_data = response.json()
+                models = []
+                for model in models_data.get("data", []):
+                    models.append({
+                        "id": model["id"],
+                        "name": model.get("name", model["id"]),
+                        "description": model.get("description", ""),
+                        "context_length": model.get("max_tokens", 0),
+                        "provider": "NanoGPT"
+                    })
+                return {"success": True, "models": models}
+            else:
+                return {"success": False, "error": f"API error: {response.status_code}"}
+
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def grade_document(
+        self,
+        text,
+        prompt,
+        model="chatgpt-4o-latest",
+        marking_scheme_content=None,
+        temperature=0.3,
+        max_tokens=2000,
+    ):
+        try:
+            nano_key = os.getenv("NANOGPT_API_KEY")
+            if not nano_key:
+                return {
+                    "success": False,
+                    "error": "NanoGPT API authentication failed. Please check your API key configuration.",
+                    "provider": "NanoGPT",
+                }
+
+            # Prepare the grading prompt with marking scheme if provided
+            if marking_scheme_content:
+                enhanced_prompt = f"{prompt}\n\nMarking Scheme:\n{marking_scheme_content}\n\nPlease use the above marking scheme to grade the following document:\n{text}"
+            else:
+                enhanced_prompt = f"{prompt}\n\nDocument to grade:\n{text}"
+
+            headers = {
+                "Authorization": f"Bearer {nano_key}",
+                "Content-Type": "application/json",
+            }
+
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.",
+                    },
+                    {"role": "user", "content": enhanced_prompt},
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+            }
+
+            response = requests.post(
+                "https://nano-gpt.com/api/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "success": True,
+                    "grade": data["choices"][0]["message"]["content"],
+                    "model": model,
+                    "provider": "NanoGPT",
+                    "usage": {
+                        "prompt_tokens": data.get("usage", {}).get("prompt_tokens", 0),
+                        "completion_tokens": data.get("usage", {}).get("completion_tokens", 0),
+                        "total_tokens": data.get("usage", {}).get("total_tokens", 0),
+                    },
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"NanoGPT API error: {response.status_code} - {response.text}",
+                    "provider": "NanoGPT",
+                }
+
+        except requests.exceptions.RequestException as e:
+            return {
+                "success": False,
+                "error": f"NanoGPT API connection error: {str(e)}",
+                "provider": "NanoGPT",
+            }
+        except Exception as e:
+            error_msg = str(e)
+            if "auth" in error_msg.lower() or "key" in error_msg.lower():
+                return {
+                    "success": False,
+                    "error": "NanoGPT API authentication failed. Please check your API key.",
+                    "provider": "NanoGPT",
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Unexpected error with NanoGPT API: {error_msg}",
+                    "provider": "NanoGPT",
+                }
+
+
 def get_llm_provider(provider_name):
     """Factory function to get an LLM provider instance."""
     if provider_name == "OpenRouter":
@@ -1128,5 +1620,13 @@ def get_llm_provider(provider_name):
         return GeminiLLMProvider()
     elif provider_name == "OpenAI":
         return OpenAILLMProvider()
+    elif provider_name == "Chutes":
+        return ChutesLLMProvider()
+    elif provider_name == "Z.AI":
+        return ZAILLMProvider()
+    elif provider_name == "Z.AI Coding Plan":
+        return ZAICodingPlanLLMProvider()
+    elif provider_name == "NanoGPT":
+        return NanoGPTLLMProvider()
     else:
         raise ValueError(f"Unknown LLM provider: {provider_name}")

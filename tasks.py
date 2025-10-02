@@ -366,12 +366,20 @@ def _get_supported_providers():
         "ollama",
         "gemini",
         "openai",
+        "chutes",
+        "z.ai",
+        "nanogpt",
+        "z.ai_coding_plan",
         "OpenRouter",
         "Claude",
         "LM Studio",
         "Ollama",
         "Gemini",
         "OpenAI",
+        "Chutes",
+        "Z.AI",
+        "NanoGPT",
+        "Z.AI Coding Plan",
     }
 
 
@@ -395,6 +403,10 @@ def _get_models_to_grade(job):
         "ollama": "llama2",
         "gemini": "gemini-2.5-pro",
         "openai": "gpt-5",
+        "chutes": "microsoft/DialoGPT-medium",
+        "z.ai": "glm-4.6",
+        "nanogpt": "chatgpt-4o-latest",
+        "z.ai_coding_plan": "glm-4.6",
     }
     default_model = provider_defaults.get(
         provider_name, provider_defaults["openrouter"]
@@ -425,12 +437,16 @@ def _grade_with_model(submission, job, model, marking_scheme_content):
             "ollama": "Ollama",
             "gemini": "Gemini",
             "openai": "OpenAI",
+            "chutes": "Chutes",
+            "z.ai": "Z.AI",
+            "nanogpt": "NanoGPT",
+            "z.ai_coding_plan": "Z.AI Coding Plan",
         }
         provider_name = provider_mapping.get(job.provider.lower(), job.provider)
         llm_provider = get_llm_provider(provider_name)
 
         with provider_semaphore(provider_name):
-            if job.provider.lower() in ["openrouter", "ollama", "gemini", "openai"]:
+            if job.provider.lower() in ["openrouter", "ollama", "gemini", "openai", "chutes", "z.ai", "nanogpt", "z.ai_coding_plan"]:
                 return llm_provider.grade_document(
                     text=submission.extracted_text,
                     prompt=job.prompt,
