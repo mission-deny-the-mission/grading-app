@@ -68,6 +68,22 @@ DEFAULT_MODELS = {
         "default": "gpt-4o",
         "popular": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"],
     },
+    "nanogpt": {
+        "default": "gpt-4o",
+        "popular": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022", "gemini-2.0-flash-exp"],
+    },
+    "chutes": {
+        "default": "gpt-4o",
+        "popular": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022", "gemini-2.0-flash-exp"],
+    },
+    "zai": {
+        "default": "glm-4.6",
+        "popular": ["glm-4.6", "glm-4.5", "glm-4.5-x", "glm-4.5-flash"],
+    },
+    "zai_coding_plan": {
+        "default": "glm-4.6",
+        "popular": ["glm-4.6", "glm-4.5", "glm-4.5-air"],
+    },
 }
 
 
@@ -235,6 +251,10 @@ def upload_file():
                 "ollama": "Ollama",
                 "gemini": "Gemini",
                 "openai": "OpenAI",
+                "nanogpt": "NanoGPT",
+                "chutes": "Chutes",
+                "zai": "Z.AI",
+                "zai_coding_plan": "Z.AI Coding Plan",
             }
             if not short_key:
                 return None
@@ -299,6 +319,46 @@ def upload_file():
                         jsonify(
                             {
                                 "error": "OpenAI API key not configured. Please configure your API key in the settings."
+                            }
+                        ),
+                        400,
+                    )
+            elif prov_canonical == "NanoGPT":
+                if not os.getenv("NANOGPT_API_KEY"):
+                    return (
+                        jsonify(
+                            {
+                                "error": "NanoGPT API key not configured. Please configure your API key in the settings."
+                            }
+                        ),
+                        400,
+                    )
+            elif prov_canonical == "Chutes":
+                if not os.getenv("CHUTES_API_KEY"):
+                    return (
+                        jsonify(
+                            {
+                                "error": "Chutes API key not configured. Please configure your API key in the settings."
+                            }
+                        ),
+                        400,
+                    )
+            elif prov_canonical == "Z.AI":
+                if not os.getenv("ZAI_API_KEY"):
+                    return (
+                        jsonify(
+                            {
+                                "error": "Z.AI API key not configured. Please configure your API key in the settings."
+                            }
+                        ),
+                        400,
+                    )
+            elif prov_canonical == "Z.AI Coding Plan":
+                if not os.getenv("ZAI_API_KEY"):
+                    return (
+                        jsonify(
+                            {
+                                "error": "Z.AI Coding Plan API key not configured. Please configure your API key in the settings."
                             }
                         ),
                         400,

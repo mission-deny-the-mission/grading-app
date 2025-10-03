@@ -69,9 +69,13 @@ content %}
                         </label>
                         <div class="d-flex align-items-center gap-2">
                             <select class="form-select" id="jobTemplateSelect">
-                                <option value="">No template - Manual configuration</option>
+                                <option value="">
+                                    No template - Manual configuration
+                                </option>
                                 {% for template in job_templates %}
-                                <option value="{{ template.id }}">{{ template.name }}</option>
+                                <option value="{{ template.id }}">
+                                    {{ template.name }}
+                                </option>
                                 {% endfor %}
                             </select>
                             <button
@@ -80,11 +84,13 @@ content %}
                                 onclick="loadJobTemplate()"
                                 id="loadTemplateBtn"
                             >
-                                <i class="fas fa-download me-1"></i>Load Template
+                                <i class="fas fa-download me-1"></i>Load
+                                Template
                             </button>
                         </div>
                         <div class="form-text">
-                            Select a template to automatically populate job settings
+                            Select a template to automatically populate job
+                            settings
                         </div>
                         <div
                             id="templateInfo"
@@ -108,53 +114,77 @@ content %}
                                 <option value="claude">
                                     Claude API (Direct)
                                 </option>
-                                <option value="gemini">
-                                    Google Gemini
-                                </option>
-                                <option value="openai">
-                                    OpenAI (Direct)
+                                <option value="gemini">Google Gemini</option>
+                                <option value="openai">OpenAI (Direct)</option>
+                                <option value="nanogpt">NanoGPT</option>
+                                <option value="chutes">Chutes AI</option>
+                                <option value="zai">Z.AI (Normal API)</option>
+                                <option value="zai_coding_plan">
+                                    Z.AI (Coding Plan)
                                 </option>
                                 <option value="lm_studio">
                                     LM Studio (Local)
                                 </option>
-                                <option value="ollama">
-                                    Ollama (Local)
-                                </option>
+                                <option value="ollama">Ollama (Local)</option>
                             </select>
                         </div>
-                         <div class="col-md-6 mb-3">
-                             <label for="modelSelect" class="form-label fw-bold"
-                                 >Model Selection</label
-                             >
-                             <div class="d-flex align-items-center">
-                                 <select class="form-select" id="modelSelect" name="modelSelect" onchange="toggleCustomModelBulk()">
-                                     <option value="default">Use Default Model</option>
-                                 </select>
-                                 <div class="spinner-border spinner-border-sm text-primary ms-2" 
-                                      id="modelSelectSpinner" style="display: none;" role="status">
-                                     <span class="visually-hidden">Loading...</span>
-                                 </div>
-                                 <button type="button" class="btn btn-sm btn-outline-secondary ms-2" 
-                                         onclick="refreshBulkProviderModels()" 
-                                         id="refreshBulkModelsBtn" 
-                                         title="Refresh available models">
-                                     <i class="fas fa-sync-alt"></i>
-                                 </button>
-                             </div>
-                             <div class="mt-1">
-                                 <small class="text-muted" id="bulkModelLoadingStatus">Ready</small>
-                             </div>
-                             <div class="invalid-feedback" id="bulkModelError" style="display: none;"></div>
-                             <input
-                                 type="text"
-                                 class="form-control mt-2"
-                                 id="customModel"
-                                 name="customModel"
-                                 placeholder="Enter custom model name"
-                                 style="display: none;" 
-                                 disabled
-                             />
-                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="modelSelect" class="form-label fw-bold"
+                                >Model Selection</label
+                            >
+                            <div class="d-flex align-items-center">
+                                <select
+                                    class="form-select"
+                                    id="modelSelect"
+                                    name="modelSelect"
+                                    onchange="toggleCustomModelBulk()"
+                                >
+                                    <option value="default">
+                                        Use Default Model
+                                    </option>
+                                </select>
+                                <div
+                                    class="spinner-border spinner-border-sm text-primary ms-2"
+                                    id="modelSelectSpinner"
+                                    style="display: none"
+                                    role="status"
+                                >
+                                    <span class="visually-hidden"
+                                        >Loading...</span
+                                    >
+                                </div>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-outline-secondary ms-2"
+                                    onclick="refreshBulkProviderModels()"
+                                    id="refreshBulkModelsBtn"
+                                    title="Refresh available models"
+                                >
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                            <div class="mt-1">
+                                <small
+                                    class="text-muted"
+                                    id="bulkModelLoadingStatus"
+                                    >Ready</small
+                                >
+                            </div>
+                            <div
+                                class="invalid-feedback"
+                                id="bulkModelError"
+                                style="display: none"
+                            ></div>
+                            <input
+                                type="text"
+                                class="form-control mt-2"
+                                id="customModel"
+                                name="customModel"
+                                placeholder="Enter custom model name"
+                                style="display: none"
+                                disabled
+                            />
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -187,27 +217,51 @@ content %}
                                     <div class="row align-items-center">
                                         <div class="col-md-4">
                                             <div class="provider-filters">
-                                                <label class="form-label mb-1">Filter by Providers:</label>
-                                                <div id="providerFilters" class="d-flex flex-wrap gap-2">
+                                                <label class="form-label mb-1"
+                                                    >Filter by Providers:</label
+                                                >
+                                                <div
+                                                    id="providerFilters"
+                                                    class="d-flex flex-wrap gap-2"
+                                                >
                                                     <!-- Provider filter checkboxes will be loaded dynamically -->
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="search-bar">
-                                                <label class="form-label mb-1">Search Models:</label>
-                                                <input type="text" class="form-control" id="modelSearch"
-                                                       placeholder="Search across all models...">
+                                                <label class="form-label mb-1"
+                                                    >Search Models:</label
+                                                >
+                                                <input
+                                                    type="text"
+                                                    class="form-control"
+                                                    id="modelSearch"
+                                                    placeholder="Search across all models..."
+                                                />
                                             </div>
                                         </div>
                                         <div class="col-md-4">
                                             <div class="selection-info">
-                                                <label class="form-label mb-1">Selected Models:</label>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span id="selectedCount" class="badge bg-primary">0</span>
+                                                <label class="form-label mb-1"
+                                                    >Selected Models:</label
+                                                >
+                                                <div
+                                                    class="d-flex align-items-center gap-2"
+                                                >
+                                                    <span
+                                                        id="selectedCount"
+                                                        class="badge bg-primary"
+                                                        >0</span
+                                                    >
                                                     <span>models selected</span>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-auto"
-                                                            onclick="clearAllModelSelections()">Clear All</button>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-sm btn-outline-secondary ms-auto"
+                                                        onclick="clearAllModelSelections()"
+                                                    >
+                                                        Clear All
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -222,24 +276,42 @@ content %}
                                     <h6>Custom Models:</h6>
                                     <div class="row">
                                         <div class="col-md-4 mb-2">
-                                            <input type="text" class="form-control" id="customModel1" name="customModels[]"
-                                                   placeholder="Enter custom model name">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                id="customModel1"
+                                                name="customModels[]"
+                                                placeholder="Enter custom model name"
+                                            />
                                         </div>
                                         <div class="col-md-4 mb-2">
-                                            <input type="text" class="form-control" id="customModel2" name="customModels[]"
-                                                   placeholder="Enter custom model name">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                id="customModel2"
+                                                name="customModels[]"
+                                                placeholder="Enter custom model name"
+                                            />
                                         </div>
                                         <div class="col-md-4 mb-2">
-                                            <input type="text" class="form-control" id="customModel3" name="customModels[]"
-                                                   placeholder="Enter custom model name">
+                                            <input
+                                                type="text"
+                                                class="form-control"
+                                                id="customModel3"
+                                                name="customModels[]"
+                                                placeholder="Enter custom model name"
+                                            />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mt-2">
                                     <small class="text-muted">
                                         <i class="fas fa-info-circle me-1"></i>
-                                        Select 2 or more models from different providers to compare their grading results.
-                                        Use provider filters to focus on specific providers, or search to find specific models.
+                                        Select 2 or more models from different
+                                        providers to compare their grading
+                                        results. Use provider filters to focus
+                                        on specific providers, or search to find
+                                        specific models.
                                     </small>
                                 </div>
                             </div>
@@ -253,11 +325,19 @@ content %}
                         </label>
                         <div class="mb-2 d-flex align-items-center gap-2">
                             <div class="d-flex align-items-center">
-                                <label for="selectSavedPrompt" class="me-2 mb-0">Saved Prompt:</label>
-                                <select class="form-select form-select-sm" id="selectSavedPrompt" style="max-width: 320px;">
+                                <label for="selectSavedPrompt" class="me-2 mb-0"
+                                    >Saved Prompt:</label
+                                >
+                                <select
+                                    class="form-select form-select-sm"
+                                    id="selectSavedPrompt"
+                                    style="max-width: 320px"
+                                >
                                     <option value="">No saved prompt</option>
                                     {% for p in saved_prompts %}
-                                    <option value="{{ p.id }}">{{ p.name }}</option>
+                                    <option value="{{ p.id }}">
+                                        {{ p.name }}
+                                    </option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -266,7 +346,8 @@ content %}
                                 class="btn btn-outline-success btn-sm"
                                 onclick="saveCurrentPrompt()"
                             >
-                                <i class="fas fa-save me-1"></i>Save Current Prompt
+                                <i class="fas fa-save me-1"></i>Save Current
+                                Prompt
                             </button>
                         </div>
                         <textarea
@@ -365,11 +446,23 @@ content %}
                         </label>
                         <div class="mb-2 d-flex align-items-center gap-2">
                             <div class="d-flex align-items-center">
-                                <label for="selectSavedMarkingScheme" class="me-2 mb-0">Saved Scheme:</label>
-                                <select class="form-select form-select-sm" id="selectSavedMarkingScheme" style="max-width: 320px;">
-                                    <option value="">No saved marking scheme</option>
+                                <label
+                                    for="selectSavedMarkingScheme"
+                                    class="me-2 mb-0"
+                                    >Saved Scheme:</label
+                                >
+                                <select
+                                    class="form-select form-select-sm"
+                                    id="selectSavedMarkingScheme"
+                                    style="max-width: 320px"
+                                >
+                                    <option value="">
+                                        No saved marking scheme
+                                    </option>
                                     {% for s in saved_marking_schemes %}
-                                    <option value="{{ s.id }}">{{ s.name }}</option>
+                                    <option value="{{ s.id }}">
+                                        {{ s.name }}
+                                    </option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -378,7 +471,8 @@ content %}
                                 class="btn btn-outline-success btn-sm"
                                 onclick="saveCurrentMarkingScheme()"
                             >
-                                <i class="fas fa-save me-1"></i>Save Current Scheme
+                                <i class="fas fa-save me-1"></i>Save Current
+                                Scheme
                             </button>
                         </div>
                         <input
@@ -412,7 +506,8 @@ content %}
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">
-                            <i class="fas fa-layer-group me-2"></i>Batch Assignment
+                            <i class="fas fa-layer-group me-2"></i>Batch
+                            Assignment
                         </label>
                         <div class="form-check">
                             <input
@@ -423,7 +518,10 @@ content %}
                                 value="new"
                                 checked
                             />
-                            <label class="form-check-label" for="createNewBatch">
+                            <label
+                                class="form-check-label"
+                                for="createNewBatch"
+                            >
                                 Create as standalone job (no batch)
                             </label>
                         </div>
@@ -435,7 +533,10 @@ content %}
                                 name="batchOption"
                                 value="create_batch"
                             />
-                            <label class="form-check-label" for="createBatchFromJob">
+                            <label
+                                class="form-check-label"
+                                for="createBatchFromJob"
+                            >
                                 Create new batch using job settings
                             </label>
                         </div>
@@ -447,18 +548,30 @@ content %}
                                 name="batchOption"
                                 value="existing"
                             />
-                            <label class="form-check-label" for="addToExistingBatch">
+                            <label
+                                class="form-check-label"
+                                for="addToExistingBatch"
+                            >
                                 Add to existing batch
                             </label>
                         </div>
-                        <div id="batchCreationSettings" class="mt-3" style="display: none">
+                        <div
+                            id="batchCreationSettings"
+                            class="mt-3"
+                            style="display: none"
+                        >
                             <div class="card">
                                 <div class="card-body">
                                     <h6 class="card-title">
-                                        <i class="fas fa-plus me-2"></i>Batch Settings
+                                        <i class="fas fa-plus me-2"></i>Batch
+                                        Settings
                                     </h6>
                                     <div class="mb-3">
-                                        <label for="newBatchName" class="form-label fw-bold">Batch Name</label>
+                                        <label
+                                            for="newBatchName"
+                                            class="form-label fw-bold"
+                                            >Batch Name</label
+                                        >
                                         <input
                                             type="text"
                                             class="form-control"
@@ -466,11 +579,16 @@ content %}
                                             placeholder="Enter batch name"
                                         />
                                         <div class="form-text">
-                                            Name for the new batch that will be created
+                                            Name for the new batch that will be
+                                            created
                                         </div>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="newBatchDescription" class="form-label fw-bold">Batch Description (Optional)</label>
+                                        <label
+                                            for="newBatchDescription"
+                                            class="form-label fw-bold"
+                                            >Batch Description (Optional)</label
+                                        >
                                         <textarea
                                             class="form-control"
                                             id="newBatchDescription"
@@ -480,18 +598,28 @@ content %}
                                     </div>
                                     <div class="alert alert-info">
                                         <i class="fas fa-info-circle me-2"></i>
-                                        The new batch will inherit all settings from this job (prompt, model, temperature, etc.)
+                                        The new batch will inherit all settings
+                                        from this job (prompt, model,
+                                        temperature, etc.)
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div id="batchSelection" class="mt-3" style="display: none">
-                            <label for="existingBatch" class="form-label">Select Batch:</label>
+                        <div
+                            id="batchSelection"
+                            class="mt-3"
+                            style="display: none"
+                        >
+                            <label for="existingBatch" class="form-label"
+                                >Select Batch:</label
+                            >
                             <select class="form-select" id="existingBatch">
                                 <option value="">Loading batches...</option>
                             </select>
                             <div class="form-text">
-                                Choose an existing batch to add this job to. All batches except failed, cancelled, or archived ones are available.
+                                Choose an existing batch to add this job to. All
+                                batches except failed, cancelled, or archived
+                                ones are available.
                             </div>
                         </div>
                     </div>
@@ -597,21 +725,21 @@ content %}
         const spinner = document.getElementById('modelSelectSpinner');
         const status = document.getElementById('bulkModelLoadingStatus');
         const errorDiv = document.getElementById('bulkModelError');
-        
+
         // Show loading state
         spinner.style.display = 'block';
         status.textContent = 'Loading models...';
         errorDiv.style.display = 'none';
-        
+
         // Clear existing options (keep default option)
         modelSelect.innerHTML = '<option value="default">Use Default Model</option>';
-        
+
         // Fetch available models for the selected provider
         fetch(`/api/models/${provider}`)
             .then(response => response.json())
             .then(data => {
                 popularModelsDiv.innerHTML = '';
-                
+
                 if (data.popular && data.popular.length > 0) {
                     // Add popular models to single model select
                     data.popular.forEach(model => {
@@ -621,14 +749,14 @@ content %}
                         option.textContent = displayName;
                         modelSelect.appendChild(option);
                     });
-                    
+
                     // Add separator if there are other models
                     if (data.other && data.other.length > 0) {
                         const separator = document.createElement('option');
                         separator.disabled = true;
                         separator.textContent = '──────────────';
                         modelSelect.appendChild(separator);
-                        
+
                         data.other.forEach(model => {
                             const displayName = getModelDisplayName(model);
                             const option = document.createElement('option');
@@ -637,13 +765,13 @@ content %}
                             modelSelect.appendChild(option);
                         });
                     }
-                    
+
                     // Add custom model option
                     const customOption = document.createElement('option');
                     customOption.value = 'custom';
                     customOption.textContent = 'Custom Model...';
                     modelSelect.appendChild(customOption);
-                    
+
                     // Add models to comparison section with provider prefix
                     data.popular.forEach(model => {
                         const modelId = `${provider}_${model.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -660,13 +788,13 @@ content %}
                         `;
                         popularModelsDiv.appendChild(div);
                     });
-                    
+
                     status.textContent = 'Models loaded successfully';
                 } else {
                     status.textContent = 'No models available';
                     errorDiv.textContent = 'No models available for this provider';
                     errorDiv.style.display = 'block';
-                    
+
                     // Add fallback models
                     const fallbackModels = getBulkFallbackModels(provider);
                     fallbackModels.forEach(model => {
@@ -683,7 +811,7 @@ content %}
                 status.textContent = 'Error loading models';
                 errorDiv.textContent = 'Failed to load models. Please try again.';
                 errorDiv.style.display = 'block';
-                
+
                 // Add fallback models
                 const fallbackModels = getBulkFallbackModels(provider);
                 fallbackModels.forEach(model => {
@@ -698,17 +826,17 @@ content %}
                 setTimeout(() => status.textContent = 'Ready', 2000);
             });
     }
-    
+
     function refreshBulkProviderModels() {
         const provider = document.getElementById('provider').value;
         const refreshBtn = document.getElementById('refreshBulkModelsBtn');
         const status = document.getElementById('bulkModelLoadingStatus');
-        
+
         // Show loading state on refresh button
         refreshBtn.disabled = true;
         refreshBtn.querySelector('i').classList.add('fa-spin');
         status.textContent = 'Refreshing models...';
-        
+
         // Clear cache by making a fresh request
         fetch(`/api/models/${provider}?t=${Date.now()}`)
             .then(response => response.json())
@@ -726,7 +854,7 @@ content %}
                 setTimeout(() => status.textContent = 'Ready', 2000);
             });
     }
-    
+
     function getBulkFallbackModels(provider) {
         const fallbackModels = {
             'openrouter': [
@@ -754,6 +882,26 @@ content %}
             'ollama': [
                 {id: 'llama2', name: 'Llama 2'},
                 {id: 'llama3', name: 'Llama 3'}
+            ],
+            'nanogpt': [
+                {id: 'gpt-4o', name: 'GPT-4o'},
+                {id: 'gpt-4o-mini', name: 'GPT-4o Mini'},
+                {id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'}
+            ],
+            'chutes': [
+                {id: 'gpt-4o', name: 'GPT-4o'},
+                {id: 'gpt-4o-mini', name: 'GPT-4o Mini'},
+                {id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'}
+            ],
+            'zai': [
+                {id: 'glm-4.6', name: 'GLM-4.6'},
+                {id: 'glm-4.5', name: 'GLM-4.5'},
+                {id: 'glm-4.5-x', name: 'GLM-4.5 X'}
+            ],
+            'zai_coding_plan': [
+                {id: 'glm-4.6', name: 'GLM-4.6'},
+                {id: 'glm-4.5', name: 'GLM-4.5'},
+                {id: 'glm-4.5-air', name: 'GLM-4.5 Air'}
             ]
         };
         return fallbackModels[provider] || [];
@@ -763,7 +911,7 @@ content %}
         // Load all models from all providers for unified selection
         const allModelsContainer = document.getElementById('allModelsContainer');
         const providerFilters = document.getElementById('providerFilters');
-        
+
         // Fetch all models
         fetch('/api/models/all')
             .then(response => response.json())
@@ -771,7 +919,7 @@ content %}
                 // Clear previous content
                 allModelsContainer.innerHTML = '';
                 providerFilters.innerHTML = '';
-                
+
                 // Create provider filter checkboxes
                 const allProviderFilter = document.createElement('div');
                 allProviderFilter.className = 'form-check form-check-inline';
@@ -783,7 +931,7 @@ content %}
                     </label>
                 `;
                 providerFilters.appendChild(allProviderFilter);
-                
+
                 // Create provider sections
                 Object.entries(data).forEach(([providerKey, providerData]) => {
                     // Add provider filter checkbox
@@ -797,7 +945,7 @@ content %}
                         </label>
                     `;
                     providerFilters.appendChild(providerFilter);
-                    
+
                     // Create provider section
                     const providerSection = document.createElement('div');
                     providerSection.className = 'provider-section mb-4';
@@ -817,13 +965,13 @@ content %}
                         </div>
                     `;
                     allModelsContainer.appendChild(providerSection);
-                    
+
                     // Add models to this provider section
                     const modelsGrid = document.getElementById(`models-grid-${providerKey}`);
                     providerData.popular.forEach(model => {
                         const modelId = `${providerKey}-${model.replace(/[^a-zA-Z0-9]/g, '_')}`;
                         const displayName = getModelDisplayName(model);
-                        
+
                         const modelDiv = document.createElement('div');
                         modelDiv.className = 'col-md-6 col-lg-4 mb-2';
                         modelDiv.innerHTML = `
@@ -839,16 +987,16 @@ content %}
                         modelsGrid.appendChild(modelDiv);
                     });
                 });
-                
+
                 // Add event listeners for provider filters
                 addProviderFilterListeners();
-                
+
                 // Add event listeners for provider select-all checkboxes
                 addProviderSelectAllListeners();
-                
+
                 // Add event listener for model search
                 addModelSearchListener();
-                
+
                 // Update selected count
                 updateSelectedModelCount();
             })
@@ -864,14 +1012,14 @@ content %}
             filter.addEventListener('change', function() {
                 const providerKey = this.value;
                 const isChecked = this.checked;
-                
+
                 if (providerKey === 'all') {
                     // Show/hide all provider sections
                     const allSections = document.querySelectorAll('.provider-section');
                     allSections.forEach(section => {
                         section.style.display = isChecked ? 'block' : 'none';
                     });
-                    
+
                     // Update other checkboxes
                     document.querySelectorAll('.provider-filter:not([value="all"])').forEach(cb => {
                         cb.checked = isChecked;
@@ -882,7 +1030,7 @@ content %}
                     if (providerSection) {
                         providerSection.style.display = isChecked ? 'block' : 'none';
                     }
-                    
+
                     // Check if all providers are selected/deselected
                     const allProviderCheckbox = document.getElementById('provider-all');
                     const allProviderFilters = document.querySelectorAll('.provider-filter:not([value="all"])');
@@ -900,14 +1048,14 @@ content %}
                 const providerKey = this.getAttribute('id').replace('select-all-', '');
                 const isChecked = this.checked;
                 const providerSection = document.querySelector(`[data-provider="${providerKey}"]`);
-                
+
                 if (providerSection) {
                     const modelCheckboxes = providerSection.querySelectorAll('.unified-model-checkbox');
                     modelCheckboxes.forEach(modelCheckbox => {
                         modelCheckbox.checked = isChecked;
                     });
                 }
-                
+
                 updateSelectedModelCount();
             });
         });
@@ -918,12 +1066,12 @@ content %}
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
             const modelLabels = document.querySelectorAll('.unified-model-checkbox + label');
-            
+
             modelLabels.forEach(label => {
                 const modelName = label.textContent.toLowerCase();
                 const modelCheckbox = label.previousElementSibling;
                 const providerSection = label.closest('.provider-section');
-                
+
                 if (modelName.includes(searchTerm)) {
                     label.style.display = 'block';
                     if (providerSection) {
@@ -940,7 +1088,7 @@ content %}
         const selectedCheckboxes = document.querySelectorAll('.unified-model-checkbox:checked');
         const count = selectedCheckboxes.length;
         document.getElementById('selectedCount').textContent = count;
-        
+
         // Update the count badge color
         const countBadge = document.getElementById('selectedCount');
         countBadge.className = count >= 2 ? 'badge bg-success' : count === 1 ? 'badge bg-warning' : 'badge bg-secondary';
@@ -961,7 +1109,11 @@ content %}
             'lm_studio': 'LM Studio',
             'ollama': 'Ollama',
             'gemini': 'Gemini',
-            'openai': 'OpenAI'
+            'openai': 'OpenAI',
+            'nanogpt': 'NanoGPT',
+            'chutes': 'Chutes AI',
+            'zai': 'Z.AI (Normal API)',
+            'zai_coding_plan': 'Z.AI (Coding Plan)'
         };
         return displayNames[providerKey] || providerKey;
     }
@@ -973,7 +1125,11 @@ content %}
             'lm_studio': 'server',
             'ollama': 'microchip',
             'gemini': 'gem',
-            'openai': 'bolt'
+            'openai': 'bolt',
+            'nanogpt': 'brain',
+            'chutes': 'rocket',
+            'zai': 'star',
+            'zai_coding_plan': 'code'
         };
         return icons[providerKey] || 'question';
     }
@@ -1019,7 +1175,7 @@ content %}
 
         const loadBtn = document.getElementById('loadTemplateBtn');
         const originalText = loadBtn.innerHTML;
-        
+
         loadBtn.disabled = true;
         loadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
 
@@ -1028,7 +1184,7 @@ content %}
             .then(data => {
                 if (data.success) {
                     const template = data.template;
-                    
+
                     // Populate form fields with template data
                     document.getElementById('jobName').value = template.name || '';
                     document.getElementById('jobDescription').value = template.description || '';
@@ -1037,32 +1193,32 @@ content %}
                     document.getElementById('temperature').value = template.temperature || 0.3;
                     document.getElementById('max_tokens').value = template.max_tokens || 2000;
                     document.getElementById('temperatureValue').textContent = template.temperature || 0.3;
-                    
+
                     // Handle model selection
                     if (template.model) {
                         document.getElementById('modelSelect').value = template.model;
                         toggleCustomModelBulk();
                     }
-                    
+
                     // Handle marking scheme if present
                     if (template.saved_marking_scheme_id) {
                         document.getElementById('saved_marking_scheme_id').value = template.saved_marking_scheme_id;
                         document.getElementById('savedSchemeName').textContent = template.marking_scheme_name || '';
                         document.getElementById('savedSchemeInfo').style.display = 'block';
                     }
-                    
+
                     // Show template info
                     const templateInfo = document.getElementById('templateInfo');
                     const templateInfoText = document.getElementById('templateInfoText');
                     templateInfoText.textContent = `Template "${template.name}" loaded successfully.`;
                     templateInfo.style.display = 'block';
-                    
+
                     // Scroll to template info
                     templateInfo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    
+
                     // Load available models for the selected provider
                     loadAvailableModels();
-                    
+
                 } else {
                     alert('Error loading template: ' + data.error);
                 }
@@ -1090,7 +1246,7 @@ content %}
     function toggleCustomModelBulk() {
         const modelSelect = document.getElementById('modelSelect');
         const customModelInput = document.getElementById('customModel');
-        
+
         if (modelSelect.value === 'custom') {
             customModelInput.style.display = 'block';
             customModelInput.disabled = false;
@@ -1202,14 +1358,14 @@ content %}
     document.getElementById('provider').addEventListener('change', function() {
         loadAvailableModels();
     });
-    
+
     // Add event listener for unified model selection
     document.getElementById('enableComparison').addEventListener('change', function() {
         if (this.checked) {
             loadAllProvidersModels();
         }
     });
-    
+
     // Add event listeners for model checkboxes to update count
     document.addEventListener('change', '.unified-model-checkbox', function() {
         updateSelectedModelCount();
@@ -1220,7 +1376,7 @@ content %}
         const createBatch = document.getElementById('createBatchFromJob');
         const batchSelection = document.getElementById('batchSelection');
         const batchCreationSettings = document.getElementById('batchCreationSettings');
-        
+
         if (addToExisting.checked) {
             batchSelection.style.display = 'block';
             batchCreationSettings.style.display = 'none';
@@ -1237,18 +1393,18 @@ content %}
     function loadAvailableBatches() {
         const batchSelect = document.getElementById('existingBatch');
         batchSelect.innerHTML = '<option value="">Loading batches...</option>';
-        
+
         fetch('/api/batches?per_page=100')
             .then(response => response.json())
             .then(data => {
                 batchSelect.innerHTML = '<option value="">Select a batch...</option>';
-                
+
                 if (data.success && data.batches && data.batches.length > 0) {
                     // Filter to show batches that can accept new jobs (exclude failed, cancelled, archived)
-                    const availableBatches = data.batches.filter(batch => 
+                    const availableBatches = data.batches.filter(batch =>
                         !['failed', 'cancelled', 'archived'].includes(batch.status)
                     );
-                    
+
                     if (availableBatches.length > 0) {
                         availableBatches.forEach(batch => {
                             const option = document.createElement('option');
@@ -1482,7 +1638,7 @@ content %}
 
         // Ensure job_id is included in the form data
         formData.set('job_id', jobId);
-        
+
         // Include template ID for usage tracking
         const templateId = document.getElementById('jobTemplateSelect').value;
         if (templateId) {
@@ -1610,7 +1766,7 @@ content %}
             if (data.success) {
                 // Close modal and show success
                 bootstrap.Modal.getInstance(document.getElementById('savePromptModal')).hide();
-                
+
                 // Show success notification
                 const alertDiv = document.createElement('div');
                 alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
@@ -1620,12 +1776,12 @@ content %}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 `;
                 document.body.appendChild(alertDiv);
-                
+
                 // Auto-remove notification after 3 seconds
                 setTimeout(() => {
                     alertDiv.remove();
                 }, 3000);
-                
+
                 // Optionally refresh the saved prompts dropdown
                 location.reload();
             } else {
@@ -1722,7 +1878,7 @@ content %}
             if (data.success) {
                 // Close modal and show success
                 bootstrap.Modal.getInstance(document.getElementById('saveMarkingSchemeModal')).hide();
-                
+
                 // Show success notification
                 const alertDiv = document.createElement('div');
                 alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
@@ -1732,12 +1888,12 @@ content %}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 `;
                 document.body.appendChild(alertDiv);
-                
+
                 // Auto-remove notification after 3 seconds
                 setTimeout(() => {
                     alertDiv.remove();
                 }, 3000);
-                
+
                 // Optionally refresh the saved marking schemes dropdown
                 location.reload();
             } else {
@@ -1756,14 +1912,25 @@ content %}
 </script>
 
 <!-- Save Prompt Modal -->
-<div class="modal fade" id="savePromptModal" tabindex="-1" aria-labelledby="savePromptModalLabel" aria-hidden="true">
+<div
+    class="modal fade"
+    id="savePromptModal"
+    tabindex="-1"
+    aria-labelledby="savePromptModalLabel"
+    aria-hidden="true"
+>
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="savePromptModalLabel">
                     <i class="fas fa-save me-2"></i>Save Current Prompt
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
             </div>
             <div class="modal-body">
                 <form id="savePromptForm">
@@ -1771,28 +1938,52 @@ content %}
                         <label for="promptName" class="form-label">
                             <i class="fas fa-tag me-1"></i>Name *
                         </label>
-                        <input type="text" class="form-control" id="promptName" required 
-                               placeholder="Enter a descriptive name for this prompt">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="promptName"
+                            required
+                            placeholder="Enter a descriptive name for this prompt"
+                        />
                     </div>
                     <div class="mb-3">
                         <label for="promptDescription" class="form-label">
                             <i class="fas fa-info-circle me-1"></i>Description
                         </label>
-                        <textarea class="form-control" id="promptDescription" rows="3"
-                                  placeholder="Optional: Describe what this prompt is used for"></textarea>
+                        <textarea
+                            class="form-control"
+                            id="promptDescription"
+                            rows="3"
+                            placeholder="Optional: Describe what this prompt is used for"
+                        ></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="promptCategory" class="form-label">
                             <i class="fas fa-folder me-1"></i>Category
                         </label>
-                        <input type="text" class="form-control" id="promptCategory" 
-                               placeholder="Optional: essay, report, assignment, etc.">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="promptCategory"
+                            placeholder="Optional: essay, report, assignment, etc."
+                        />
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="submitPromptSave()" id="savePromptBtn">
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    onclick="submitPromptSave()"
+                    id="savePromptBtn"
+                >
                     <i class="fas fa-save me-1"></i>Save Prompt
                 </button>
             </div>
@@ -1801,14 +1992,25 @@ content %}
 </div>
 
 <!-- Save Marking Scheme Modal -->
-<div class="modal fade" id="saveMarkingSchemeModal" tabindex="-1" aria-labelledby="saveMarkingSchemeModalLabel" aria-hidden="true">
+<div
+    class="modal fade"
+    id="saveMarkingSchemeModal"
+    tabindex="-1"
+    aria-labelledby="saveMarkingSchemeModalLabel"
+    aria-hidden="true"
+>
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="saveMarkingSchemeModalLabel">
                     <i class="fas fa-save me-2"></i>Save Current Marking Scheme
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
             </div>
             <div class="modal-body">
                 <form id="saveMarkingSchemeForm">
@@ -1816,28 +2018,55 @@ content %}
                         <label for="markingSchemeName" class="form-label">
                             <i class="fas fa-tag me-1"></i>Name *
                         </label>
-                        <input type="text" class="form-control" id="markingSchemeName" required 
-                               placeholder="Enter a descriptive name for this marking scheme">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="markingSchemeName"
+                            required
+                            placeholder="Enter a descriptive name for this marking scheme"
+                        />
                     </div>
                     <div class="mb-3">
-                        <label for="markingSchemeDescription" class="form-label">
+                        <label
+                            for="markingSchemeDescription"
+                            class="form-label"
+                        >
                             <i class="fas fa-info-circle me-1"></i>Description
                         </label>
-                        <textarea class="form-control" id="markingSchemeDescription" rows="3"
-                                  placeholder="Optional: Describe what this marking scheme covers"></textarea>
+                        <textarea
+                            class="form-control"
+                            id="markingSchemeDescription"
+                            rows="3"
+                            placeholder="Optional: Describe what this marking scheme covers"
+                        ></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="markingSchemeCategory" class="form-label">
                             <i class="fas fa-folder me-1"></i>Category
                         </label>
-                        <input type="text" class="form-control" id="markingSchemeCategory" 
-                               placeholder="Optional: essay, report, assignment, etc.">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="markingSchemeCategory"
+                            placeholder="Optional: essay, report, assignment, etc."
+                        />
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="submitMarkingSchemeSave()" id="saveMarkingSchemeBtn">
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    onclick="submitMarkingSchemeSave()"
+                    id="saveMarkingSchemeBtn"
+                >
                     <i class="fas fa-save me-1"></i>Save Marking Scheme
                 </button>
             </div>

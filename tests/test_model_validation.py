@@ -239,7 +239,7 @@ class TestModelValidation:
     @pytest.mark.api
     def test_model_provider_endpoints(self, client):
         """Test individual model provider endpoints."""
-        providers = ["openrouter", "claude", "gemini", "openai", "ollama"]
+        providers = ["openrouter", "claude", "gemini", "openai", "ollama", "nanogpt", "chutes", "zai"]
 
         for provider in providers:
             response = client.get(f"/api/models/{provider}")

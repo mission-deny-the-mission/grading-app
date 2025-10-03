@@ -57,6 +57,9 @@ def save_config():
         config.claude_api_key = request.form.get("claude_api_key", "").strip() or None
         config.gemini_api_key = request.form.get("gemini_api_key", "").strip() or None
         config.openai_api_key = request.form.get("openai_api_key", "").strip() or None
+        config.nanogpt_api_key = request.form.get("nanogpt_api_key", "").strip() or None
+        config.chutes_api_key = request.form.get("chutes_api_key", "").strip() or None
+        config.zai_api_key = request.form.get("zai_api_key", "").strip() or None
         config.lm_studio_url = request.form.get(
             "lm_studio_url", "http://localhost:1234/v1"
         ).strip()
@@ -64,6 +67,7 @@ def save_config():
             "ollama_url", "http://localhost:11434"
         ).strip()
         config.default_prompt = request.form.get("default_prompt", "").strip() or None
+        config.zai_pricing_plan = request.form.get("zai_pricing_plan", "normal").strip() or "normal"
 
         # Update default model configurations
         config.openrouter_default_model = (
@@ -77,6 +81,15 @@ def save_config():
         )
         config.openai_default_model = (
             request.form.get("openai_default_model", "").strip() or None
+        )
+        config.nanogpt_default_model = (
+            request.form.get("nanogpt_default_model", "").strip() or None
+        )
+        config.chutes_default_model = (
+            request.form.get("chutes_default_model", "").strip() or None
+        )
+        config.zai_default_model = (
+            request.form.get("zai_default_model", "").strip() or None
         )
         config.lm_studio_default_model = (
             request.form.get("lm_studio_default_model", "").strip() or None
@@ -113,6 +126,10 @@ def load_config():
             "claude_api_key": config.claude_api_key or os.getenv("CLAUDE_API_KEY", ""),
             "gemini_api_key": config.gemini_api_key or os.getenv("GEMINI_API_KEY", ""),
             "openai_api_key": config.openai_api_key or os.getenv("OPENAI_API_KEY", ""),
+            "nanogpt_api_key": config.nanogpt_api_key or os.getenv("NANOGPT_API_KEY", ""),
+            "chutes_api_key": config.chutes_api_key or os.getenv("CHUTES_API_KEY", ""),
+            "zai_api_key": config.zai_api_key or os.getenv("ZAI_API_KEY", ""),
+            "zai_pricing_plan": config.zai_pricing_plan or "normal",
             "lm_studio_url": config.lm_studio_url
             or os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
             "ollama_url": config.ollama_url
@@ -124,6 +141,9 @@ def load_config():
             "claude_default_model": config.claude_default_model or "",
             "gemini_default_model": config.gemini_default_model or "",
             "openai_default_model": config.openai_default_model or "",
+            "nanogpt_default_model": config.nanogpt_default_model or "",
+            "chutes_default_model": config.chutes_default_model or "",
+            "zai_default_model": config.zai_default_model or "",
             "lm_studio_default_model": config.lm_studio_default_model or "",
             "ollama_default_model": config.ollama_default_model or "",
         }
@@ -135,6 +155,9 @@ def load_config():
             "claude_api_key": os.getenv("CLAUDE_API_KEY", ""),
             "gemini_api_key": os.getenv("GEMINI_API_KEY", ""),
             "openai_api_key": os.getenv("OPENAI_API_KEY", ""),
+            "nanogpt_api_key": os.getenv("NANOGPT_API_KEY", ""),
+            "chutes_api_key": os.getenv("CHUTES_API_KEY", ""),
+            "zai_api_key": os.getenv("ZAI_API_KEY", ""),
             "lm_studio_url": os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
             "ollama_url": os.getenv(
                 "OLLAMA_URL", "http://localhost:11434"
@@ -257,6 +280,94 @@ def test_api_key():
                     {"success": False, "error": f"Invalid OpenAI API key: {str(e)}"}
                 )
 
+        elif api_type == "nanogpt":
+            # Test NanoGPT API key
+            try:
+                import requests
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                response = requests.get(
+                    "https://nano-gpt.com/api/v1/models",
+                    headers=headers,
+                    timeout=30,
+                )
+                if response.status_code == 200:
+                    return jsonify({"success": True, "message": "NanoGPT API key is valid"})
+                else:
+                    return jsonify({"success": False, "error": f"NanoGPT API error: {response.status_code}"})
+            except Exception as e:
+                return jsonify({"success": False, "error": f"Invalid NanoGPT API key: {str(e)}"})
+
+        elif api_type == "chutes":
+            # Test Chutes AI API key
+            try:
+                import requests
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                response = requests.get(
+                    "https://api.chutes.ai/v1/models",
+                    headers=headers,
+                    timeout=30,
+                )
+                if response.status_code == 200:
+                    return jsonify({"success": True, "message": "Chutes AI API key is valid"})
+                else:
+                    return jsonify({"success": False, "error": f"Chutes AI API error: {response.status_code}"})
+            except Exception as e:
+                return jsonify({"success": False, "error": f"Invalid Chutes AI API key: {str(e)}"})
+
+        elif api_type == "zai":
+            # Test Z.AI API key (Normal API)
+            try:
+                import requests
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                # Use a simple chat completion test
+                payload = {
+                    "model": "glm-4.5-flash",
+                    "messages": [{"role": "user", "content": "Hello"}],
+                    "max_tokens": 10,
+                }
+                response = requests.post(
+                    "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
+                )
+                if response.status_code == 200:
+                    return jsonify({"success": True, "message": "Z.AI API key is valid (Normal API)"})
+                else:
+                    return jsonify({"success": False, "error": f"Z.AI API error: {response.status_code}"})
+            except Exception as e:
+                return jsonify({"success": False, "error": f"Invalid Z.AI API key: {str(e)}"})
+
+        elif api_type == "zai_coding_plan":
+            # Test Z.AI Coding Plan API key
+            try:
+                import requests
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                # Test models endpoint for coding plan
+                response = requests.get(
+                    "https://open.bigmodel.cn/api/paas/v4/models",
+                    headers=headers,
+                    timeout=30,
+                )
+                if response.status_code == 200:
+                    return jsonify({"success": True, "message": "Z.AI Coding Plan API key is valid"})
+                else:
+                    return jsonify({"success": False, "error": f"Z.AI Coding Plan API error: {response.status_code}"})
+            except Exception as e:
+                return jsonify({"success": False, "error": f"Invalid Z.AI Coding Plan API key: {str(e)}"})
+
         else:
             return jsonify({"success": False, "error": "Invalid API type"})
 
@@ -330,35 +441,35 @@ def test_ollama():
             headers={"Content-Type": "application/json"},
             timeout=10,
         )
-        
+
         if models_response.status_code != 200:
             return jsonify({
                 "success": False,
                 "error": f"Ollama models endpoint not accessible: {models_response.status_code} - {models_response.text}"
             })
-        
+
         models_data = models_response.json()
         if not models_data.get("models"):
             return jsonify({
                 "success": False,
                 "error": "No models found on Ollama server. Please install at least one model."
             })
-        
+
         # Find a model that supports generation (not embedding models)
         generative_models = [
-            model for model in models_data["models"] 
+            model for model in models_data["models"]
             if not any(keyword in model["name"].lower() for keyword in ["embed", "minilm", "bert"])
         ]
-        
+
         if not generative_models:
             return jsonify({
                 "success": False,
                 "error": "No generative models found on Ollama server. Please install a generative model like llama2, mistral, or qwen."
             })
-        
+
         # Use the first generative model for testing
         test_model = generative_models[0]["name"]
-        
+
         # Test with a simple generation request
         response = requests.post(
             url,

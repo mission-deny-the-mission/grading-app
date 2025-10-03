@@ -67,6 +67,9 @@ class TestModelBackendIntegration:
                 "openai",
                 "lm_studio",
                 "ollama",
+                "nanogpt",
+                "chutes",
+                "zai",
             ]
 
             success_count = 0
@@ -233,6 +236,9 @@ class TestModelBackendIntegration:
             "openai",
             "lm_studio",
             "ollama",
+            "nanogpt",
+            "chutes",
+            "zai",
         ]
 
         for provider in required_providers:

@@ -784,6 +784,26 @@ Provide specific suggestions for technical improvements and clarity enhancements
                 { id: "llama2", name: "Llama 2" },
                 { id: "llama3", name: "Llama 3" },
             ],
+            nanogpt: [
+                { id: "gpt-4o", name: "GPT-4o" },
+                { id: "gpt-4o-mini", name: "GPT-4o Mini" },
+                { id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet" },
+            ],
+            chutes: [
+                { id: "gpt-4o", name: "GPT-4o" },
+                { id: "gpt-4o-mini", name: "GPT-4o Mini" },
+                { id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet" },
+            ],
+            zai: [
+                { id: "glm-4.6", name: "GLM-4.6" },
+                { id: "glm-4.5", name: "GLM-4.5" },
+                { id: "glm-4.5-x", name: "GLM-4.5 X" },
+            ],
+            "z.ai_coding_plan": [
+                { id: "glm-4.6", name: "GLM-4.6" },
+                { id: "glm-4.5", name: "GLM-4.5" },
+                { id: "glm-4.5-air", name: "GLM-4.5 Air" },
+            ],
         };
         return fallbackModels[provider] || [];
     }
@@ -1027,6 +1047,10 @@ Provide specific suggestions for technical improvements and clarity enhancements
             ollama: "Ollama",
             gemini: "Gemini",
             openai: "OpenAI",
+            nanogpt: "NanoGPT",
+            chutes: "Chutes AI",
+            zai: "Z.AI (Normal API)",
+            "z.ai_coding_plan": "Z.AI (Coding Plan)",
         };
         return displayNames[providerKey] || providerKey;
     }
@@ -1039,6 +1063,11 @@ Provide specific suggestions for technical improvements and clarity enhancements
             ollama: "microchip",
             gemini: "gem",
             openai: "bolt",
+            nanogpt: "brain",
+            chutes: "rocket",
+            zai: "star",
+            "z.ai": "star",
+            "z.ai_coding_plan": "code",
         };
         return icons[providerKey] || "question";
     }

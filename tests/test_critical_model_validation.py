@@ -18,19 +18,19 @@ class TestCriticalModelValidation:
         # instead of trying to extract from HTML
         response = client.get("/api/models")
         assert response.status_code == 200
-        
+
         models_data = response.get_json()
-        
+
         # Check that we have providers with the expected structure
-        required_providers = ["openrouter", "claude", "gemini", "openai", "lm_studio", "ollama"]
-        
+        required_providers = ["openrouter", "claude", "gemini", "openai", "lm_studio", "ollama", "nanogpt", "chutes", "zai"]
+
         valid_models = 0
         issues_found = 0
-        
+
         for provider in required_providers:
             if provider in models_data:
                 provider_data = models_data[provider]
-                
+
                 # Check structure
                 if "popular" in provider_data and "default" in provider_data:
                     # Validate naming patterns for popular models
@@ -39,13 +39,13 @@ class TestCriticalModelValidation:
                             valid_models += 1
                         else:
                             issues_found += 1
-                    
+
                     # Also validate default model
                     if self._validate_model_patterns(provider_data["default"]):
                         valid_models += 1
                     else:
                         issues_found += 1
-        
+
         # Should have mostly valid models with few issues
         assert valid_models > 0, "No valid models found"
         assert issues_found <= 5, f"Too many naming issues: {issues_found}"

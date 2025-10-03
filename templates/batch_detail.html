@@ -1,8 +1,5 @@
-{% extends "base.html" %}
-
-{% block title %}Batch Details - Document Grader{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Batch Details - Document Grader{%
+endblock %} {% block content %}
 <div class="row">
     <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -16,7 +13,10 @@
                 {% endif %}
             </div>
             <div>
-                <a href="{{ url_for('batches') }}" class="btn btn-outline-secondary">
+                <a
+                    href="{{ url_for('batches') }}"
+                    class="btn btn-outline-secondary"
+                >
                     <i class="fas fa-arrow-left me-2"></i>Back to Batches
                 </a>
             </div>
@@ -27,28 +27,41 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Batch Information</h5>
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Batch
+                            Information
+                        </h5>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-6">
                                 <small class="text-muted">Status</small>
-                                <div class="fw-bold">{{ batch.status.title() }}</div>
+                                <div class="fw-bold">
+                                    {{ batch.status.title() }}
+                                </div>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Created</small>
-                                <div class="fw-bold">{{ batch.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                                <div class="fw-bold">
+                                    {{ batch.created_at.strftime('%Y-%m-%d
+                                    %H:%M') }}
+                                </div>
                             </div>
                         </div>
-                        <hr>
+                        <hr />
                         <div class="row">
                             <div class="col-6">
                                 <small class="text-muted">Provider</small>
-                                <div class="fw-bold">{{ batch.provider.title() if batch.provider else 'Not set' }}</div>
+                                <div class="fw-bold">
+                                    {{ batch.provider.title() if batch.provider
+                                    else 'Not set' }}
+                                </div>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Model</small>
-                                <div class="fw-bold">{{ batch.model or 'Default' }}</div>
+                                <div class="fw-bold">
+                                    {{ batch.model or 'Default' }}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -57,29 +70,44 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Progress</h5>
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>Progress
+                        </h5>
                     </div>
                     <div class="card-body">
                         <div class="row text-center">
                             <div class="col-4">
-                                <div class="h4 text-primary">{{ batch.total_jobs }}</div>
+                                <div class="h4 text-primary">
+                                    {{ batch.total_jobs }}
+                                </div>
                                 <small class="text-muted">Total Jobs</small>
                             </div>
                             <div class="col-4">
-                                <div class="h4 text-success">{{ batch.completed_jobs }}</div>
+                                <div class="h4 text-success">
+                                    {{ batch.completed_jobs }}
+                                </div>
                                 <small class="text-muted">Completed</small>
                             </div>
                             <div class="col-4">
-                                <div class="h4 text-danger">{{ batch.failed_jobs }}</div>
+                                <div class="h4 text-danger">
+                                    {{ batch.failed_jobs }}
+                                </div>
                                 <small class="text-muted">Failed</small>
                             </div>
                         </div>
-                        <hr>
-                        <div class="progress" style="height: 10px;">
-                            {% set progress = (batch.completed_jobs / batch.total_jobs * 100) if batch.total_jobs > 0 else 0 %}
-                            <div class="progress-bar bg-success" style="width: {{ progress }}%"></div>
+                        <hr />
+                        <div class="progress" style="height: 10px">
+                            {% set progress = (batch.completed_jobs /
+                            batch.total_jobs * 100) if batch.total_jobs > 0 else
+                            0 %}
+                            <div
+                                class="progress-bar bg-success"
+                                style="width: {{ progress }}%"
+                            ></div>
                         </div>
-                        <small class="text-muted">{{ "%.1f"|format(progress) }}% complete</small>
+                        <small class="text-muted"
+                            >{{ "%.1f"|format(progress) }}% complete</small
+                        >
                     </div>
                 </div>
             </div>
@@ -88,13 +116,17 @@
         <!-- Batch Settings Summary -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Batch Settings</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Batch Settings
+                </h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-3">
                         <small class="text-muted">Provider</small>
-                        <div class="fw-bold">{{ batch.provider or 'Mixed' }}</div>
+                        <div class="fw-bold">
+                            {{ batch.provider or 'Mixed' }}
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted">Model</small>
@@ -102,47 +134,57 @@
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted">Temperature</small>
-                        <div class="fw-bold">{{ batch.temperature or 'Default' }}</div>
+                        <div class="fw-bold">
+                            {{ batch.temperature or 'Default' }}
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted">Max Tokens</small>
-                        <div class="fw-bold">{{ batch.max_tokens or 'Default' }}</div>
+                        <div class="fw-bold">
+                            {{ batch.max_tokens or 'Default' }}
+                        </div>
                     </div>
                 </div>
                 {% if batch.models_to_compare %}
-                <hr>
+                <hr />
                 <div class="row">
                     <div class="col-12">
                         <small class="text-muted">Multi-Model Comparison</small>
                         <div class="fw-bold text-primary">
                             <i class="fas fa-layer-group me-1"></i>
-                            Enabled ({{ batch.models_to_compare|length }} models)
+                            Enabled ({{ batch.models_to_compare|length }}
+                            models)
                         </div>
                         <div class="mt-2">
                             {% for model in batch.models_to_compare %}
-                            <span class="badge bg-secondary me-1">{{ model }}</span>
+                            <span class="badge bg-secondary me-1"
+                                >{{ model }}</span
+                            >
                             {% endfor %}
                         </div>
                     </div>
                 </div>
-                {% endif %}
-                {% if batch.prompt or batch.saved_prompt_id or batch.saved_marking_scheme_id %}
-                <hr>
+                {% endif %} {% if batch.prompt or batch.saved_prompt_id or
+                batch.saved_marking_scheme_id %}
+                <hr />
                 <div class="row">
                     {% if batch.prompt %}
                     <div class="col-md-6">
                         <small class="text-muted">Default Prompt</small>
-                        <div class="bg-light p-2 rounded" style="max-height: 100px; overflow-y: auto;">
+                        <div
+                            class="bg-light p-2 rounded"
+                            style="max-height: 100px; overflow-y: auto"
+                        >
                             <small>{{ batch.prompt }}</small>
                         </div>
                     </div>
-                    {% endif %}
-                    {% if batch.saved_prompt_id %}
+                    {% endif %} {% if batch.saved_prompt_id %}
                     <div class="col-md-6">
                         <small class="text-muted">Saved Prompt</small>
                         <div class="fw-bold">
-                            {% set saved_prompt = batch.get_batch_settings_summary()['saved_prompt_name'] %}
-                            {{ saved_prompt or 'Not found' }}
+                            {% set saved_prompt =
+                            batch.get_batch_settings_summary()['saved_prompt_name']
+                            %} {{ saved_prompt or 'Not found' }}
                         </div>
                     </div>
                     {% endif %}
@@ -151,25 +193,38 @@
                 <div class="mt-2">
                     <small class="text-muted">Saved Marking Scheme</small>
                     <div class="fw-bold">
-                        {% set saved_scheme = batch.get_batch_settings_summary()['saved_marking_scheme_name'] %}
-                        {{ saved_scheme or 'Not found' }}
+                        {% set saved_scheme =
+                        batch.get_batch_settings_summary()['saved_marking_scheme_name']
+                        %} {{ saved_scheme or 'Not found' }}
                     </div>
                 </div>
-                {% endif %}
-                {% endif %}
+                {% endif %} {% endif %}
             </div>
         </div>
 
         <!-- Jobs in this Batch -->
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Jobs in this Batch</h5>
+            <div
+                class="card-header d-flex justify-content-between align-items-center"
+            >
+                <h5 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>Jobs in this Batch
+                </h5>
                 <div>
-                    {% if batch.status not in ['failed', 'cancelled', 'archived'] %}
-                    <button class="btn btn-sm btn-success me-2" data-bs-toggle="modal" data-bs-target="#createJobModal">
+                    {% if batch.status not in ['failed', 'cancelled',
+                    'archived'] %}
+                    <button
+                        class="btn btn-sm btn-success me-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#createJobModal"
+                    >
                         <i class="fas fa-plus me-1"></i>Create Job
                     </button>
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addJobsModal">
+                    <button
+                        class="btn btn-sm btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#addJobsModal"
+                    >
                         <i class="fas fa-plus-circle me-1"></i>Add Existing Jobs
                     </button>
                     {% endif %}
@@ -193,34 +248,60 @@
                             {% for job in batch.jobs %}
                             <tr>
                                 <td>
-                                    <div class="fw-bold">{{ job.job_name }}</div>
+                                    <div class="fw-bold">
+                                        {{ job.job_name }}
+                                    </div>
                                     {% if job.description %}
-                                    <small class="text-muted">{{ job.description }}</small>
+                                    <small class="text-muted"
+                                        >{{ job.description }}</small
+                                    >
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <small class="text-muted">{{ job.provider }}</small>
+                                    <small class="text-muted"
+                                        >{{ job.provider }}</small
+                                    >
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ 'success' if job.status == 'completed' else 'warning' if job.status == 'processing' else 'danger' if job.status == 'failed' else 'secondary' }}">
+                                    <span
+                                        class="badge bg-{{ 'success' if job.status == 'completed' else 'warning' if job.status == 'processing' else 'danger' if job.status == 'failed' else 'secondary' }}"
+                                    >
                                         {{ job.status.title() }}
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="progress" style="height: 6px; width: 100px;">
-                                        <div class="progress-bar bg-success" style="width: {{ job.get_progress() }}%"></div>
+                                    <div
+                                        class="progress"
+                                        style="height: 6px; width: 100px"
+                                    >
+                                        <div
+                                            class="progress-bar bg-success"
+                                            style="width: {{ job.get_progress() }}%"
+                                        ></div>
                                     </div>
-                                    <small class="text-muted">{{ job.get_progress() }}%</small>
+                                    <small class="text-muted"
+                                        >{{ job.get_progress() }}%</small
+                                    >
                                 </td>
                                 <td>
-                                    <small class="text-muted">{{ job.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    <small class="text-muted"
+                                        >{{ job.created_at.strftime('%Y-%m-%d
+                                        %H:%M') }}</small
+                                    >
                                 </td>
                                 <td>
-                                    <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                    <a
+                                        href="{{ url_for('job_detail', job_id=job.id) }}"
+                                        class="btn btn-sm btn-outline-primary me-1"
+                                    >
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    {% if batch.status not in ['failed', 'cancelled', 'archived'] %}
-                                    <button class="btn btn-sm btn-outline-danger" onclick="removeJobFromBatch('{{ job.id }}', '{{ job.job_name }}')">
+                                    {% if batch.status not in ['failed',
+                                    'cancelled', 'archived'] %}
+                                    <button
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="removeJobFromBatch('{{ job.id }}', '{{ job.job_name }}')"
+                                    >
                                         <i class="fas fa-times"></i>
                                     </button>
                                     {% endif %}
@@ -234,11 +315,20 @@
                 <div class="text-center py-4">
                     <i class="fas fa-tasks fa-2x text-muted mb-3"></i>
                     <p class="text-muted">No jobs found in this batch</p>
-                    {% if batch.status not in ['failed', 'cancelled', 'archived'] %}
-                    <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#createJobModal">
+                    {% if batch.status not in ['failed', 'cancelled',
+                    'archived'] %}
+                    <button
+                        class="btn btn-primary me-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#createJobModal"
+                    >
                         <i class="fas fa-plus me-1"></i>Create Your First Job
                     </button>
-                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addJobsModal">
+                    <button
+                        class="btn btn-outline-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#addJobsModal"
+                    >
                         <i class="fas fa-plus-circle me-1"></i>Add Existing Jobs
                     </button>
                     {% endif %}
@@ -250,117 +340,278 @@
 </div>
 
 <!-- Create Job Modal -->
-<div class="modal fade" id="createJobModal" tabindex="-1" data-bs-backdrop="false">
+<div
+    class="modal fade"
+    id="createJobModal"
+    tabindex="-1"
+    data-bs-backdrop="false"
+>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Create New Job in Batch</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>Create New Job in Batch
+                </h5>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                ></button>
             </div>
             <div class="modal-body">
                 <form id="createJobForm">
                     <div class="mb-3">
-                        <label for="jobName" class="form-label">Job Name *</label>
-                        <input type="text" class="form-control" id="jobName" required>
+                        <label for="jobName" class="form-label"
+                            >Job Name *</label
+                        >
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="jobName"
+                            required
+                        />
                     </div>
                     <div class="mb-3">
-                        <label for="jobDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="jobDescription" rows="3"></textarea>
+                        <label for="jobDescription" class="form-label"
+                            >Description</label
+                        >
+                        <textarea
+                            class="form-control"
+                            id="jobDescription"
+                            rows="3"
+                        ></textarea>
                     </div>
 
                     <!-- File Upload Section -->
                     <div class="mb-3">
-                        <label for="jobFiles" class="form-label">Upload Documents to Grade *</label>
-                        <input type="file" class="form-control" id="jobFiles" multiple accept=".docx,.pdf,.txt" required>
-                        <div class="form-text">Select one or more documents (.docx, .pdf, .txt) to be graded. Maximum 100MB per file.</div>
+                        <label for="jobFiles" class="form-label"
+                            >Upload Documents to Grade *</label
+                        >
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="jobFiles"
+                            multiple
+                            accept=".docx,.pdf,.txt"
+                            required
+                        />
+                        <div class="form-text">
+                            Select one or more documents (.docx, .pdf, .txt) to
+                            be graded. Maximum 100MB per file.
+                        </div>
                         <div id="fileList" class="mt-2"></div>
                     </div>
-                    
+
                     <!-- Settings Override Section -->
                     <div class="card bg-light">
                         <div class="card-header">
                             <h6 class="mb-0">
-                                <i class="fas fa-info-circle me-2"></i>Settings (Override Batch Defaults)
-                                <small class="text-muted">Leave empty to inherit from batch</small>
+                                <i class="fas fa-info-circle me-2"></i>Settings
+                                (Override Batch Defaults)
+                                <small class="text-muted"
+                                    >Leave empty to inherit from batch</small
+                                >
                             </h6>
                         </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <label for="jobProvider" class="form-label">Provider</label>
-                                    <select class="form-control" id="jobProvider">
-                                        <option value="">Inherit from batch ({{ batch.provider or 'Default' }})</option>
-                                        <option value="openrouter">OpenRouter</option>
+                                    <label for="jobProvider" class="form-label"
+                                        >Provider</label
+                                    >
+                                    <select
+                                        class="form-control"
+                                        id="jobProvider"
+                                    >
+                                        <option value="">
+                                            Inherit from batch ({{
+                                            batch.provider or 'Default' }})
+                                        </option>
+                                        <option value="openrouter">
+                                            OpenRouter
+                                        </option>
                                         <option value="claude">Claude</option>
-                                        <option value="lm_studio">LM Studio</option>
+                                        <option value="gemini">
+                                            Google Gemini
+                                        </option>
+                                        <option value="openai">
+                                            OpenAI (Direct)
+                                        </option>
+                                        <option value="nanogpt">NanoGPT</option>
+                                        <option value="chutes">
+                                            Chutes AI
+                                        </option>
+                                        <option value="zai">Z.AI</option>
+                                        <option value="lm_studio">
+                                            LM Studio
+                                        </option>
+                                        <option value="ollama">Ollama</option>
                                     </select>
                                 </div>
-                             <div class="col-md-6">
-                                 <label for="jobModel" class="form-label">Model</label>
-                                 <div class="d-flex align-items-center">
-                                     <select class="form-control" id="jobModel">
-                                         <option value="">Inherit from batch ({{ batch.model or 'Default' }})</option>
-                                     </select>
-                                     <div class="spinner-border spinner-border-sm text-primary ms-2" 
-                                          id="jobModelSpinner" style="display: none;" role="status">
-                                         <span class="visually-hidden">Loading...</span>
-                                     </div>
-                                 </div>
-                                 <div class="invalid-feedback" id="jobModelError" style="display: none;"></div>
-                             </div>
+                                <div class="col-md-6">
+                                    <label for="jobModel" class="form-label"
+                                        >Model</label
+                                    >
+                                    <div class="d-flex align-items-center">
+                                        <select
+                                            class="form-control"
+                                            id="jobModel"
+                                        >
+                                            <option value="">
+                                                Inherit from batch ({{
+                                                batch.model or 'Default' }})
+                                            </option>
+                                        </select>
+                                        <div
+                                            class="spinner-border spinner-border-sm text-primary ms-2"
+                                            id="jobModelSpinner"
+                                            style="display: none"
+                                            role="status"
+                                        >
+                                            <span class="visually-hidden"
+                                                >Loading...</span
+                                            >
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="invalid-feedback"
+                                        id="jobModelError"
+                                        style="display: none"
+                                    ></div>
+                                </div>
                             </div>
                             <div class="row mt-3">
                                 <div class="col-md-6">
-                                    <label for="jobTemperature" class="form-label">Temperature</label>
-                                    <input type="number" class="form-control" id="jobTemperature" step="0.1" min="0" max="2" placeholder="Inherit from batch ({{ batch.temperature or 'Default' }})">
+                                    <label
+                                        for="jobTemperature"
+                                        class="form-label"
+                                        >Temperature</label
+                                    >
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="jobTemperature"
+                                        step="0.1"
+                                        min="0"
+                                        max="2"
+                                        placeholder="Inherit from batch ({{ batch.temperature or 'Default' }})"
+                                    />
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="jobMaxTokens" class="form-label">Max Tokens</label>
-                                    <input type="number" class="form-control" id="jobMaxTokens" min="1" placeholder="Inherit from batch ({{ batch.max_tokens or 'Default' }})">
+                                    <label for="jobMaxTokens" class="form-label"
+                                        >Max Tokens</label
+                                    >
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="jobMaxTokens"
+                                        min="1"
+                                        placeholder="Inherit from batch ({{ batch.max_tokens or 'Default' }})"
+                                    />
                                 </div>
                             </div>
                             <div class="mt-3">
-                                <label for="jobPrompt" class="form-label">Custom Prompt</label>
-                                <textarea class="form-control" id="jobPrompt" rows="4" placeholder="Inherit from batch{% if batch.prompt %}: {{ batch.prompt[:50] }}...{% endif %}"></textarea>
+                                <label for="jobPrompt" class="form-label"
+                                    >Custom Prompt</label
+                                >
+                                <textarea
+                                    class="form-control"
+                                    id="jobPrompt"
+                                    rows="4"
+                                    placeholder="Inherit from batch{% if batch.prompt %}: {{ batch.prompt[:50] }}...{% endif %}"
+                                ></textarea>
                             </div>
-                            
+
                             <!-- Multi-model comparison section -->
                             <div class="mt-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableJobMultiModel" 
-                                           {% if batch.models_to_compare %}checked{% endif %}>
-                                    <label class="form-check-label" for="enableJobMultiModel">
-                                        Override multi-model comparison 
-                                        {% if batch.models_to_compare %}
-                                            <small class="text-muted">(batch has {{ batch.models_to_compare|length }} models)</small>
+                                    <input
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        id="enableJobMultiModel"
+                                        {%
+                                        if
+                                        batch.models_to_compare
+                                        %}checked{%
+                                        endif
+                                        %}
+                                    />
+                                    <label
+                                        class="form-check-label"
+                                        for="enableJobMultiModel"
+                                    >
+                                        Override multi-model comparison {% if
+                                        batch.models_to_compare %}
+                                        <small class="text-muted"
+                                            >(batch has {{
+                                            batch.models_to_compare|length }}
+                                            models)</small
+                                        >
                                         {% else %}
-                                            <small class="text-muted">(batch uses single model)</small>
+                                        <small class="text-muted"
+                                            >(batch uses single model)</small
+                                        >
                                         {% endif %}
                                     </label>
                                 </div>
-                                
-                                <div id="jobMultiModelSection" class="mt-2" {% if not batch.models_to_compare %}style="display: none;"{% endif %}>
-                                    <small class="text-muted">Select models for this specific job (overrides batch settings)</small>
+
+                                <div
+                                    id="jobMultiModelSection"
+                                    class="mt-2"
+                                    {%
+                                    if
+                                    not
+                                    batch.models_to_compare
+                                    %}style="display: none;"
+                                    {%
+                                    endif
+                                    %}
+                                >
+                                    <small class="text-muted"
+                                        >Select models for this specific job
+                                        (overrides batch settings)</small
+                                    >
                                     <div class="row mt-2">
                                         <div class="col-md-6">
-                                            <h6 class="text-muted small">OpenRouter Models</h6>
+                                            <h6 class="text-muted small">
+                                                OpenRouter Models
+                                            </h6>
                                             <div id="jobPopularModels">
                                                 <!-- Popular models will be loaded here -->
                                             </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <h6 class="text-muted small">Other Providers</h6>
+                                            <h6 class="text-muted small">
+                                                Other Providers
+                                            </h6>
                                             <div class="form-check">
-                                                <input class="form-check-input job-model-checkbox" type="checkbox" 
-                                                       name="job_models_to_compare[]" value="claude-4-opus-20250805" id="job_claude_direct">
-                                                <label class="form-check-label small" for="job_claude_direct">
-                                                    Claude 3.5 Sonnet (Direct API)
+                                                <input
+                                                    class="form-check-input job-model-checkbox"
+                                                    type="checkbox"
+                                                    name="job_models_to_compare[]"
+                                                    value="claude-4-opus-20250805"
+                                                    id="job_claude_direct"
+                                                />
+                                                <label
+                                                    class="form-check-label small"
+                                                    for="job_claude_direct"
+                                                >
+                                                    Claude 3.5 Sonnet (Direct
+                                                    API)
                                                 </label>
                                             </div>
                                             <div class="form-check">
-                                                <input class="form-check-input job-model-checkbox" type="checkbox" 
-                                                       name="job_models_to_compare[]" value="local-model" id="job_lm_studio">
-                                                <label class="form-check-label small" for="job_lm_studio">
+                                                <input
+                                                    class="form-check-input job-model-checkbox"
+                                                    type="checkbox"
+                                                    name="job_models_to_compare[]"
+                                                    value="local-model"
+                                                    id="job_lm_studio"
+                                                />
+                                                <label
+                                                    class="form-check-label small"
+                                                    for="job_lm_studio"
+                                                >
                                                     LM Studio (Local)
                                                 </label>
                                             </div>
@@ -373,24 +624,54 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="createJob()">Create Job</button>
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-success"
+                    onclick="createJob()"
+                >
+                    Create Job
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Add Existing Jobs Modal -->
-<div class="modal fade" id="addJobsModal" tabindex="-1" data-bs-backdrop="false">
+<div
+    class="modal fade"
+    id="addJobsModal"
+    tabindex="-1"
+    data-bs-backdrop="false"
+>
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add Existing Jobs to Batch</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">
+                    <i class="fas fa-plus-circle me-2"></i>Add Existing Jobs to
+                    Batch
+                </h5>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                ></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <input type="text" class="form-control" id="jobSearch" placeholder="Search jobs..." onkeyup="searchAvailableJobs()">
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="jobSearch"
+                        placeholder="Search jobs..."
+                        onkeyup="searchAvailableJobs()"
+                    />
                 </div>
                 <div id="availableJobsList">
                     <div class="text-center py-4">
@@ -403,13 +684,26 @@
                 <div class="mt-3">
                     <small class="text-muted">
                         <i class="fas fa-info-circle me-1"></i>
-                        Only jobs not currently assigned to any batch are shown. Selected jobs will inherit this batch's settings.
+                        Only jobs not currently assigned to any batch are shown.
+                        Selected jobs will inherit this batch's settings.
                     </small>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="addSelectedJobs()" id="addJobsBtn" disabled>
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="addSelectedJobs()"
+                    id="addJobsBtn"
+                    disabled
+                >
                     Add Selected Jobs (<span id="selectedCount">0</span>)
                 </button>
             </div>
@@ -418,467 +712,467 @@
 </div>
 
 <script>
-let selectedJobs = [];
-let availableJobs = [];
-let selectedFiles = [];
+    let selectedJobs = [];
+    let availableJobs = [];
+    let selectedFiles = [];
 
-// Load available jobs when modal opens
-$('#addJobsModal').on('show.bs.modal', function() {
-    loadAvailableJobs();
-});
-
-// Handle file selection and display
-$('#jobFiles').on('change', function() {
-    selectedFiles = Array.from(this.files);
-    displaySelectedFiles();
-});
-
-// Display selected files
-function displaySelectedFiles() {
-    const fileListDiv = $('#fileList');
-    
-    if (selectedFiles.length === 0) {
-        fileListDiv.html('');
-        return;
-    }
-    
-    let html = '<div class="border rounded p-2"><small class="text-muted fw-bold">Selected Files:</small><ul class="mb-0 mt-1">';
-    selectedFiles.forEach((file, index) => {
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        html += `<li class="small">
-            ${file.name} <span class="text-muted">(${fileSize} MB)</span>
-            <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="removeFile(${index})">
-                <i class="fas fa-times"></i>
-            </button>
-        </li>`;
+    // Load available jobs when modal opens
+    $('#addJobsModal').on('show.bs.modal', function() {
+        loadAvailableJobs();
     });
-    html += '</ul></div>';
-    fileListDiv.html(html);
-}
 
-// Remove a file from selection
-function removeFile(index) {
-    selectedFiles.splice(index, 1);
-    
-    // Update the file input
-    const dt = new DataTransfer();
-    selectedFiles.forEach(file => dt.items.add(file));
-    $('#jobFiles')[0].files = dt.files;
-    
-    displaySelectedFiles();
-}
+    // Handle file selection and display
+    $('#jobFiles').on('change', function() {
+        selectedFiles = Array.from(this.files);
+        displaySelectedFiles();
+    });
 
-// Reset the create job form
-function resetCreateJobForm() {
-    $('#createJobForm')[0].reset();
-    selectedFiles = [];
-    $('#fileList').html('');
-}
+    // Display selected files
+    function displaySelectedFiles() {
+        const fileListDiv = $('#fileList');
 
-// Reset form when modal is closed
-$('#createJobModal').on('hidden.bs.modal', function() {
-    resetCreateJobForm();
-});
+        if (selectedFiles.length === 0) {
+            fileListDiv.html('');
+            return;
+        }
 
-// Handle job multi-model comparison toggle
-$('#enableJobMultiModel').on('change', function() {
-    if ($(this).is(':checked')) {
-        $('#jobMultiModelSection').show();
-        loadJobPopularModels();
-    } else {
-        $('#jobMultiModelSection').hide();
-        // Uncheck all model selections
-        $('input[name="job_models_to_compare[]"]').prop('checked', false);
-    }
-});
-
-// Handle provider change to load models dynamically
-$('#jobProvider').on('change', function() {
-    loadJobProviderModels();
-});
-
-// Load models on page load
-loadJobProviderModels();
-
-// Load popular models for job multi-model comparison
-function loadJobPopularModels() {
-    const jobPopularModelsDiv = document.getElementById('jobPopularModels');
-    if (!jobPopularModelsDiv || jobPopularModelsDiv.innerHTML.includes('checkbox')) {
-        return; // Already loaded
-    }
-    
-    jobPopularModelsDiv.innerHTML = '<small class="text-muted">Loading models...</small>';
-    
-    fetch('/api/models/openrouter')
-        .then(response => response.json())
-        .then(data => {
-            jobPopularModelsDiv.innerHTML = '';
-            
-            if (data.popular && data.popular.length > 0) {
-                data.popular.forEach(model => {
-                    const modelId = 'job_' + model.replace(/[^a-zA-Z0-9]/g, '_');
-                    const displayName = getJobModelDisplayName(model);
-                    
-                    const div = document.createElement('div');
-                    div.className = 'form-check';
-                    div.innerHTML = `
-                        <input class="form-check-input job-model-checkbox" type="checkbox" 
-                               name="job_models_to_compare[]" value="${model}" id="${modelId}">
-                        <label class="form-check-label small" for="${modelId}">
-                            ${displayName}
-                        </label>
-                    `;
-                    jobPopularModelsDiv.appendChild(div);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error loading models:', error);
-            jobPopularModelsDiv.innerHTML = '<small class="text-muted">Error loading models</small>';
+        let html = '<div class="border rounded p-2"><small class="text-muted fw-bold">Selected Files:</small><ul class="mb-0 mt-1">';
+        selectedFiles.forEach((file, index) => {
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            html += `<li class="small">
+                ${file.name} <span class="text-muted">(${fileSize} MB)</span>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="removeFile(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </li>`;
         });
-}
-
-function loadJobProviderModels() {
-    const provider = $('#jobProvider').val();
-    const modelSelect = $('#jobModel');
-    const spinner = $('#jobModelSpinner');
-    const errorDiv = $('#jobModelError');
-    
-    if (!provider) {
-        // Reset to inherit from batch
-        modelSelect.empty();
-        modelSelect.append(`<option value="">Inherit from batch ({{ batch.model or 'Default' }})</option>`);
-        return;
+        html += '</ul></div>';
+        fileListDiv.html(html);
     }
-    
-    // Show loading state
-    spinner.show();
-    errorDiv.hide();
-    modelSelect.prop('disabled', true);
-    
-    // Clear existing options
-    modelSelect.empty();
-    modelSelect.append('<option value="">Select a model...</option>');
-    
-    // Fetch models for the selected provider
-    fetch(`/api/models/${provider}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.popular && data.popular.length > 0) {
-                // Add popular models
-                data.popular.forEach(model => {
-                    const displayName = getJobModelDisplayName(model);
-                    modelSelect.append(`<option value="${model}">${displayName}</option>`);
-                });
-                
-                // Add separator if there are other models
-                if (data.other && data.other.length > 0) {
-                    modelSelect.append('<option disabled>──────────────</option>');
-                    data.other.forEach(model => {
+
+    // Remove a file from selection
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+
+        // Update the file input
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        $('#jobFiles')[0].files = dt.files;
+
+        displaySelectedFiles();
+    }
+
+    // Reset the create job form
+    function resetCreateJobForm() {
+        $('#createJobForm')[0].reset();
+        selectedFiles = [];
+        $('#fileList').html('');
+    }
+
+    // Reset form when modal is closed
+    $('#createJobModal').on('hidden.bs.modal', function() {
+        resetCreateJobForm();
+    });
+
+    // Handle job multi-model comparison toggle
+    $('#enableJobMultiModel').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#jobMultiModelSection').show();
+            loadJobPopularModels();
+        } else {
+            $('#jobMultiModelSection').hide();
+            // Uncheck all model selections
+            $('input[name="job_models_to_compare[]"]').prop('checked', false);
+        }
+    });
+
+    // Handle provider change to load models dynamically
+    $('#jobProvider').on('change', function() {
+        loadJobProviderModels();
+    });
+
+    // Load models on page load
+    loadJobProviderModels();
+
+    // Load popular models for job multi-model comparison
+    function loadJobPopularModels() {
+        const jobPopularModelsDiv = document.getElementById('jobPopularModels');
+        if (!jobPopularModelsDiv || jobPopularModelsDiv.innerHTML.includes('checkbox')) {
+            return; // Already loaded
+        }
+
+        jobPopularModelsDiv.innerHTML = '<small class="text-muted">Loading models...</small>';
+
+        fetch('/api/models/openrouter')
+            .then(response => response.json())
+            .then(data => {
+                jobPopularModelsDiv.innerHTML = '';
+
+                if (data.popular && data.popular.length > 0) {
+                    data.popular.forEach(model => {
+                        const modelId = 'job_' + model.replace(/[^a-zA-Z0-9]/g, '_');
+                        const displayName = getJobModelDisplayName(model);
+
+                        const div = document.createElement('div');
+                        div.className = 'form-check';
+                        div.innerHTML = `
+                            <input class="form-check-input job-model-checkbox" type="checkbox"
+                                   name="job_models_to_compare[]" value="${model}" id="${modelId}">
+                            <label class="form-check-label small" for="${modelId}">
+                                ${displayName}
+                            </label>
+                        `;
+                        jobPopularModelsDiv.appendChild(div);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading models:', error);
+                jobPopularModelsDiv.innerHTML = '<small class="text-muted">Error loading models</small>';
+            });
+    }
+
+    function loadJobProviderModels() {
+        const provider = $('#jobProvider').val();
+        const modelSelect = $('#jobModel');
+        const spinner = $('#jobModelSpinner');
+        const errorDiv = $('#jobModelError');
+
+        if (!provider) {
+            // Reset to inherit from batch
+            modelSelect.empty();
+            modelSelect.append(`<option value="">Inherit from batch ({{ batch.model or 'Default' }})</option>`);
+            return;
+        }
+
+        // Show loading state
+        spinner.show();
+        errorDiv.hide();
+        modelSelect.prop('disabled', true);
+
+        // Clear existing options
+        modelSelect.empty();
+        modelSelect.append('<option value="">Select a model...</option>');
+
+        // Fetch models for the selected provider
+        fetch(`/api/models/${provider}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.popular && data.popular.length > 0) {
+                    // Add popular models
+                    data.popular.forEach(model => {
                         const displayName = getJobModelDisplayName(model);
                         modelSelect.append(`<option value="${model}">${displayName}</option>`);
                     });
+
+                    // Add separator if there are other models
+                    if (data.other && data.other.length > 0) {
+                        modelSelect.append('<option disabled>──────────────</option>');
+                        data.other.forEach(model => {
+                            const displayName = getJobModelDisplayName(model);
+                            modelSelect.append(`<option value="${model}">${displayName}</option>`);
+                        });
+                    }
+                } else {
+                    errorDiv.text('No models available for this provider').show();
                 }
-            } else {
-                errorDiv.text('No models available for this provider').show();
-            }
-        })
-        .catch(error => {
-            console.error('Error loading job models:', error);
-            errorDiv.text('Failed to load models. Please try again.').show();
-            
-            // Add fallback models
-            const fallbackModels = getJobFallbackModels(provider);
-            fallbackModels.forEach(model => {
-                modelSelect.append(`<option value="${model.id}">${model.name}</option>`);
+            })
+            .catch(error => {
+                console.error('Error loading job models:', error);
+                errorDiv.text('Failed to load models. Please try again.').show();
+
+                // Add fallback models
+                const fallbackModels = getJobFallbackModels(provider);
+                fallbackModels.forEach(model => {
+                    modelSelect.append(`<option value="${model.id}">${model.name}</option>`);
+                });
+            })
+            .finally(() => {
+                spinner.hide();
+                modelSelect.prop('disabled', false);
             });
-        })
-        .finally(() => {
-            spinner.hide();
-            modelSelect.prop('disabled', false);
-        });
-}
-
-function getJobFallbackModels(provider) {
-    const fallbackModels = {
-        'openrouter': [
-            {id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4'},
-            {id: 'openai/gpt-4o', name: 'GPT-4o'},
-            {id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet'}
-        ],
-        'claude': [
-            {id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'},
-            {id: 'claude-3-opus-20240229', name: 'Claude 3 Opus'},
-            {id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku'}
-        ],
-        'lm_studio': [
-            {id: 'local-model', name: 'Local Model'}
-        ]
-    };
-    return fallbackModels[provider] || [];
-}
-
-function getJobModelDisplayName(modelName) {
-    // Create a more readable display name from the model identifier
-    const nameMap = {
-        'anthropic/claude-opus-4-1': 'Claude Opus 4.1 (Latest)',
-        'openai/gpt-5': 'GPT-5',
-        'openai/gpt-4o': 'GPT-4o',
-        'openai/gpt-4o-mini': 'GPT-4o Mini',
-        'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
-        'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
-        'google/gemini-2.5-pro': 'Gemini 2.5 Pro (Latest)',
-        'google/gemini-pro-1.5': 'Gemini Pro 1.5',
-        'mistralai/mistral-7b-instruct': 'Mistral 7B',
-        'openai/gpt-4-turbo': 'GPT-4 Turbo',
-        'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku'
-    };
-    
-    return nameMap[modelName] || modelName;
-}
-
-// Initialize multi-model section if batch has multi-model enabled
-$(document).ready(function() {
-    {% if batch.models_to_compare %}
-        loadJobPopularModels();
-    {% endif %}
-});
-
-// Create a new job in the batch
-function createJob() {
-    const jobName = $('#jobName').val();
-    const files = $('#jobFiles')[0].files;
-    
-    if (!jobName) {
-        alert('Job name is required');
-        return;
     }
-    
-    if (files.length === 0) {
-        alert('Please select at least one file to grade');
-        return;
+
+    function getJobFallbackModels(provider) {
+        const fallbackModels = {
+            'openrouter': [
+                {id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4'},
+                {id: 'openai/gpt-4o', name: 'GPT-4o'},
+                {id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet'}
+            ],
+            'claude': [
+                {id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet'},
+                {id: 'claude-3-opus-20240229', name: 'Claude 3 Opus'},
+                {id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku'}
+            ],
+            'lm_studio': [
+                {id: 'local-model', name: 'Local Model'}
+            ]
+        };
+        return fallbackModels[provider] || [];
     }
-    
-    // Validate file sizes
-    for (let file of files) {
-        if (file.size > 100 * 1024 * 1024) { // 100MB limit
-            alert(`File "${file.name}" is too large. Maximum size is 100MB.`);
+
+    function getJobModelDisplayName(modelName) {
+        // Create a more readable display name from the model identifier
+        const nameMap = {
+            'anthropic/claude-opus-4-1': 'Claude Opus 4.1 (Latest)',
+            'openai/gpt-5': 'GPT-5',
+            'openai/gpt-4o': 'GPT-4o',
+            'openai/gpt-4o-mini': 'GPT-4o Mini',
+            'anthropic/claude-3-opus-20240229': 'Claude 3 Opus',
+            'meta-llama/llama-3.1-70b-instruct': 'Llama 3.1 70B',
+            'google/gemini-2.5-pro': 'Gemini 2.5 Pro (Latest)',
+            'google/gemini-pro-1.5': 'Gemini Pro 1.5',
+            'mistralai/mistral-7b-instruct': 'Mistral 7B',
+            'openai/gpt-4-turbo': 'GPT-4 Turbo',
+            'anthropic/claude-3-haiku-20240307': 'Claude 3 Haiku'
+        };
+
+        return nameMap[modelName] || modelName;
+    }
+
+    // Initialize multi-model section if batch has multi-model enabled
+    $(document).ready(function() {
+        {% if batch.models_to_compare %}
+            loadJobPopularModels();
+        {% endif %}
+    });
+
+    // Create a new job in the batch
+    function createJob() {
+        const jobName = $('#jobName').val();
+        const files = $('#jobFiles')[0].files;
+
+        if (!jobName) {
+            alert('Job name is required');
             return;
         }
-    }
 
-    // Create FormData for file upload
-    const formData = new FormData();
-    
-    // Add job metadata
-    formData.append('job_name', jobName);
-    if ($('#jobDescription').val()) {
-        formData.append('description', $('#jobDescription').val());
-    }
-    if ($('#jobProvider').val()) {
-        formData.append('provider', $('#jobProvider').val());
-    }
-    if ($('#jobModel').val()) {
-        formData.append('model', $('#jobModel').val());
-    }
-    if ($('#jobTemperature').val()) {
-        formData.append('temperature', $('#jobTemperature').val());
-    }
-    if ($('#jobMaxTokens').val()) {
-        formData.append('max_tokens', $('#jobMaxTokens').val());
-    }
-    if ($('#jobPrompt').val()) {
-        formData.append('prompt', $('#jobPrompt').val());
-    }
-    
-    // Add multi-model comparison models if override is enabled
-    if ($('#enableJobMultiModel').is(':checked')) {
-        $('input[name="job_models_to_compare[]"]:checked').each(function() {
-            formData.append('models_to_compare[]', $(this).val());
-        });
-    }
-    
-    // Add files
-    for (let file of files) {
-        formData.append('files[]', file);
-    }
+        if (files.length === 0) {
+            alert('Please select at least one file to grade');
+            return;
+        }
 
-    // Show loading state
-    const createBtn = $('.btn-success[onclick="createJob()"]');
-    const originalText = createBtn.text();
-    createBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Creating...');
+        // Validate file sizes
+        for (let file of files) {
+            if (file.size > 100 * 1024 * 1024) { // 100MB limit
+                alert(`File "${file.name}" is too large. Maximum size is 100MB.`);
+                return;
+            }
+        }
 
-    $.ajax({
-        url: `/api/batches/{{ batch.id }}/jobs/create-with-files`,
-        type: 'POST',
-        data: formData,
-        processData: false,
-        contentType: false,
-        timeout: 300000, // 5 minutes timeout for large uploads
-        success: function(response) {
-            if (response.success) {
-                alert(`Job "${response.job.job_name}" created successfully with ${response.uploaded_files} file(s)!`);
-                location.reload();
-            } else {
-                alert('Error creating job: ' + response.error);
+        // Create FormData for file upload
+        const formData = new FormData();
+
+        // Add job metadata
+        formData.append('job_name', jobName);
+        if ($('#jobDescription').val()) {
+            formData.append('description', $('#jobDescription').val());
+        }
+        if ($('#jobProvider').val()) {
+            formData.append('provider', $('#jobProvider').val());
+        }
+        if ($('#jobModel').val()) {
+            formData.append('model', $('#jobModel').val());
+        }
+        if ($('#jobTemperature').val()) {
+            formData.append('temperature', $('#jobTemperature').val());
+        }
+        if ($('#jobMaxTokens').val()) {
+            formData.append('max_tokens', $('#jobMaxTokens').val());
+        }
+        if ($('#jobPrompt').val()) {
+            formData.append('prompt', $('#jobPrompt').val());
+        }
+
+        // Add multi-model comparison models if override is enabled
+        if ($('#enableJobMultiModel').is(':checked')) {
+            $('input[name="job_models_to_compare[]"]:checked').each(function() {
+                formData.append('models_to_compare[]', $(this).val());
+            });
+        }
+
+        // Add files
+        for (let file of files) {
+            formData.append('files[]', file);
+        }
+
+        // Show loading state
+        const createBtn = $('.btn-success[onclick="createJob()"]');
+        const originalText = createBtn.text();
+        createBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Creating...');
+
+        $.ajax({
+            url: `/api/batches/{{ batch.id }}/jobs/create-with-files`,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            timeout: 300000, // 5 minutes timeout for large uploads
+            success: function(response) {
+                if (response.success) {
+                    alert(`Job "${response.job.job_name}" created successfully with ${response.uploaded_files} file(s)!`);
+                    location.reload();
+                } else {
+                    alert('Error creating job: ' + response.error);
+                    createBtn.prop('disabled', false).text(originalText);
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Unknown error occurred';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    errorMessage = response.error || errorMessage;
+                } catch (e) {
+                    if (xhr.status === 413) {
+                        errorMessage = 'One or more files are too large. Maximum size is 100MB per file.';
+                    } else if (xhr.status === 0) {
+                        errorMessage = 'Request timeout. Please try with smaller files or fewer files.';
+                    }
+                }
+                alert('Error creating job: ' + errorMessage);
                 createBtn.prop('disabled', false).text(originalText);
             }
-        },
-        error: function(xhr) {
-            let errorMessage = 'Unknown error occurred';
-            try {
-                const response = JSON.parse(xhr.responseText);
-                errorMessage = response.error || errorMessage;
-            } catch (e) {
-                if (xhr.status === 413) {
-                    errorMessage = 'One or more files are too large. Maximum size is 100MB per file.';
-                } else if (xhr.status === 0) {
-                    errorMessage = 'Request timeout. Please try with smaller files or fewer files.';
-                }
-            }
-            alert('Error creating job: ' + errorMessage);
-            createBtn.prop('disabled', false).text(originalText);
-        }
-    });
-}
+        });
+    }
 
-// Load available jobs
-function loadAvailableJobs() {
-    $.ajax({
-        url: `/api/batches/{{ batch.id }}/available-jobs`,
-        type: 'GET',
-        success: function(response) {
-            if (response.success) {
-                availableJobs = response.available_jobs;
-                displayAvailableJobs(availableJobs);
-            } else {
+    // Load available jobs
+    function loadAvailableJobs() {
+        $.ajax({
+            url: `/api/batches/{{ batch.id }}/available-jobs`,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    availableJobs = response.available_jobs;
+                    displayAvailableJobs(availableJobs);
+                } else {
+                    $('#availableJobsList').html(`
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
+                            <p class="text-muted">Error loading jobs: ${response.error}</p>
+                        </div>
+                    `);
+                }
+            },
+            error: function(xhr) {
                 $('#availableJobsList').html(`
                     <div class="text-center py-4">
-                        <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
-                        <p class="text-muted">Error loading jobs: ${response.error}</p>
+                        <i class="fas fa-exclamation-triangle fa-2x text-danger mb-3"></i>
+                        <p class="text-muted">Failed to load available jobs</p>
                     </div>
                 `);
             }
-        },
-        error: function(xhr) {
+        });
+    }
+
+    // Display available jobs
+    function displayAvailableJobs(jobs) {
+        if (jobs.length === 0) {
             $('#availableJobsList').html(`
                 <div class="text-center py-4">
-                    <i class="fas fa-exclamation-triangle fa-2x text-danger mb-3"></i>
-                    <p class="text-muted">Failed to load available jobs</p>
+                    <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No available jobs found. All jobs are already assigned to batches.</p>
                 </div>
             `);
+            return;
         }
-    });
-}
 
-// Display available jobs
-function displayAvailableJobs(jobs) {
-    if (jobs.length === 0) {
-        $('#availableJobsList').html(`
-            <div class="text-center py-4">
-                <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
-                <p class="text-muted">No available jobs found. All jobs are already assigned to batches.</p>
-            </div>
-        `);
-        return;
-    }
-
-    let html = '<div class="list-group" style="max-height: 400px; overflow-y: auto;">';
-    jobs.forEach(job => {
-        html += `
-            <div class="list-group-item">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="${job.id}" id="job_${job.id}" onchange="toggleJobSelection('${job.id}')">
-                    <label class="form-check-label" for="job_${job.id}">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h6 class="mb-1">${job.job_name}</h6>
-                                <p class="mb-1 text-muted small">${job.description || 'No description'}</p>
-                                <small class="text-muted">Provider: ${job.provider} | Created: ${new Date(job.created_at).toLocaleDateString()}</small>
+        let html = '<div class="list-group" style="max-height: 400px; overflow-y: auto;">';
+        jobs.forEach(job => {
+            html += `
+                <div class="list-group-item">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${job.id}" id="job_${job.id}" onchange="toggleJobSelection('${job.id}')">
+                        <label class="form-check-label" for="job_${job.id}">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="mb-1">${job.job_name}</h6>
+                                    <p class="mb-1 text-muted small">${job.description || 'No description'}</p>
+                                    <small class="text-muted">Provider: ${job.provider} | Created: ${new Date(job.created_at).toLocaleDateString()}</small>
+                                </div>
+                                <span class="badge bg-${job.status === 'completed' ? 'success' : job.status === 'failed' ? 'danger' : 'secondary'}">${job.status}</span>
                             </div>
-                            <span class="badge bg-${job.status === 'completed' ? 'success' : job.status === 'failed' ? 'danger' : 'secondary'}">${job.status}</span>
-                        </div>
-                    </label>
+                        </label>
+                    </div>
                 </div>
-            </div>
-        `;
-    });
-    html += '</div>';
-    $('#availableJobsList').html(html);
-}
-
-// Search available jobs
-function searchAvailableJobs() {
-    const searchTerm = $('#jobSearch').val().toLowerCase();
-    const filteredJobs = availableJobs.filter(job => 
-        job.job_name.toLowerCase().includes(searchTerm) || 
-        (job.description && job.description.toLowerCase().includes(searchTerm))
-    );
-    displayAvailableJobs(filteredJobs);
-}
-
-// Toggle job selection
-function toggleJobSelection(jobId) {
-    if (selectedJobs.includes(jobId)) {
-        selectedJobs = selectedJobs.filter(id => id !== jobId);
-    } else {
-        selectedJobs.push(jobId);
+            `;
+        });
+        html += '</div>';
+        $('#availableJobsList').html(html);
     }
-    
-    $('#selectedCount').text(selectedJobs.length);
-    $('#addJobsBtn').prop('disabled', selectedJobs.length === 0);
-}
 
-// Add selected jobs to batch
-function addSelectedJobs() {
-    if (selectedJobs.length === 0) return;
+    // Search available jobs
+    function searchAvailableJobs() {
+        const searchTerm = $('#jobSearch').val().toLowerCase();
+        const filteredJobs = availableJobs.filter(job =>
+            job.job_name.toLowerCase().includes(searchTerm) ||
+            (job.description && job.description.toLowerCase().includes(searchTerm))
+        );
+        displayAvailableJobs(filteredJobs);
+    }
 
-    $.ajax({
-        url: `/api/batches/{{ batch.id }}/jobs`,
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({ job_ids: selectedJobs }),
-        success: function(response) {
-            if (response.success) {
-                alert(`Successfully added ${response.added_jobs.length} jobs to the batch!`);
-                if (response.skipped_jobs && response.skipped_jobs.length > 0) {
-                    alert(`Note: ${response.skipped_jobs.length} jobs were skipped (already assigned or not found).`);
+    // Toggle job selection
+    function toggleJobSelection(jobId) {
+        if (selectedJobs.includes(jobId)) {
+            selectedJobs = selectedJobs.filter(id => id !== jobId);
+        } else {
+            selectedJobs.push(jobId);
+        }
+
+        $('#selectedCount').text(selectedJobs.length);
+        $('#addJobsBtn').prop('disabled', selectedJobs.length === 0);
+    }
+
+    // Add selected jobs to batch
+    function addSelectedJobs() {
+        if (selectedJobs.length === 0) return;
+
+        $.ajax({
+            url: `/api/batches/{{ batch.id }}/jobs`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ job_ids: selectedJobs }),
+            success: function(response) {
+                if (response.success) {
+                    alert(`Successfully added ${response.added_jobs.length} jobs to the batch!`);
+                    if (response.skipped_jobs && response.skipped_jobs.length > 0) {
+                        alert(`Note: ${response.skipped_jobs.length} jobs were skipped (already assigned or not found).`);
+                    }
+                    location.reload();
+                } else {
+                    alert('Error adding jobs: ' + response.error);
                 }
-                location.reload();
-            } else {
+            },
+            error: function(xhr) {
+                const response = JSON.parse(xhr.responseText);
                 alert('Error adding jobs: ' + response.error);
             }
-        },
-        error: function(xhr) {
-            const response = JSON.parse(xhr.responseText);
-            alert('Error adding jobs: ' + response.error);
-        }
-    });
-}
-
-// Remove job from batch
-function removeJobFromBatch(jobId, jobName) {
-    if (!confirm(`Are you sure you want to remove "${jobName}" from this batch?`)) {
-        return;
+        });
     }
 
-    $.ajax({
-        url: `/api/batches/{{ batch.id }}/jobs/${jobId}`,
-        type: 'DELETE',
-        success: function(response) {
-            if (response.success) {
-                alert('Job removed from batch successfully!');
-                location.reload();
-            } else {
+    // Remove job from batch
+    function removeJobFromBatch(jobId, jobName) {
+        if (!confirm(`Are you sure you want to remove "${jobName}" from this batch?`)) {
+            return;
+        }
+
+        $.ajax({
+            url: `/api/batches/{{ batch.id }}/jobs/${jobId}`,
+            type: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    alert('Job removed from batch successfully!');
+                    location.reload();
+                } else {
+                    alert('Error removing job: ' + response.error);
+                }
+            },
+            error: function(xhr) {
+                const response = JSON.parse(xhr.responseText);
                 alert('Error removing job: ' + response.error);
             }
-        },
-        error: function(xhr) {
-            const response = JSON.parse(xhr.responseText);
-            alert('Error removing job: ' + response.error);
-        }
-    });
-}
+        });
+    }
 </script>
 
 {% endblock %}

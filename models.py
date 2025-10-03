@@ -1240,6 +1240,10 @@ class Config(db.Model):
     claude_api_key = db.Column(db.Text)
     gemini_api_key = db.Column(db.Text)
     openai_api_key = db.Column(db.Text)
+    nanogpt_api_key = db.Column(db.Text)
+    chutes_api_key = db.Column(db.Text)
+    zai_api_key = db.Column(db.Text)
+    zai_pricing_plan = db.Column(db.String(20), default='normal')
     lm_studio_url = db.Column(db.String(500))
     ollama_url = db.Column(db.String(500))
 
@@ -1251,6 +1255,9 @@ class Config(db.Model):
     claude_default_model = db.Column(db.String(200))
     gemini_default_model = db.Column(db.String(200))
     openai_default_model = db.Column(db.String(200))
+    nanogpt_default_model = db.Column(db.String(200))
+    chutes_default_model = db.Column(db.String(200))
+    zai_default_model = db.Column(db.String(200))
     lm_studio_default_model = db.Column(db.String(200))
     ollama_default_model = db.Column(db.String(200))
 
@@ -1292,6 +1299,9 @@ class Config(db.Model):
             "claude": self.claude_default_model,
             "gemini": self.gemini_default_model,
             "openai": self.openai_default_model,
+            "nanogpt": self.nanogpt_default_model,
+            "chutes": self.chutes_default_model,
+            "zai": self.zai_default_model,
             "lm_studio": self.lm_studio_default_model,
             "ollama": self.ollama_default_model,
         }
@@ -1306,6 +1316,9 @@ class Config(db.Model):
             "claude": "claude-3.5-sonnet-20241022",
             "gemini": "gemini-2.0-flash-exp",
             "openai": "gpt-4o",
+            "nanogpt": "gpt-4o",
+            "chutes": "gpt-4o",
+            "zai": "glm-4.6",
             "lm_studio": "local-model",
             "ollama": "llama2",
         }

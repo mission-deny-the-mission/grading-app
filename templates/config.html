@@ -391,6 +391,333 @@ endblock %} {% block content %}
                         </div>
                     </div>
 
+                    <!-- NanoGPT Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-brain me-2"></i>NanoGPT
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="nanogpt_api_key" class="form-label"
+                                    >API Key</label
+                                >
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="nanogpt_api_key"
+                                    name="nanogpt_api_key"
+                                    placeholder="your-nanogpt-key-here"
+                                    autocomplete="new-password"
+                                    value="{{ config.nanogpt_api_key if config else '' }}"
+                                />
+                                <div class="form-text">
+                                    Get your API key from
+                                    <a
+                                        href="https://nano-gpt.com"
+                                        target="_blank"
+                                        >NanoGPT</a
+                                    >
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        onclick="togglePassword('nanogpt_api_key')"
+                                    >
+                                        <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="testAPIKey('nanogpt')"
+                                    >
+                                        <i class="fas fa-check"></i> Test Key
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label
+                                    for="nanogpt_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="nanogpt_default_model"
+                                    name="nanogpt_default_model"
+                                >
+                                    <option value="">Use System Default</option>
+                                    <!-- Models will be loaded dynamically -->
+                                </select>
+                                <div class="form-text">
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('nanogpt')"
+                                        id="nanogpt-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="nanogpt-refresh-text"
+                                            >Refresh Models</span
+                                        >
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chutes AI Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-rocket me-2"></i>Chutes AI
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="chutes_api_key" class="form-label"
+                                    >API Key</label
+                                >
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="chutes_api_key"
+                                    name="chutes_api_key"
+                                    placeholder="your-chutes-key-here"
+                                    autocomplete="new-password"
+                                    value="{{ config.chutes_api_key if config else '' }}"
+                                />
+                                <div class="form-text">
+                                    Get your API key from
+                                    <a
+                                        href="https://api.chutes.ai"
+                                        target="_blank"
+                                        >Chutes AI</a
+                                    >
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        onclick="togglePassword('chutes_api_key')"
+                                    >
+                                        <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="testAPIKey('chutes')"
+                                    >
+                                        <i class="fas fa-check"></i> Test Key
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label
+                                    for="chutes_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="chutes_default_model"
+                                    name="chutes_default_model"
+                                >
+                                    <option value="">Use System Default</option>
+                                    <!-- Models will be loaded dynamically -->
+                                </select>
+                                <div class="form-text">
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('chutes')"
+                                        id="chutes-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="chutes-refresh-text"
+                                            >Refresh Models</span
+                                        >
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Z.AI Configuration -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">
+                            <i class="fas fa-star me-2"></i>Z.AI
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="zai_api_key" class="form-label"
+                                    >API Key</label
+                                >
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="zai_api_key"
+                                    name="zai_api_key"
+                                    placeholder="your-zai-key-here"
+                                    autocomplete="new-password"
+                                    value="{{ config.zai_api_key if config else '' }}"
+                                />
+                                <div class="form-text">
+                                    Get your API key from
+                                    <a href="https://z.ai" target="_blank"
+                                        >Z.AI</a
+                                    >
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-primary"
+                                        onclick="togglePassword('zai_api_key')"
+                                    >
+                                        <i class="fas fa-eye"></i> Show/Hide
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="testZAIAPIKey()"
+                                    >
+                                        <i class="fas fa-check"></i> Test Key
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold"
+                                    >Pricing Plan</label
+                                >
+                                <div class="form-check form-check-inline">
+                                    <input
+                                        class="form-check-input"
+                                        type="radio"
+                                        name="zai_pricing_plan"
+                                        id="zai_normal_api"
+                                        value="normal"
+                                        checked
+                                    />
+                                    <label
+                                        class="form-check-label"
+                                        for="zai_normal_api"
+                                    >
+                                        <i class="fas fa-coins me-1"></i>Normal
+                                        API Pricing
+                                        <small class="text-muted d-block"
+                                            >Pay per use, more models
+                                            available</small
+                                        >
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input
+                                        class="form-check-input"
+                                        type="radio"
+                                        name="zai_pricing_plan"
+                                        id="zai_coding_plan"
+                                        value="coding_plan"
+                                    />
+                                    <label
+                                        class="form-check-label"
+                                        for="zai_coding_plan"
+                                    >
+                                        <i class="fas fa-code me-1"></i>Coding
+                                        Plan Subscription
+                                        <small class="text-muted d-block"
+                                            >Monthly subscription, fewer
+                                            models</small
+                                        >
+                                    </label>
+                                </div>
+                                <div class="form-text">
+                                    Choose your Z.AI pricing plan. The Coding
+                                    Plan requires an active subscription but
+                                    offers unlimited usage for supported models.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label
+                                    for="zai_default_model"
+                                    class="form-label"
+                                    >Default Model</label
+                                >
+                                <select
+                                    class="form-select"
+                                    id="zai_default_model"
+                                    name="zai_default_model"
+                                >
+                                    <option value="">Use System Default</option>
+                                    <!-- Models will be loaded dynamically based on pricing plan -->
+                                </select>
+                                <div class="form-text">
+                                    Default model to use when "Use Default
+                                    Model" is selected for this provider
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">&nbsp;</label>
+                                <div class="d-grid">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info"
+                                        onclick="loadModelsForProvider('zai')"
+                                        id="zai-refresh-btn"
+                                    >
+                                        <i class="fas fa-sync me-1"></i>
+                                        <span id="zai-refresh-text"
+                                            >Refresh Models</span
+                                        >
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- LM Studio Configuration -->
                     <div class="mb-4">
                         <h6 class="fw-bold text-primary">
@@ -1068,10 +1395,26 @@ endblock %} {% block content %}
                     data.gemini_api_key || "";
                 document.getElementById("openai_api_key").value =
                     data.openai_api_key || "";
+                document.getElementById("nanogpt_api_key").value =
+                    data.nanogpt_api_key || "";
+                document.getElementById("chutes_api_key").value =
+                    data.chutes_api_key || "";
+                document.getElementById("zai_api_key").value =
+                    data.zai_api_key || "";
                 document.getElementById("lm_studio_url").value =
                     data.lm_studio_url || "http://localhost:1234/v1";
                 document.getElementById("ollama_url").value =
                     data.ollama_url || "http://localhost:11434";
+
+                // Set Z.AI pricing plan
+                if (data.zai_pricing_plan) {
+                    const pricingRadio = document.querySelector(
+                        `input[name="zai_pricing_plan"][value="${data.zai_pricing_plan}"]`,
+                    );
+                    if (pricingRadio) {
+                        pricingRadio.checked = true;
+                    }
+                }
                 document.getElementById("default_prompt").value =
                     data.default_prompt || "";
 
@@ -1085,6 +1428,9 @@ endblock %} {% block content %}
                 setDefaultModelValue("openai", data.openai_default_model);
                 setDefaultModelValue("lm_studio", data.lm_studio_default_model);
                 setDefaultModelValue("ollama", data.ollama_default_model);
+                setDefaultModelValue("nanogpt", data.nanogpt_default_model);
+                setDefaultModelValue("chutes", data.chutes_default_model);
+                setDefaultModelValue("zai", data.zai_default_model);
 
                 showStatus("Configuration loaded successfully", "success");
             })
@@ -1452,5 +1798,116 @@ endblock %} {% block content %}
             });
         });
     });
+
+    // Handle Z.AI pricing plan changes
+    function handleZAiPricingPlanChange() {
+        const pricingPlan = document.querySelector(
+            'input[name="zai_pricing_plan"]:checked',
+        ).value;
+        const modelSelect = document.getElementById("zai_default_model");
+        const refreshBtn = document.getElementById("zai-refresh-btn");
+
+        // Clear current models
+        modelSelect.innerHTML = '<option value="">Loading models...</option>';
+        modelSelect.disabled = true;
+
+        // Update button text based on pricing plan
+        const refreshText = document.getElementById("zai-refresh-text");
+        if (refreshText) {
+            refreshText.textContent =
+                pricingPlan === "coding_plan"
+                    ? "Refresh Coding Plan Models"
+                    : "Refresh Normal API Models";
+        }
+
+        // Update the form-text description
+        const formText = modelSelect.parentElement.nextElementSibling;
+        if (formText && formText.classList.contains("form-text")) {
+            formText.innerHTML = `Default model to use when "Use Default Model" is selected for this provider
+                (${pricingPlan === "coding_plan" ? "Coding Plan subscription" : "Normal API pricing"})`;
+        }
+
+        // Load models based on pricing plan
+        const providerKey =
+            pricingPlan === "coding_plan" ? "zai_coding_plan" : "zai";
+        loadModelsForProvider(providerKey);
+    }
+
+    // Add event listener for Z.AI pricing plan changes
+    document.addEventListener("DOMContentLoaded", function () {
+        const zaiRadios = document.querySelectorAll(
+            'input[name="zai_pricing_plan"]',
+        );
+        zaiRadios.forEach((radio) => {
+            radio.addEventListener("change", handleZAiPricingPlanChange);
+        });
+
+        // Load initial models based on current selection
+        const currentPlan =
+            document.querySelector('input[name="zai_pricing_plan"]:checked')
+                ?.value || "normal";
+        if (currentPlan) {
+            handleZAiPricingPlanChange();
+        }
+    });
+
+    // Test Z.AI API key considering pricing plan
+    function testZAIAPIKey() {
+        const apiKeyField = document.getElementById("zai_api_key");
+        const statusIndicator = document.getElementById("zai-status");
+        const pricingPlan = document.querySelector(
+            'input[name="zai_pricing_plan"]:checked',
+        ).value;
+        const apiKey = apiKeyField.value;
+
+        statusIndicator.className = "status-indicator";
+
+        if (!apiKey) {
+            statusIndicator.classList.add("offline");
+            showStatus(
+                `Z.AI API key not set (${pricingPlan === "coding_plan" ? "Coding Plan" : "Normal API"}).`,
+                "warning",
+            );
+            return;
+        }
+
+        // Show loading state
+        statusIndicator.className = "status-indicator";
+        showStatus(
+            `Testing Z.AI API key (${pricingPlan === "coding_plan" ? "Coding Plan" : "Normal API"})...`,
+            "info",
+        );
+
+        const apiType =
+            pricingPlan === "coding_plan" ? "zai_coding_plan" : "zai";
+
+        fetch("/test_api_key", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                type: apiType,
+                key: apiKey,
+            }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    statusIndicator.classList.add("online");
+                    showStatus(data.message, "success");
+                } else {
+                    statusIndicator.classList.add("offline");
+                    showStatus(data.error, "danger");
+                }
+            })
+            .catch((error) => {
+                statusIndicator.classList.add("offline");
+                showStatus(
+                    `Z.AI API key test failed: ${error.message}`,
+                    "danger",
+                );
+            });
+    }
 </script>
 {% endblock %}
