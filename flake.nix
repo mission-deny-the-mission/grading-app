@@ -25,6 +25,7 @@
           celery
           redis
           psycopg2-binary
+          beautifulsoup4
 
           # Development dependencies
           black

@@ -15,7 +15,8 @@ let
     celery
     redis
     psycopg2-binary
-    
+    beautifulsoup4
+
     # Development dependencies
     black
     flake8
@@ -32,7 +33,7 @@ let
 in
 {
   inherit pythonEnv;
-  
+
   # For direct use with nix-shell
   devShell = pkgs.mkShell {
     name = "grading-app-dev";
@@ -43,8 +44,16 @@ in
       git
       gnumake
       which
+      gcc
+      g++
+      pkg-config
+      openssl
+      libxml2
+      libxslt
+      zlib
     ];
-    
+  };
+
     shellHook = ''
       # Set up environment variables
       export FLASK_ENV=development
@@ -55,7 +64,7 @@ in
       export REDIS_PORT=6379
       export LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
       export PYTHONPATH=$(pwd)
-      
+
       # Create .env file if it doesn't exist
       if [ ! -f .env ]; then
         echo "Creating .env file with defaults..."
@@ -87,7 +96,7 @@ EOF
         echo "Starting PostgreSQL..."
         pg_ctl -D .postgres_data -l .postgres_log start
         sleep 2
-        
+
         # Create database if it doesn't exist
         if ! psql -h localhost -p 5433 -U $USER -lqt | cut -d \| -f 1 | grep -qw grading_app; then
           echo "Creating grading_app database..."
