@@ -283,7 +283,6 @@ def test_api_key():
         elif api_type == "nanogpt":
             # Test NanoGPT API key
             try:
-                import requests
                 headers = {
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
@@ -303,7 +302,6 @@ def test_api_key():
         elif api_type == "chutes":
             # Test Chutes AI API key
             try:
-                import requests
                 headers = {
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
@@ -323,7 +321,6 @@ def test_api_key():
         elif api_type == "zai":
             # Test Z.AI API key (Normal API)
             try:
-                import requests
                 headers = {
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
@@ -350,7 +347,6 @@ def test_api_key():
         elif api_type == "zai_coding_plan":
             # Test Z.AI Coding Plan API key
             try:
-                import requests
                 headers = {
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json",
@@ -379,8 +375,6 @@ def test_api_key():
 def test_lm_studio():
     """Test LM Studio connection."""
     try:
-        import requests
-
         data = request.get_json()
         url = data.get("url", "http://localhost:1234/v1")
 
@@ -429,8 +423,6 @@ def test_lm_studio():
 def test_ollama():
     """Test Ollama connection."""
     try:
-        import requests
-
         data = request.get_json()
         base_url = data.get("url", "http://localhost:11434")
         url = f"{base_url}/api/generate"

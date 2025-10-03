@@ -1157,6 +1157,11 @@ class TestBatchMultiModelComparison:
             db.session.commit()
             batch_id = batch.id
 
+            # Debug: verify the batch data was saved correctly
+            saved_batch = JobBatch.query.get(batch_id)
+            print(f"Saved batch models_to_compare: {saved_batch.models_to_compare}")
+            print(f"Length: {len(saved_batch.models_to_compare) if saved_batch.models_to_compare else 'None'}")
+
         # Get batch detail page
         response = client.get(f"/batches/{batch_id}")
         assert response.status_code == 200
@@ -1164,7 +1169,21 @@ class TestBatchMultiModelComparison:
         # Check that multi-model information is displayed
         html_content = response.data.decode("utf-8")
         assert "Multi-Model Comparison" in html_content
-        assert f"Enabled ({len(models_to_compare)} models)" in html_content
+
+        # The template splits this text across lines, so we need to account for spacing
+        enabled_patterns = [
+            f"Enabled ({len(models_to_compare)}\nmodels)",
+            f"Enabled ({len(models_to_compare)} models)",
+            f"Enabled ({len(models_to_compare)}\n                            models)",
+        ]
+
+        found_pattern = False
+        for pattern in enabled_patterns:
+            if pattern in html_content:
+                found_pattern = True
+                break
+
+        assert found_pattern, f"Could not find 'Enabled ({len(models_to_compare)} models)' or variants in HTML"
 
         # Check that individual models are displayed
         for model in models_to_compare:
