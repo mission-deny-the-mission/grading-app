@@ -15,10 +15,13 @@ This project includes a Nix development environment that sets up all required se
 nix develop
 ```
 
-### Using `nix-shell` (legacy)
+### Using `nix-shell` (deprecated)
+
+The `nix-shell` configuration has been deprecated in favor of the flake-based approach. 
+Please use `nix develop` or direnv with `use flake` instead.
 
 ```bash
-# Enter the development environment (legacy method)
+# This method is now deprecated - do not use
 nix-shell
 ```
 
