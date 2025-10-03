@@ -208,11 +208,15 @@ def get_available_models():
 @api_bp.route("/models/<provider>")
 def get_provider_models(provider):
     """Get available models for a specific provider."""
-    models = get_cached_models(provider)
-    if models:
-        return jsonify(models)
-    else:
-        return jsonify({"error": f"Unknown provider: {provider}"}), 400
+    try:
+        models = get_cached_models(provider)
+        if models:
+            return jsonify(models)
+        else:
+            return jsonify({"error": f"Unknown provider: {provider}"}), 400
+    except Exception as e:
+        # Handle API connection errors gracefully
+        return jsonify({"error": f"Failed to fetch models from {provider}: {str(e)}"}), 500
 
 
 @api_bp.route("/models/all")

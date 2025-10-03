@@ -83,7 +83,7 @@ grading-app/
 The project includes Nix support for reproducible development environments:
 
 ```bash
-nix-shell  # Sets up complete dev environment
+nix develop # Sets up complete dev environment
 ```
 
 ### Docker Development

@@ -22,6 +22,8 @@ help:
 	@echo "  test      - Run tests"
 	@echo "  lint      - Run linting"
 	@echo "  format    - Format code"
+	@echo "  validate  - Validate bulk upload model loading fix"
+	@echo "  validate-tests - Run comprehensive bulk upload tests"
 
 # Production commands
 build:
@@ -75,6 +77,13 @@ lint:
 format:
 	docker compose -f docker-compose.dev.yml exec app black .
 	docker compose -f docker-compose.dev.yml exec app isort .
+
+# Validation commands
+validate:
+	python validate_bulk_upload_fix.py
+
+validate-tests:
+	cd tests && python simple_test_runner.py
 
 # Database commands
 init-db:
