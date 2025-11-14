@@ -28,7 +28,7 @@ services:
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
     volumes:
-      - ./uploads:/app/uploads
+      - student_uploads:/app/uploads
       - ./instance:/app/instance
     depends_on:
       redis:
@@ -48,7 +48,7 @@ services:
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
     volumes:
-      - ./uploads:/app/uploads
+      - student_uploads:/app/uploads
       - ./instance:/app/instance
     depends_on:
       redis:
@@ -68,7 +68,7 @@ services:
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
     volumes:
-      - ./uploads:/app/uploads
+      - student_uploads:/app/uploads
       - ./instance:/app/instance
     depends_on:
       redis:
@@ -94,3 +94,4 @@ services:
 
 volumes:
   redis_data:
+  student_uploads:

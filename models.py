@@ -1324,3 +1324,238 @@ class Config(db.Model):
         }
 
         return fallback_defaults.get(provider, "anthropic/claude-3-5-sonnet-20241022")
+
+
+class ImageSubmission(db.Model):
+    """Model for tracking image submissions (screenshots, diagrams)."""
+
+    __tablename__ = "image_submissions"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationship to existing submission
+    submission_id = db.Column(
+        db.String(36), db.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
+    )
+
+    # File storage (UUID-based two-level hashing)
+    storage_path = db.Column(db.String(500), nullable=False)
+    file_uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
+
+    # File metadata
+    original_filename = db.Column(db.String(255), nullable=False)
+    file_size_bytes = db.Column(db.Integer, nullable=False)
+    mime_type = db.Column(db.String(100), nullable=False)
+    file_extension = db.Column(db.String(10), nullable=False)
+
+    # Image properties
+    width_pixels = db.Column(db.Integer)
+    height_pixels = db.Column(db.Integer)
+    aspect_ratio = db.Column(db.Numeric(5, 2))
+    file_hash = db.Column(db.String(64))
+
+    # Processing status
+    processing_status = db.Column(db.String(50), default="uploaded")
+    ocr_started_at = db.Column(db.DateTime)
+    ocr_completed_at = db.Column(db.DateTime)
+    error_message = db.Column(db.Text)
+
+    # Validation status
+    passes_quality_check = db.Column(db.Boolean)
+    requires_manual_review = db.Column(db.Boolean, default=False)
+
+    # Relationships
+    submission = db.relationship("Submission", backref="image_submissions", lazy=True)
+    extracted_content = db.relationship(
+        "ExtractedContent", backref="image_submission", uselist=False, cascade="all, delete-orphan"
+    )
+    quality_metrics = db.relationship(
+        "ImageQualityMetrics", backref="image_submission", uselist=False, cascade="all, delete-orphan"
+    )
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_submission_id", "submission_id"),
+        db.Index("idx_processing_status", "processing_status"),
+        db.Index("idx_file_uuid", "file_uuid"),
+        db.Index("idx_created_at", "created_at"),
+    )
+
+    def to_dict(self):
+        """Convert image submission to dictionary."""
+        return {
+            "id": self.id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "submission_id": self.submission_id,
+            "storage_path": self.storage_path,
+            "file_uuid": self.file_uuid,
+            "original_filename": self.original_filename,
+            "file_size_bytes": self.file_size_bytes,
+            "mime_type": self.mime_type,
+            "file_extension": self.file_extension,
+            "width_pixels": self.width_pixels,
+            "height_pixels": self.height_pixels,
+            "aspect_ratio": float(self.aspect_ratio) if self.aspect_ratio else None,
+            "file_hash": self.file_hash,
+            "processing_status": self.processing_status,
+            "ocr_started_at": self.ocr_started_at.isoformat() if self.ocr_started_at else None,
+            "ocr_completed_at": self.ocr_completed_at.isoformat() if self.ocr_completed_at else None,
+            "error_message": self.error_message,
+            "passes_quality_check": self.passes_quality_check,
+            "requires_manual_review": self.requires_manual_review,
+        }
+
+
+class ExtractedContent(db.Model):
+    """Model for storing OCR-extracted text and metadata."""
+
+    __tablename__ = "extracted_content"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationship (one-to-one with ImageSubmission)
+    image_submission_id = db.Column(
+        db.String(36),
+        db.ForeignKey("image_submissions.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+
+    # OCR results
+    extracted_text = db.Column(db.Text)
+    text_length = db.Column(db.Integer)
+    line_count = db.Column(db.Integer)
+
+    # OCR metadata
+    ocr_provider = db.Column(db.String(50), nullable=False)
+    ocr_model = db.Column(db.String(100))
+    confidence_score = db.Column(db.Numeric(5, 4))
+    processing_time_ms = db.Column(db.Integer)
+
+    # Structured data
+    text_regions = db.Column(db.JSON)
+
+    # Usage tracking
+    api_cost_usd = db.Column(db.Numeric(10, 6))
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_image_submission_id", "image_submission_id"),
+        db.Index("idx_confidence_score", "confidence_score"),
+        db.Index("idx_ocr_provider", "ocr_provider"),
+    )
+
+    def to_dict(self):
+        """Convert extracted content to dictionary."""
+        return {
+            "id": self.id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "image_submission_id": self.image_submission_id,
+            "extracted_text": self.extracted_text,
+            "text_length": self.text_length,
+            "line_count": self.line_count,
+            "ocr_provider": self.ocr_provider,
+            "ocr_model": self.ocr_model,
+            "confidence_score": float(self.confidence_score) if self.confidence_score else None,
+            "processing_time_ms": self.processing_time_ms,
+            "text_regions": self.text_regions,
+            "api_cost_usd": float(self.api_cost_usd) if self.api_cost_usd else None,
+        }
+
+
+class ImageQualityMetrics(db.Model):
+    """Model for storing automated quality assessment results."""
+
+    __tablename__ = "image_quality_metrics"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationship (one-to-one with ImageSubmission)
+    image_submission_id = db.Column(
+        db.String(36),
+        db.ForeignKey("image_submissions.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+
+    # Overall assessment
+    overall_quality = db.Column(db.String(20), nullable=False)
+    passes_quality_check = db.Column(db.Boolean, nullable=False, default=False)
+
+    # Blur detection
+    blur_score = db.Column(db.Numeric(10, 2))
+    is_blurry = db.Column(db.Boolean)
+    blur_threshold = db.Column(db.Numeric(10, 2))
+
+    # Resolution metrics
+    meets_min_resolution = db.Column(db.Boolean)
+    min_width_required = db.Column(db.Integer)
+    min_height_required = db.Column(db.Integer)
+
+    # Completeness assessment
+    edge_density_top = db.Column(db.Numeric(5, 2))
+    edge_density_bottom = db.Column(db.Numeric(5, 2))
+    edge_density_left = db.Column(db.Numeric(5, 2))
+    edge_density_right = db.Column(db.Numeric(5, 2))
+    avg_edge_density = db.Column(db.Numeric(5, 2))
+    max_edge_density = db.Column(db.Numeric(5, 2))
+    likely_cropped = db.Column(db.Boolean)
+
+    # Quality issues
+    issues = db.Column(db.JSON)
+
+    # Processing metadata
+    assessment_duration_ms = db.Column(db.Integer)
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_image_submission_id", "image_submission_id"),
+        db.Index("idx_overall_quality", "overall_quality"),
+        db.Index("idx_passes_quality_check", "passes_quality_check"),
+    )
+
+    def to_dict(self):
+        """Convert image quality metrics to dictionary."""
+        return {
+            "id": self.id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "image_submission_id": self.image_submission_id,
+            "overall_quality": self.overall_quality,
+            "passes_quality_check": self.passes_quality_check,
+            "blur_score": float(self.blur_score) if self.blur_score else None,
+            "is_blurry": self.is_blurry,
+            "blur_threshold": float(self.blur_threshold) if self.blur_threshold else None,
+            "meets_min_resolution": self.meets_min_resolution,
+            "min_width_required": self.min_width_required,
+            "min_height_required": self.min_height_required,
+            "edge_density_top": float(self.edge_density_top) if self.edge_density_top else None,
+            "edge_density_bottom": float(self.edge_density_bottom) if self.edge_density_bottom else None,
+            "edge_density_left": float(self.edge_density_left) if self.edge_density_left else None,
+            "edge_density_right": float(self.edge_density_right) if self.edge_density_right else None,
+            "avg_edge_density": float(self.avg_edge_density) if self.avg_edge_density else None,
+            "max_edge_density": float(self.max_edge_density) if self.max_edge_density else None,
+            "likely_cropped": self.likely_cropped,
+            "issues": self.issues,
+            "assessment_duration_ms": self.assessment_duration_ms,
+        }
