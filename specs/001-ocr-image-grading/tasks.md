@@ -267,34 +267,34 @@ Polish (Final Phase)
   - Handle 404 if not found
   - File: routes/api.py
 
-- [ ] T025 [US1] Create UI template for viewing image submissions
+- [X] T025 [US1] Create UI template for viewing image submissions
   - Extend existing grading template (templates/)
   - Display original image thumbnail
   - Display extracted text in expandable panel
   - Show OCR confidence score
   - Show processing status indicator
-  - File: templates/submission_detail.html (or new template)
+  - File: templates/image_submissions.html
 
-- [ ] T026 [US1] Add image submission route to main.py
+- [X] T026 [US1] Add image submission route to main.py
   - Add route: /submissions/<submission_id>/images
   - Render template with submission images
   - Pass ImageSubmission query results to template
   - File: routes/main.py
 
-- [ ] T027 [US1] Write integration test for image upload and OCR flow
+- [X] T027 [US1] Write integration test for image upload and OCR flow
   - Test: Upload PNG with text → verify ImageSubmission created
   - Test: Wait for OCR completion → verify ExtractedContent exists
   - Test: Verify extracted text matches expected content
   - Test: Verify confidence score ≥ 0.9 for clear image
   - File: tests/test_image_processing.py
 
-- [ ] T028 [US1] Write unit tests for file validation
+- [X] T028 [US1] Write unit tests for file validation
   - Test: Valid PNG passes validation
   - Test: Invalid extension rejected
   - Test: File > 50MB rejected
   - Test: Non-image MIME type rejected
   - Test: Corrupted image data rejected
-  - File: tests/test_file_utils.py
+  - File: tests/test_file_utils_more.py
 
 ---
 
