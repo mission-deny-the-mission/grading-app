@@ -1453,7 +1453,7 @@ class ExtractedContent(db.Model):
 
     # Indexes
     __table_args__ = (
-        db.Index("idx_image_submission_id", "image_submission_id"),
+        db.Index("idx_extracted_content_image_submission", "image_submission_id"),
         db.Index("idx_confidence_score", "confidence_score"),
         db.Index("idx_ocr_provider", "ocr_provider"),
     )
@@ -1529,7 +1529,7 @@ class ImageQualityMetrics(db.Model):
 
     # Indexes
     __table_args__ = (
-        db.Index("idx_image_submission_id", "image_submission_id"),
+        db.Index("idx_image_quality_image_submission", "image_submission_id"),
         db.Index("idx_overall_quality", "overall_quality"),
         db.Index("idx_passes_quality_check", "passes_quality_check"),
     )
