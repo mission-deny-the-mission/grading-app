@@ -18,7 +18,6 @@ A critical issue where the bulk upload system failed to load models due to missi
 - Testing: `docs/Testing.md`
 - Docker: `docs/Docker.md`
 - Bulk upload tests: `tests/README_bulk_upload_tests.md`
-- Spec-Driven Development: `SPEC_DRIVEN_DEVELOPMENT.md`
 
 ## File structure
 
@@ -33,35 +32,8 @@ grading-app/
 ├── docs/
 ├── tests/
 ├── validate_bulk_upload_fix.py  # Quick validation script
-├── uploads/
-├── .specify/                      # Spec-Driven Development setup
-├── specify_cli.py                 # Spec Kit CLI tool
-└── SPEC_DRIVEN_DEVELOPMENT.md     # SDD usage guide
+└── uploads/
 ```
-
-## Spec-Driven Development 🚀
-
-This project uses a simplified version of **GitHub Spec Kit** for structured development. The Spec-Driven Development methodology helps create better features through:
-
-- **Structured specifications** with clear requirements
-- **Technical planning** before implementation  
-- **Task breakdown** with dependencies
-- **Consistent processes** for all development
-
-### Quick Start
-```bash
-python specify_cli.py check      # Verify setup
-python specify_cli.py status     # View current status
-```
-
-Then use these AI agent slash commands:
-- `/constitution` - View project principles
-- `/specify` - Define feature requirements  
-- `/plan` - Create technical implementation
-- `/tasks` - Generate actionable tasks
-- `/implement` - Execute development
-
-See `SPEC_DRIVEN_DEVELOPMENT.md` for complete guide.
 
 ## License
 
