@@ -7,7 +7,9 @@ from celery import Celery
 from dotenv import load_dotenv
 
 from models import (
+    ExtractedContent,
     GradingJob,
+    ImageSubmission,
     JobBatch,
     MarkingScheme,
     SavedMarkingScheme,
@@ -15,7 +17,11 @@ from models import (
     db,
 )
 from utils.file_utils import cleanup_file
-from utils.llm_providers import get_llm_provider, provider_semaphore
+from utils.llm_providers import (
+    extract_text_from_image_azure,
+    get_llm_provider,
+    provider_semaphore,
+)
 from utils.text_extraction import extract_text_by_file_type
 
 anthropic = None  # Keep for compatibility, though not directly used now
@@ -737,6 +743,95 @@ def update_batch_progress(batch_id):
         except Exception as e:
             print(f"Error updating batch progress {batch_id}: {str(e)}")
             return False
+
+
+@celery_app.task(bind=True)
+def process_image_ocr(self, image_submission_id):
+    """
+    Process OCR extraction for an image submission.
+
+    Args:
+        image_submission_id: ID of ImageSubmission to process
+
+    Returns:
+        dict: Processing result with status and details
+    """
+    app = create_app()
+    with app.app_context():
+        try:
+            # Get ImageSubmission
+            image_submission = ImageSubmission.query.get(image_submission_id)
+            if not image_submission:
+                return {
+                    'status': 'error',
+                    'error': f'ImageSubmission {image_submission_id} not found'
+                }
+
+            # Update status to processing
+            image_submission.processing_status = 'processing'
+            image_submission.ocr_started_at = datetime.now(timezone.utc)
+            db.session.commit()
+
+            # Extract text using Azure Vision OCR
+            ocr_result = extract_text_from_image_azure(image_submission.storage_path)
+
+            if ocr_result['status'] == 'success':
+                # Create ExtractedContent record
+                extracted_content = ExtractedContent(
+                    image_submission_id=image_submission.id,
+                    extracted_text=ocr_result['text'],
+                    text_length=ocr_result.get('text_length', len(ocr_result['text'])),
+                    line_count=ocr_result.get('line_count', ocr_result['text'].count('\n') + 1),
+                    ocr_provider='azure_vision',
+                    ocr_model='azure_read_api',
+                    confidence_score=ocr_result['confidence'],
+                    processing_time_ms=ocr_result['processing_time_ms'],
+                    text_regions=ocr_result.get('text_regions', [])
+                )
+                db.session.add(extracted_content)
+
+                # Update ImageSubmission status
+                image_submission.processing_status = 'completed'
+                image_submission.ocr_completed_at = datetime.now(timezone.utc)
+                image_submission.error_message = None
+
+                db.session.commit()
+
+                return {
+                    'status': 'success',
+                    'image_submission_id': image_submission_id,
+                    'extracted_text_length': ocr_result.get('text_length', 0),
+                    'confidence': ocr_result['confidence'],
+                    'processing_time_ms': ocr_result['processing_time_ms']
+                }
+            else:
+                # OCR failed
+                image_submission.processing_status = 'failed'
+                image_submission.error_message = ocr_result.get('error', 'Unknown OCR error')
+                db.session.commit()
+
+                return {
+                    'status': 'error',
+                    'image_submission_id': image_submission_id,
+                    'error': ocr_result.get('error', 'Unknown OCR error')
+                }
+
+        except Exception as e:
+            # Handle unexpected errors
+            try:
+                image_submission = ImageSubmission.query.get(image_submission_id)
+                if image_submission:
+                    image_submission.processing_status = 'failed'
+                    image_submission.error_message = f'Unexpected error: {str(e)}'
+                    db.session.commit()
+            except Exception:
+                pass  # Don't fail if we can't update status
+
+            return {
+                'status': 'error',
+                'image_submission_id': image_submission_id,
+                'error': f'Unexpected error: {str(e)}'
+            }
 
 
 @celery_app.task

@@ -186,7 +186,7 @@ Polish (Final Phase)
 
 ### Tasks
 
-- [ ] T015 [US1] Implement file validation utility in utils/file_utils.py
+- [X] T015 [US1] Implement file validation utility in utils/file_utils.py
   - Add function: validate_uploaded_image(file)
   - Check: file extension in ALLOWED_EXTENSIONS (png, jpg, jpeg, gif, webp, bmp)
   - Check: file size ≤ 50MB
@@ -195,14 +195,14 @@ Polish (Final Phase)
   - Return: True or raise ValidationError with details
   - File: utils/file_utils.py
 
-- [ ] T016 [US1] Implement UUID-based storage path generator
+- [X] T016 [US1] Implement UUID-based storage path generator
   - Add function: generate_storage_path(file_extension) → (storage_path, file_uuid)
   - Use two-level UUID hashing: /uploads/XX/YY/uuid.ext
   - Create subdirectories if needed
   - Return storage path and UUID
   - File: utils/file_utils.py
 
-- [ ] T017 [US1] Implement Azure Vision OCR provider in utils/llm_providers.py
+- [X] T017 [US1] Implement Azure Vision OCR provider in utils/llm_providers.py
   - Extend LLMProvider base class or create OCRProvider base
   - Add method: extract_text_from_image(image_path)
   - Use Azure ComputerVisionClient.read_in_stream()
@@ -211,7 +211,7 @@ Polish (Final Phase)
   - Handle errors gracefully
   - File: utils/llm_providers.py
 
-- [ ] T018 [US1] Create Celery task for OCR processing
+- [X] T018 [US1] Create Celery task for OCR processing
   - Add @celery.task: process_image_ocr(image_submission_id)
   - Update ImageSubmission status: queued → processing
   - Call OCR provider extract_text_from_image()
@@ -220,7 +220,7 @@ Polish (Final Phase)
   - Log processing time and API cost
   - File: tasks.py
 
-- [ ] T019 [P] [US1] Implement POST /api/submissions/{submission_id}/images endpoint
+- [X] T019 [P] [US1] Implement POST /api/submissions/{submission_id}/images endpoint
   - Accept multipart/form-data with 'image' file
   - Validate file using validate_uploaded_image()
   - Generate storage path using generate_storage_path()
@@ -230,28 +230,28 @@ Polish (Final Phase)
   - Return 201 with ImageSubmission JSON
   - File: routes/api.py
 
-- [ ] T020 [P] [US1] Implement GET /api/submissions/{submission_id}/images endpoint
+- [X] T020 [P] [US1] Implement GET /api/submissions/{submission_id}/images endpoint
   - Query ImageSubmission by submission_id
   - Filter by status if query param provided
   - Include OCR content if include_content=true query param
   - Return list of ImageSubmission objects as JSON
   - File: routes/api.py
 
-- [ ] T021 [P] [US1] Implement GET /api/images/{image_id} endpoint
+- [X] T021 [P] [US1] Implement GET /api/images/{image_id} endpoint
   - Query ImageSubmission by ID
   - Eager load extracted_content and quality_metrics
   - Return detailed ImageSubmission JSON
   - Handle 404 if not found
   - File: routes/api.py
 
-- [ ] T022 [P] [US1] Implement GET /api/images/{image_id}/download endpoint
+- [X] T022 [P] [US1] Implement GET /api/images/{image_id}/download endpoint
   - Query ImageSubmission by ID to get storage_path
   - Verify file exists at storage_path
   - Return file with send_file() with correct MIME type
   - Set Content-Disposition header with original_filename
   - File: routes/api.py
 
-- [ ] T023 [P] [US1] Implement GET /api/images/{image_id}/ocr endpoint
+- [X] T023 [P] [US1] Implement GET /api/images/{image_id}/ocr endpoint
   - Query ExtractedContent by image_submission_id
   - If not found: check ImageSubmission.processing_status
   - Return 200 with ExtractedContent JSON if completed
@@ -259,7 +259,7 @@ Polish (Final Phase)
   - Return 404 if image not found
   - File: routes/api.py
 
-- [ ] T024 [P] [US1] Implement DELETE /api/images/{image_id} endpoint
+- [X] T024 [P] [US1] Implement DELETE /api/images/{image_id} endpoint
   - Query ImageSubmission by ID
   - Delete physical file from storage_path
   - Delete database record (CASCADE deletes ExtractedContent, Quality, Validation)

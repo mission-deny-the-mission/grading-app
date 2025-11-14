@@ -12,8 +12,24 @@ from flask import Blueprint, jsonify, request, send_file
 from werkzeug.exceptions import NotFound
 import time
 
-from models import (BatchTemplate, GradingJob, JobBatch, JobTemplate,
-                    SavedMarkingScheme, SavedPrompt, Submission, db)
+from models import (
+    BatchTemplate,
+    ExtractedContent,
+    GradingJob,
+    ImageSubmission,
+    JobBatch,
+    JobTemplate,
+    SavedMarkingScheme,
+    SavedPrompt,
+    Submission,
+    db,
+)
+from tasks import process_image_ocr
+from utils.file_utils import (
+    ValidationError,
+    generate_storage_path,
+    validate_uploaded_image,
+)
 from utils.llm_providers import get_llm_provider
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -2021,5 +2037,267 @@ def delete_saved_marking_scheme(scheme_id):
         return jsonify(
             {"success": True, "message": "Marking scheme deleted successfully"}
         )
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+# Image Submission Endpoints
+
+@api_bp.route("/submissions/<submission_id>/images", methods=["POST"])
+def upload_image(submission_id):
+    """
+    Upload an image for a submission.
+
+    Args:
+        submission_id: ID of the submission
+
+    Returns:
+        JSON response with ImageSubmission details (201) or error (400/404)
+    """
+    try:
+        # Verify submission exists
+        submission = Submission.query.get_or_404(submission_id)
+
+        # Get uploaded file
+        if 'image' not in request.files:
+            return jsonify({"success": False, "error": "No image file provided"}), 400
+
+        file = request.files['image']
+
+        # Validate image
+        try:
+            validate_uploaded_image(file)
+        except ValidationError as e:
+            return jsonify({"success": False, "error": str(e)}), 400
+
+        # Get file extension
+        filename_lower = file.filename.lower()
+        file_ext = filename_lower.rsplit('.', 1)[1] if '.' in filename_lower else 'png'
+
+        # Generate storage path
+        upload_folder = os.getenv('UPLOAD_FOLDER', '/app/uploads')
+        storage_path, file_uuid = generate_storage_path(file_ext, upload_folder)
+
+        # Save file
+        file.save(storage_path)
+
+        # Get image dimensions using PIL
+        from PIL import Image as PILImage
+        with PILImage.open(storage_path) as img:
+            width, height = img.size
+            aspect_ratio = width / height if height > 0 else 0
+
+        # Get file size
+        file_size = os.path.getsize(storage_path)
+
+        # Calculate file hash
+        import hashlib
+        with open(storage_path, 'rb') as f:
+            file_hash = hashlib.sha256(f.read()).hexdigest()
+
+        # Create ImageSubmission record
+        image_submission = ImageSubmission(
+            submission_id=submission.id,
+            storage_path=storage_path,
+            file_uuid=file_uuid,
+            original_filename=file.filename,
+            file_size_bytes=file_size,
+            mime_type=file.content_type,
+            file_extension=file_ext,
+            width_pixels=width,
+            height_pixels=height,
+            aspect_ratio=aspect_ratio,
+            file_hash=file_hash,
+            processing_status='queued'
+        )
+
+        db.session.add(image_submission)
+        db.session.commit()
+
+        # Queue OCR processing task
+        process_image_ocr.delay(image_submission.id)
+
+        return jsonify({
+            "success": True,
+            "image": image_submission.to_dict()
+        }), 201
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@api_bp.route("/submissions/<submission_id>/images", methods=["GET"])
+def get_submission_images(submission_id):
+    """
+    Get all images for a submission.
+
+    Query params:
+        status: Filter by processing_status
+        include_content: Include OCR content if true
+
+    Returns:
+        JSON list of ImageSubmission objects
+    """
+    try:
+        # Verify submission exists
+        submission = Submission.query.get_or_404(submission_id)
+
+        # Build query
+        query = ImageSubmission.query.filter_by(submission_id=submission.id)
+
+        # Filter by status if provided
+        status = request.args.get('status')
+        if status:
+            query = query.filter_by(processing_status=status)
+
+        images = query.all()
+
+        # Include OCR content if requested
+        include_content = request.args.get('include_content', '').lower() == 'true'
+
+        result = []
+        for img in images:
+            img_dict = img.to_dict()
+            if include_content and img.extracted_content:
+                img_dict['extracted_content'] = img.extracted_content.to_dict()
+            result.append(img_dict)
+
+        return jsonify({"success": True, "images": result})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@api_bp.route("/images/<image_id>", methods=["GET"])
+def get_image(image_id):
+    """
+    Get detailed information about an image.
+
+    Returns:
+        JSON with ImageSubmission, ExtractedContent, and QualityMetrics
+    """
+    try:
+        image = ImageSubmission.query.get_or_404(image_id)
+
+        result = image.to_dict()
+
+        # Include related data
+        if image.extracted_content:
+            result['extracted_content'] = image.extracted_content.to_dict()
+
+        if image.quality_metrics:
+            result['quality_metrics'] = image.quality_metrics.to_dict()
+
+        return jsonify({"success": True, "image": result})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@api_bp.route("/images/<image_id>/download", methods=["GET"])
+def download_image(image_id):
+    """
+    Download the original image file.
+
+    Returns:
+        Image file with correct MIME type and filename
+    """
+    try:
+        image = ImageSubmission.query.get_or_404(image_id)
+
+        # Verify file exists
+        if not os.path.exists(image.storage_path):
+            return jsonify({"success": False, "error": "Image file not found"}), 404
+
+        # Send file
+        return send_file(
+            image.storage_path,
+            mimetype=image.mime_type,
+            as_attachment=True,
+            download_name=image.original_filename
+        )
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@api_bp.route("/images/<image_id>/ocr", methods=["GET"])
+def get_image_ocr(image_id):
+    """
+    Get OCR results for an image.
+
+    Returns:
+        200: OCR content if completed
+        202: Processing status if still in progress
+        404: Image not found
+    """
+    try:
+        image = ImageSubmission.query.get_or_404(image_id)
+
+        # Check if OCR is complete
+        if image.processing_status == 'completed':
+            if image.extracted_content:
+                return jsonify({
+                    "success": True,
+                    "status": "completed",
+                    "content": image.extracted_content.to_dict()
+                })
+            else:
+                return jsonify({
+                    "success": False,
+                    "error": "OCR completed but no content found"
+                }), 404
+
+        elif image.processing_status in ['queued', 'processing']:
+            return jsonify({
+                "success": True,
+                "status": image.processing_status,
+                "message": f"OCR is {image.processing_status}"
+            }), 202
+
+        elif image.processing_status == 'failed':
+            return jsonify({
+                "success": False,
+                "status": "failed",
+                "error": image.error_message
+            }), 400
+
+        else:
+            return jsonify({
+                "success": False,
+                "status": image.processing_status,
+                "error": "Unknown processing status"
+            }), 400
+
+    except NotFound:
+        return jsonify({"success": False, "error": "Image not found"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@api_bp.route("/images/<image_id>", methods=["DELETE"])
+def delete_image(image_id):
+    """
+    Delete an image and all associated data.
+
+    Returns:
+        204: Successfully deleted
+        404: Image not found
+    """
+    try:
+        image = ImageSubmission.query.get_or_404(image_id)
+
+        # Delete physical file
+        if os.path.exists(image.storage_path):
+            os.remove(image.storage_path)
+
+        # Delete database record (CASCADE will delete ExtractedContent, QualityMetrics, etc.)
+        db.session.delete(image)
+        db.session.commit()
+
+        return '', 204
+
+    except NotFound:
+        return jsonify({"success": False, "error": "Image not found"}), 404
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
