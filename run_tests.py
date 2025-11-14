@@ -11,10 +11,10 @@ import sys
 
 def run_command(cmd, description):
     """Run a command and handle errors."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Running: {description}")
     print(f"Command: {' '.join(cmd)}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
@@ -216,7 +216,7 @@ def main():
         else:  # all
             success &= run_all_tests()
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     if success:
         print("✅ All tests passed successfully!")
         sys.exit(0)

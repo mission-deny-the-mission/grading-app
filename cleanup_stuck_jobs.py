@@ -3,10 +3,10 @@
 Script to clean up stuck jobs and restart Celery workers
 """
 
-import os
 import subprocess
 import sys
 import time
+
 
 def kill_celery_workers():
     """Kill all running Celery workers gracefully."""
@@ -50,6 +50,7 @@ def kill_celery_workers():
     except Exception as e:
         print(f"Error stopping workers: {e}")
 
+
 def clear_redis_queue():
     """Clear the Celery task queue in Redis."""
     print("🧹 Clearing Redis queues...")
@@ -69,6 +70,7 @@ def clear_redis_queue():
 
     except Exception as e:
         print(f"Error clearing Redis: {e}")
+
 
 def restart_celery_workers():
     """Restart Celery workers."""
@@ -96,6 +98,7 @@ def restart_celery_workers():
     except Exception as e:
         print(f"Error starting workers: {e}")
 
+
 def main():
     """Main cleanup function."""
     print("🧹 Cleaning up stuck jobs and restarting services...")
@@ -114,6 +117,7 @@ def main():
     print("   - Ensure all test files properly mock API calls")
     print("   - Don't run trigger_job.py or other scripts that queue real tasks during testing")
     print("   - Use proper test isolation and cleanup")
+
 
 if __name__ == "__main__":
     main()

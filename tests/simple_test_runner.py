@@ -102,8 +102,11 @@ class TestRunner:
             ]
 
             for forbidden_element in forbidden_elements:
-                self.assert_not_contains(element_references, forbidden_element,
-                                       f"No reference to forbidden element '{forbidden_element}'")
+                self.assert_not_contains(
+                    element_references,
+                    forbidden_element,
+                    f"No reference to forbidden element '{forbidden_element}'"
+                )
 
         except ValueError as e:
             self.test_results.append(f"✗ FAIL: {str(e)}")
@@ -158,8 +161,10 @@ class TestRunner:
                 if f'id="{element_id}"' not in html_content:
                     missing_elements.append(element_id)
 
-            self.assert_true(len(missing_elements) == 0,
-                           f"All JavaScript element references exist in DOM - Missing: {missing_elements}")
+            self.assert_true(
+                len(missing_elements) == 0,
+                f"All JavaScript element references exist in DOM - Missing: {missing_elements}"
+            )
 
         except ValueError as e:
             self.test_results.append(f"✗ FAIL: {str(e)}")
@@ -193,8 +198,10 @@ class TestRunner:
 
             all_functions_found = True
             for function_name in required_functions:
-                if not self.assert_true(function_name in functions,
-                                      f"Critical JavaScript function '{function_name}' exists"):
+                if not self.assert_true(
+                    function_name in functions,
+                    f"Critical JavaScript function '{function_name}' exists"
+                ):
                     all_functions_found = False
 
             if all_functions_found:
@@ -213,12 +220,21 @@ class TestRunner:
             html_content = f.read()
 
         # This is the specific regression that was fixed
-        self.assert_not_contains(html_content, 'popularModelsDiv',
-                                "Regression: No reference to 'popularModelsDiv'")
-        self.assert_not_contains(html_content, 'getElementById(\'popularModels\')',
-                                "Regression: No direct reference to 'popularModels' element")
-        self.assert_not_contains(html_content, 'document.getElementById(\'popularModels\')',
-                                "Regression: No document.getElementById reference to 'popularModels' element")
+        self.assert_not_contains(
+            html_content,
+            'popularModelsDiv',
+            "Regression: No reference to 'popularModelsDiv'"
+        )
+        self.assert_not_contains(
+            html_content,
+            'getElementById(\'popularModels\')',
+            "Regression: No direct reference to 'popularModels' element"
+        )
+        self.assert_not_contains(
+            html_content,
+            'document.getElementById(\'popularModels\')',
+            "Regression: No document.getElementById reference to 'popularModels' element"
+        )
 
         self.test_results.append("✓ PASS: Regression test passed - no problematic references found")
 

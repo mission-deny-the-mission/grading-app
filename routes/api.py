@@ -5,12 +5,12 @@ Handles RESTful API endpoints for jobs, submissions, and saved configurations.
 
 import io
 import os
+import time
 import zipfile
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request, send_file
 from werkzeug.exceptions import NotFound
-import time
 
 from models import (BatchTemplate, GradingJob, JobBatch, JobTemplate,
                     SavedMarkingScheme, SavedPrompt, Submission, db)
@@ -24,14 +24,15 @@ _model_cache = {}
 _cache_timestamp = {}
 CACHE_TTL = 300  # 5 minutes in seconds
 
+
 def get_cached_models(provider_name):
     """Get cached models for a provider, or fetch if cache is expired/empty."""
     current_time = time.time()
 
     # Check if we have cached data and it's not expired
-    if (provider_name in _model_cache and
-        provider_name in _cache_timestamp and
-        current_time - _cache_timestamp[provider_name] < CACHE_TTL):
+    if (provider_name in _model_cache
+            and provider_name in _cache_timestamp
+            and current_time - _cache_timestamp[provider_name] < CACHE_TTL):
         return _model_cache[provider_name]
 
     # Cache is empty or expired, fetch fresh data
@@ -76,6 +77,7 @@ def get_cached_models(provider_name):
         print(f"Error fetching models for {provider_name}: {e}")
         # Return None for unknown providers to trigger 400 error
         return None
+
 
 def get_fallback_models(provider_name):
     """Get fallback hardcoded models for a provider."""
@@ -122,6 +124,7 @@ def get_fallback_models(provider_name):
         }
     }
     return fallback_models.get(provider_name, {"popular": [], "default": ""})
+
 
 # Dynamic model configuration (will be populated at runtime)
 DEFAULT_MODELS = {
@@ -671,7 +674,7 @@ def api_get_templates():
         if not is_public:
             # Only show user's own templates if not requesting public
             query = query.filter(
-                (BatchTemplate.is_public == True)
+                (BatchTemplate.is_public is True)
                 | (BatchTemplate.created_by == request.remote_addr)
             )
 
@@ -1543,7 +1546,6 @@ def api_create_job_in_batch_with_files(batch_id):
     try:
         from flask import current_app
         from werkzeug.utils import secure_filename
-
 
         batch = JobBatch.query.get_or_404(batch_id)
 

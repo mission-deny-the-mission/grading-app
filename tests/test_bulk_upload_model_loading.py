@@ -5,11 +5,9 @@ This test suite ensures that the bulk upload system properly loads models
 and prevents regression of missing DOM element issues.
 """
 
-import json
 import re
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 from bs4 import BeautifulSoup
 
 
@@ -84,13 +82,6 @@ class JavaScriptTestHelper:
             found_patterns.extend(matches)
 
         return found_patterns
-
-import json
-import re
-from unittest.mock import patch, MagicMock
-
-import pytest
-from bs4 import BeautifulSoup
 
 
 class TestBulkUploadModelLoading:

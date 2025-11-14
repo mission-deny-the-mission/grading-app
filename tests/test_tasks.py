@@ -1006,14 +1006,14 @@ class TestFileProcessingAndCleanup:
 
             for i in range(3):
                 # Create test file
-                test_content = f"This is test content for file {i+1}."
+                test_content = f"This is test content for file {i + 1}."
                 with tempfile.NamedTemporaryFile(
                     mode="w", suffix=".txt", delete=False
                 ) as f:
                     f.write(test_content)
                     temp_file = f.name
 
-                filename = f"test_file_{i+1}.txt"
+                filename = f"test_file_{i + 1}.txt"
                 final_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
                 # Move to upload folder
@@ -1025,7 +1025,7 @@ class TestFileProcessingAndCleanup:
                 # Create submission
                 submission = Submission(
                     job_id=job.id,
-                    original_filename=f"document_{i+1}.txt",
+                    original_filename=f"document_{i + 1}.txt",
                     filename=filename,
                     file_type="txt",
                     file_size=len(test_content),

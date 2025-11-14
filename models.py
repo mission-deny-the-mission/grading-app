@@ -233,7 +233,7 @@ class GradingJob(db.Model):
                 marking_scheme_dict = (
                     self.marking_scheme.to_dict() if self.marking_scheme else None
                 )
-            except:
+            except Exception:
                 pass
 
             saved_prompt_dict = None
@@ -241,7 +241,7 @@ class GradingJob(db.Model):
                 saved_prompt_dict = (
                     self.saved_prompt.to_dict() if self.saved_prompt else None
                 )
-            except:
+            except Exception:
                 pass
 
             saved_marking_scheme_dict = None
@@ -251,19 +251,19 @@ class GradingJob(db.Model):
                     if self.saved_marking_scheme
                     else None
                 )
-            except:
+            except Exception:
                 pass
 
             progress = 0
             try:
                 progress = self.get_progress()
-            except:
+            except Exception:
                 pass
 
             can_retry = False
             try:
                 can_retry = self.can_retry_failed_submissions()
-            except:
+            except Exception:
                 pass
 
             return {
@@ -492,13 +492,13 @@ class Submission(db.Model):
             grade_results_list = []
             try:
                 grade_results_list = [gr.to_dict() for gr in self.grade_results]
-            except:
+            except Exception:
                 pass
 
             can_retry_val = False
             try:
                 can_retry_val = self.can_retry()
-            except:
+            except Exception:
                 pass
 
             return {
@@ -842,19 +842,19 @@ class JobBatch(db.Model):
                     1 for job in self.jobs if job.status == "processing"
                 )
                 pending_jobs = sum(1 for job in self.jobs if job.status == "pending")
-            except:
+            except Exception:
                 pass
 
             template_dict = None
             try:
                 template_dict = self.template.to_dict() if self.template else None
-            except:
+            except Exception:
                 pass
 
             progress = 0
             try:
                 progress = self.get_progress()
-            except:
+            except Exception:
                 pass
 
             can_retry = False
@@ -866,7 +866,7 @@ class JobBatch(db.Model):
                 can_start = self.can_start()
                 can_pause = self.can_pause()
                 can_resume = self.can_resume()
-            except:
+            except Exception:
                 pass
 
             return {
@@ -1151,7 +1151,7 @@ class JobBatch(db.Model):
             if self.saved_prompt_id:
                 saved_prompt = db.session.get(SavedPrompt, self.saved_prompt_id)
                 saved_prompt_name = saved_prompt.name if saved_prompt else None
-        except:
+        except Exception:
             saved_prompt_name = None
 
         try:
@@ -1163,7 +1163,7 @@ class JobBatch(db.Model):
                 saved_marking_scheme_name = (
                     saved_marking_scheme.name if saved_marking_scheme else None
                 )
-        except:
+        except Exception:
             saved_marking_scheme_name = None
 
         return {

@@ -11,7 +11,7 @@ import sys
 
 def run_test_script(script_name, description):
     """Run a test script and return success status."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"🚀 {description}")
     print("=" * 60)
 
