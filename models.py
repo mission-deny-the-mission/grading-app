@@ -1559,3 +1559,232 @@ class ImageQualityMetrics(db.Model):
             "issues": self.issues,
             "assessment_duration_ms": self.assessment_duration_ms,
         }
+
+
+# ============================================================================
+# AUTHENTICATION & MULTI-USER MODELS (004-optional-auth-system)
+# ============================================================================
+
+
+class DeploymentConfig(db.Model):
+    """System-wide deployment mode configuration (singleton pattern)."""
+
+    __tablename__ = "deployment_config"
+
+    id = db.Column(db.String(36), primary_key=True, default="singleton")
+    mode = db.Column(db.String(20), nullable=False, default="single-user")  # single-user | multi-user
+    configured_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    @classmethod
+    def get_current_mode(cls):
+        """Get the current deployment mode."""
+        config = cls.query.filter_by(id="singleton").first()
+        if config:
+            return config.mode
+        # Default to single-user if not configured
+        return "single-user"
+
+    @classmethod
+    def set_mode(cls, mode):
+        """Set the deployment mode (single-user or multi-user)."""
+        if mode not in ("single-user", "multi-user"):
+            raise ValueError(f"Invalid deployment mode: {mode}")
+
+        config = cls.query.filter_by(id="singleton").first()
+        if not config:
+            config = cls(id="singleton", mode=mode)
+            db.session.add(config)
+        else:
+            config.mode = mode
+            config.updated_at = datetime.now(timezone.utc)
+
+        db.session.commit()
+        return config
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "mode": self.mode,
+            "configured_at": self.configured_at.isoformat() if self.configured_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class User(db.Model):
+    """User model for multi-user deployments with Flask-Login integration."""
+
+    __tablename__ = "users"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    display_name = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    is_admin = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True, index=True)
+
+    # Relationships
+    ai_quotas = db.relationship("AIProviderQuota", backref="user", lazy=True, cascade="all, delete-orphan")
+    usage_records = db.relationship("UsageRecord", backref="user", lazy=True)
+    sessions = db.relationship("AuthSession", backref="user", lazy=True, cascade="all, delete-orphan")
+    shared_projects = db.relationship("ProjectShare", backref="user", lazy=True, cascade="all, delete-orphan")
+
+    # Flask-Login required properties
+    @property
+    def is_authenticated(self):
+        """Return True if user is authenticated."""
+        return True
+
+    @property
+    def is_anonymous(self):
+        """Return False (user is not anonymous)."""
+        return False
+
+    def get_id(self):
+        """Return user ID for Flask-Login."""
+        return self.id
+
+    def to_dict(self):
+        """Convert user to dictionary (excluding password hash)."""
+        return {
+            "id": self.id,
+            "email": self.email,
+            "display_name": self.display_name,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "is_admin": self.is_admin,
+            "is_active": self.is_active,
+        }
+
+
+class AIProviderQuota(db.Model):
+    """Per-user AI usage limits for each provider."""
+
+    __tablename__ = "ai_provider_quotas"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    provider = db.Column(db.String(50), nullable=False)  # openrouter, claude, gemini, lmstudio
+    limit_type = db.Column(db.String(20), nullable=False)  # tokens | requests
+    limit_value = db.Column(db.Integer, nullable=False)  # -1 for unlimited
+    reset_period = db.Column(db.String(20), nullable=False)  # daily | weekly | monthly | unlimited
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (db.UniqueConstraint("user_id", "provider", name="unique_user_provider"),)
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "provider": self.provider,
+            "limit_type": self.limit_type,
+            "limit_value": self.limit_value,
+            "reset_period": self.reset_period,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class UsageRecord(db.Model):
+    """Audit trail of all AI provider usage."""
+
+    __tablename__ = "usage_records"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
+    provider = db.Column(db.String(50), nullable=False)
+    tokens_consumed = db.Column(db.Integer, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    project_id = db.Column(db.String(36))  # Reference to GradingJob (nullable for backward compat)
+    operation_type = db.Column(db.String(50), nullable=False)  # grading | ocr | analysis
+    model_name = db.Column(db.String(100))
+
+    __table_args__ = (
+        db.Index("idx_usage_user_provider_time", "user_id", "provider", "timestamp"),
+        db.Index("idx_usage_project", "project_id"),
+    )
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "provider": self.provider,
+            "tokens_consumed": self.tokens_consumed,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "project_id": self.project_id,
+            "operation_type": self.operation_type,
+            "model_name": self.model_name,
+        }
+
+
+class ProjectShare(db.Model):
+    """Project sharing permissions between users."""
+
+    __tablename__ = "project_shares"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = db.Column(db.String(36), nullable=False)  # Reference to GradingJob
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    permission_level = db.Column(db.String(10), nullable=False)  # read | write
+    granted_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    granted_by = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("project_id", "user_id", name="unique_project_share"),
+        db.Index("idx_share_user", "user_id"),
+    )
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "project_id": self.project_id,
+            "user_id": self.user_id,
+            "permission_level": self.permission_level,
+            "granted_at": self.granted_at.isoformat() if self.granted_at else None,
+            "granted_by": self.granted_by,
+        }
+
+
+class AuthSession(db.Model):
+    """Active user sessions for authentication."""
+
+    __tablename__ = "auth_sessions"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    last_activity = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    ip_address = db.Column(db.String(45))  # IPv4/IPv6
+    user_agent = db.Column(db.String(255))
+
+    __table_args__ = (db.Index("idx_session_user", "user_id"),)
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_activity": self.last_activity.isoformat() if self.last_activity else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+        }

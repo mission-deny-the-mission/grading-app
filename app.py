@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify
+from flask_login import LoginManager
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from models import db
@@ -18,6 +19,20 @@ app = Flask(__name__, template_folder="templates")
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-here")
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100MB max file size
 
+# Flask-Login configuration
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+login_manager.session_protection = 'strong'
+
+# Session configuration (security & timeouts)
+app.config['REMEMBER_COOKIE_SECURE'] = True  # HTTPS only in production
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True  # No JS access to cookie
+app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # No JS access to cookie
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes idle timeout
+
 # Database configuration (use absolute path for SQLite to avoid CWD-related resets)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DEFAULT_SQLITE_PATH = os.path.join(BASE_DIR, "grading_app.db")
@@ -31,6 +46,13 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Initialize database
 db.init_app(app)
+
+# Flask-Login user_loader callback (will be properly configured after User model is available)
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user from database for Flask-Login session management."""
+    from models import User
+    return User.query.get(user_id)
 
 # Register blueprints
 app.register_blueprint(main_bp)
