@@ -1,0 +1,180 @@
+openapi: 3.0.3
+info:
+  title: Configuration Export Endpoint
+  description: Export all configuration settings as JSON file
+  version: 1.0.0
+
+paths:
+  /export_config:
+    get:
+      summary: Export configuration
+      description: |
+        Returns all configuration settings as JSON including API keys, URLs, default models, and prompts.
+        **WARNING**: Export contains sensitive API keys and should be protected accordingly.
+      operationId: exportConfig
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: Configuration exported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - version
+                  - exported_at
+                  - warning
+                properties:
+                  version:
+                    type: string
+                    description: Export format version
+                    example: "1.0"
+                  exported_at:
+                    type: string
+                    format: date-time
+                    description: ISO 8601 timestamp of export creation
+                    example: "2025-01-15T14:30:00Z"
+                  warning:
+                    type: string
+                    description: Security warning about sensitive content
+                    example: "This file contains sensitive API keys. Protect it accordingly."
+
+                  # API Keys
+                  openrouter_api_key:
+                    type: string
+                    description: OpenRouter API key (decrypted)
+                    example: ""
+                  claude_api_key:
+                    type: string
+                    description: Claude API key (decrypted)
+                    example: ""
+                  gemini_api_key:
+                    type: string
+                    description: Gemini API key (decrypted)
+                    example: ""
+                  openai_api_key:
+                    type: string
+                    description: OpenAI API key (decrypted)
+                    example: ""
+                  nanogpt_api_key:
+                    type: string
+                    description: NanoGPT API key (decrypted)
+                    example: ""
+                  chutes_api_key:
+                    type: string
+                    description: Chutes API key (decrypted)
+                    example: ""
+                  zai_api_key:
+                    type: string
+                    description: Z.AI API key (decrypted)
+                    example: ""
+
+                  # URLs
+                  lm_studio_url:
+                    type: string
+                    description: LM Studio endpoint URL
+                    example: "http://localhost:1234/v1"
+                  ollama_url:
+                    type: string
+                    description: Ollama endpoint URL
+                    example: "http://localhost:11434"
+
+                  # Default Models
+                  openrouter_default_model:
+                    type: string
+                    description: Default model for OpenRouter
+                    example: ""
+                  claude_default_model:
+                    type: string
+                    description: Default model for Claude
+                    example: ""
+                  gemini_default_model:
+                    type: string
+                    description: Default model for Gemini
+                    example: ""
+                  openai_default_model:
+                    type: string
+                    description: Default model for OpenAI
+                    example: ""
+                  nanogpt_default_model:
+                    type: string
+                    description: Default model for NanoGPT
+                    example: ""
+                  chutes_default_model:
+                    type: string
+                    description: Default model for Chutes
+                    example: ""
+                  zai_default_model:
+                    type: string
+                    description: Default model for Z.AI
+                    example: ""
+                  lm_studio_default_model:
+                    type: string
+                    description: Default model for LM Studio
+                    example: ""
+                  ollama_default_model:
+                    type: string
+                    description: Default model for Ollama
+                    example: ""
+
+                  # Other Settings
+                  default_prompt:
+                    type: string
+                    description: Default grading prompt
+                    example: "Please grade this document and provide detailed feedback..."
+                  zai_pricing_plan:
+                    type: string
+                    enum: [normal, coding]
+                    description: Z.AI pricing plan selection
+                    example: "normal"
+
+              examples:
+                minimal:
+                  summary: Minimal configuration (no API keys set)
+                  value:
+                    version: "1.0"
+                    exported_at: "2025-01-15T14:30:00Z"
+                    warning: "This file contains sensitive API keys. Protect it accordingly."
+                    openrouter_api_key: ""
+                    claude_api_key: ""
+                    gemini_api_key: ""
+                    openai_api_key: ""
+                    nanogpt_api_key: ""
+                    chutes_api_key: ""
+                    zai_api_key: ""
+                    lm_studio_url: "http://localhost:1234/v1"
+                    ollama_url: "http://localhost:11434"
+                    default_prompt: "Please grade this document..."
+                    zai_pricing_plan: "normal"
+
+                complete:
+                  summary: Complete configuration with API keys
+                  value:
+                    version: "1.0"
+                    exported_at: "2025-01-15T14:30:00Z"
+                    warning: "This file contains sensitive API keys. Protect it accordingly."
+                    openrouter_api_key: "sk-or-v1-abcd1234..."
+                    claude_api_key: "sk-ant-api03-xyz789..."
+                    gemini_api_key: "AIza..."
+                    openai_api_key: "sk-proj-..."
+                    lm_studio_url: "http://localhost:1234/v1"
+                    ollama_url: "http://localhost:11434"
+                    claude_default_model: "claude-3-5-sonnet-20241022"
+                    openai_default_model: "gpt-4o"
+                    default_prompt: "Custom grading prompt..."
+                    zai_pricing_plan: "normal"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Failed to export configuration"

@@ -5,8 +5,13 @@ from flask import Flask, jsonify, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_login import LoginManager
-from flask_migrate import Migrate
 from werkzeug.exceptions import RequestEntityTooLarge
+
+try:
+    from flask_migrate import Migrate
+    FLASK_MIGRATE_AVAILABLE = True
+except ImportError:
+    FLASK_MIGRATE_AVAILABLE = False
 
 from models import db
 # Import blueprints that don't depend on limiter - these go after limiter initialization
@@ -53,8 +58,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # Initialize database
 db.init_app(app)
 
-# Initialize Flask-Migrate for database migrations
-migrate = Migrate(app, db)
+# Initialize Flask-Migrate for database migrations (optional)
+if FLASK_MIGRATE_AVAILABLE:
+    migrate = Migrate(app, db)
 
 # Initialize rate limiter BEFORE importing blueprints to avoid circular imports
 limiter = Limiter(

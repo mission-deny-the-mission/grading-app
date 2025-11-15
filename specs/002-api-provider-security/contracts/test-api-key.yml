@@ -1,0 +1,168 @@
+openapi: 3.0.3
+info:
+  title: API Key Testing Endpoint
+  description: Test API key validity with actual provider connection
+  version: 1.0.0
+
+paths:
+  /test_api_key:
+    post:
+      summary: Test API key connectivity
+      description: |
+        Validates API key format and performs actual API call to verify key works with provider.
+        Returns success/failure with latency metrics or error details.
+      operationId: testApiKey
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - key
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - openrouter
+                    - claude
+                    - gemini
+                    - openai
+                    - nanogpt
+                    - chutes
+                    - zai
+                    - lm_studio
+                    - ollama
+                  description: Provider identifier
+                  example: openrouter
+                key:
+                  type: string
+                  description: API key to test
+                  example: sk-or-v1-abcd1234...
+            examples:
+              openrouter:
+                summary: Test OpenRouter API key
+                value:
+                  type: openrouter
+                  key: sk-or-v1-1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd
+              claude:
+                summary: Test Claude API key
+                value:
+                  type: claude
+                  key: sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrst
+
+      responses:
+        '200':
+          description: Test completed (success or failure)
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the API key test succeeded
+                  message:
+                    type: string
+                    description: Human-readable result message
+                  latency_ms:
+                    type: integer
+                    description: API call latency in milliseconds (only on success)
+                  error:
+                    type: string
+                    description: Error message (only on failure)
+                  error_type:
+                    type: string
+                    enum:
+                      - authentication
+                      - rate_limit
+                      - timeout
+                      - not_found
+                      - server_error
+                      - unknown
+                    description: Error category (only on failure)
+                  remediation:
+                    type: string
+                    description: Suggested remediation steps (only on failure)
+              examples:
+                success:
+                  summary: Successful API key test
+                  value:
+                    success: true
+                    message: "Connection successful"
+                    latency_ms: 245
+                auth_failure:
+                  summary: Authentication failure
+                  value:
+                    success: false
+                    error: "OpenRouter authentication failed"
+                    error_type: "authentication"
+                    remediation: "Verify your API key is correct and not expired"
+                rate_limit:
+                  summary: Rate limit exceeded
+                  value:
+                    success: false
+                    error: "Rate limit exceeded"
+                    error_type: "rate_limit"
+                    remediation: "Wait a few minutes or check your account limits"
+                timeout:
+                  summary: Request timeout
+                  value:
+                    success: false
+                    error: "Request timed out after 60 seconds"
+                    error_type: "timeout"
+                    remediation: "Check network connectivity or try again later"
+                format_invalid:
+                  summary: Invalid key format
+                  value:
+                    success: false
+                    error: "Invalid openrouter API key format"
+
+        '400':
+          description: Invalid request (missing required fields)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Missing required field: type"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+components:
+  schemas:
+    ProviderType:
+      type: string
+      enum:
+        - openrouter
+        - claude
+        - gemini
+        - openai
+        - nanogpt
+        - chutes
+        - zai
+        - lm_studio
+        - ollama
+      description: Supported AI provider identifiers

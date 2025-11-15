@@ -1225,7 +1225,7 @@ class JobBatch(db.Model):
 
 
 class Config(db.Model):
-    """Model for storing application configuration settings."""
+    """Model for storing application configuration settings with encrypted API keys."""
 
     __tablename__ = "config"
 
@@ -1237,14 +1237,15 @@ class Config(db.Model):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    # API Configuration
-    openrouter_api_key = db.Column(db.Text)
-    claude_api_key = db.Column(db.Text)
-    gemini_api_key = db.Column(db.Text)
-    openai_api_key = db.Column(db.Text)
-    nanogpt_api_key = db.Column(db.Text)
-    chutes_api_key = db.Column(db.Text)
-    zai_api_key = db.Column(db.Text)
+    # API Configuration - Encrypted Storage
+    # Use longer VARCHAR to accommodate Fernet ciphertext (longer than plaintext)
+    _openrouter_api_key = db.Column('openrouter_api_key', db.String(500))
+    _claude_api_key = db.Column('claude_api_key', db.String(500))
+    _gemini_api_key = db.Column('gemini_api_key', db.String(500))
+    _openai_api_key = db.Column('openai_api_key', db.String(500))
+    _nanogpt_api_key = db.Column('nanogpt_api_key', db.String(500))
+    _chutes_api_key = db.Column('chutes_api_key', db.String(500))
+    _zai_api_key = db.Column('zai_api_key', db.String(500))
     zai_pricing_plan = db.Column(db.String(20), default='normal')
     lm_studio_url = db.Column(db.String(500))
     ollama_url = db.Column(db.String(500))
@@ -1262,6 +1263,150 @@ class Config(db.Model):
     zai_default_model = db.Column(db.String(200))
     lm_studio_default_model = db.Column(db.String(200))
     ollama_default_model = db.Column(db.String(200))
+
+    # ========================================================================
+    # ENCRYPTION PROPERTIES - Automatic encryption/decryption
+    # ========================================================================
+
+    @property
+    def openrouter_api_key(self):
+        """Get decrypted OpenRouter API key."""
+        if not self._openrouter_api_key:
+            return None
+        from utils.encryption import decrypt_value
+        try:
+            return decrypt_value(self._openrouter_api_key)
+        except Exception:
+            return None
+
+    @openrouter_api_key.setter
+    def openrouter_api_key(self, value):
+        """Set OpenRouter API key (automatically encrypted)."""
+        if not value:
+            self._openrouter_api_key = None
+        else:
+            from utils.encryption import encrypt_value
+            self._openrouter_api_key = encrypt_value(value)
+
+    @property
+    def claude_api_key(self):
+        """Get decrypted Claude API key."""
+        if not self._claude_api_key:
+            return None
+        from utils.encryption import decrypt_value
+        try:
+            return decrypt_value(self._claude_api_key)
+        except Exception:
+            return None
+
+    @claude_api_key.setter
+    def claude_api_key(self, value):
+        """Set Claude API key (automatically encrypted)."""
+        if not value:
+            self._claude_api_key = None
+        else:
+            from utils.encryption import encrypt_value
+            self._claude_api_key = encrypt_value(value)
+
+    @property
+    def gemini_api_key(self):
+        """Get decrypted Gemini API key."""
+        if not self._gemini_api_key:
+            return None
+        from utils.encryption import decrypt_value
+        try:
+            return decrypt_value(self._gemini_api_key)
+        except Exception:
+            return None
+
+    @gemini_api_key.setter
+    def gemini_api_key(self, value):
+        """Set Gemini API key (automatically encrypted)."""
+        if not value:
+            self._gemini_api_key = None
+        else:
+            from utils.encryption import encrypt_value
+            self._gemini_api_key = encrypt_value(value)
+
+    @property
+    def openai_api_key(self):
+        """Get decrypted OpenAI API key."""
+        if not self._openai_api_key:
+            return None
+        from utils.encryption import decrypt_value
+        try:
+            return decrypt_value(self._openai_api_key)
+        except Exception:
+            return None
+
+    @openai_api_key.setter
+    def openai_api_key(self, value):
+        """Set OpenAI API key (automatically encrypted)."""
+        if not value:
+            self._openai_api_key = None
+        else:
+            from utils.encryption import encrypt_value
+            self._openai_api_key = encrypt_value(value)
+
+    @property
+    def nanogpt_api_key(self):
+        """Get decrypted NanoGPT API key."""
+        if not self._nanogpt_api_key:
+            return None
+        from utils.encryption import decrypt_value
+        try:
+            return decrypt_value(self._nanogpt_api_key)
+        except Exception:
+            return None
+
+    @nanogpt_api_key.setter
+    def nanogpt_api_key(self, value):
+        """Set NanoGPT API key (automatically encrypted)."""
+        if not value:
+            self._nanogpt_api_key = None
+        else:
+            from utils.encryption import encrypt_value
+            self._nanogpt_api_key = encrypt_value(value)
+
+    @property
+    def chutes_api_key(self):
+        """Get decrypted Chutes API key."""
+        if not self._chutes_api_key:
+            return None
+        from utils.encryption import decrypt_value
+        try:
+            return decrypt_value(self._chutes_api_key)
+        except Exception:
+            return None
+
+    @chutes_api_key.setter
+    def chutes_api_key(self, value):
+        """Set Chutes API key (automatically encrypted)."""
+        if not value:
+            self._chutes_api_key = None
+        else:
+            from utils.encryption import encrypt_value
+            self._chutes_api_key = encrypt_value(value)
+
+    @property
+    def zai_api_key(self):
+        """Get decrypted Z.AI API key."""
+        if not self._zai_api_key:
+            return None
+        from utils.encryption import decrypt_value
+        try:
+            return decrypt_value(self._zai_api_key)
+        except Exception:
+            return None
+
+    @zai_api_key.setter
+    def zai_api_key(self, value):
+        """Set Z.AI API key (automatically encrypted)."""
+        if not value:
+            self._zai_api_key = None
+        else:
+            from utils.encryption import encrypt_value
+            self._zai_api_key = encrypt_value(value)
 
     def to_dict(self):
         """Convert config to dictionary."""
