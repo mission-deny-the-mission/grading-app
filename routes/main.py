@@ -47,8 +47,35 @@ def config():
 def save_config():
     """Save configuration settings."""
     try:
+        from utils.llm_providers import validate_api_key_format
+
         # Get or create config record
         config = Config.get_or_create()
+
+        # Validate API key formats before saving
+        api_key_fields = {
+            "openrouter": "openrouter_api_key",
+            "claude": "claude_api_key",
+            "gemini": "gemini_api_key",
+            "openai": "openai_api_key",
+            "nanogpt": "nanogpt_api_key",
+            "chutes": "chutes_api_key",
+            "zai": "zai_api_key",
+        }
+
+        validation_errors = []
+        for provider, form_field in api_key_fields.items():
+            key = request.form.get(form_field, "").strip()
+            if key:  # Only validate if key is provided
+                is_valid, error = validate_api_key_format(provider, key)
+                if not is_valid:
+                    validation_errors.append(error)
+
+        # Return validation errors if any
+        if validation_errors:
+            return jsonify(
+                {"success": False, "message": "Validation failed: " + "; ".join(validation_errors)}
+            )
 
         # Update all fields from form
         config.openrouter_api_key = (
