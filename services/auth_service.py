@@ -51,7 +51,7 @@ class AuthService:
         """
         if check_deliverability is None:
             # Disable deliverability checks in test environments
-            check_deliverability = not os.getenv("TESTING", False)
+            check_deliverability = not (os.getenv("TESTING", "").lower() in ["true", "1", "yes"])
 
         try:
             valid_email = validate_email(email, check_deliverability=check_deliverability)
