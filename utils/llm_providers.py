@@ -5,7 +5,9 @@ This module consolidates all LLM provider logic to eliminate redundancy.
 
 import json
 import os
+import re
 import threading
+import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 
@@ -24,6 +26,201 @@ try:
     _redis_available = True
 except Exception:
     _redis_available = False
+
+
+# ============================================================================
+# API KEY VALIDATION PATTERNS
+# ============================================================================
+
+API_KEY_PATTERNS = {
+    'openrouter': r'^sk-or-v1-[A-Za-z0-9]{64}$',
+    'claude': r'^sk-ant-api03-[A-Za-z0-9_-]{95}$',
+    'openai': r'^sk-[A-Za-z0-9]{48}$',
+    'gemini': r'^[A-Za-z0-9_-]{39}$',
+    'nanogpt': r'^[A-Za-z0-9]{32,64}$',
+    'chutes': r'^chutes_[A-Za-z0-9]{32}$',
+    'zai': r'^[A-Za-z0-9]{32,}$',
+    'lm_studio': r'^.*$',  # Accept any value for local provider
+    'ollama': r'^.*$',  # Accept any value for local provider
+}
+
+
+# ============================================================================
+# API KEY SANITIZATION (SECURITY)
+# ============================================================================
+
+def sanitize_api_key(key):
+    """
+    Sanitize an API key for safe logging.
+
+    Returns a masked version of the API key that shows only the prefix and suffix
+    for identification purposes while hiding the actual key value.
+
+    Args:
+        key (str): API key to sanitize
+
+    Returns:
+        str: Sanitized key in format "prefix...suffix" (e.g., "sk-or...abcd")
+    """
+    if not key or len(key) < 8:
+        return "***REDACTED***"
+
+    # Show first 6 chars and last 4 chars
+    prefix = key[:6]
+    suffix = key[-4:] if len(key) >= 10 else ""
+
+    if suffix:
+        return f"{prefix}...{suffix}"
+    return f"{prefix}..."
+
+
+def sanitize_error_message(error_msg):
+    """
+    Remove API keys from error messages before logging.
+
+    Uses regex patterns to detect and replace API keys with sanitized versions.
+    This prevents accidental logging of sensitive credentials.
+
+    Args:
+        error_msg (str): Error message that may contain API keys
+
+    Returns:
+        str: Error message with API keys replaced with "***REDACTED***"
+    """
+    if not error_msg:
+        return error_msg
+
+    # Patterns to detect API keys that might be in error messages
+    sanitization_patterns = [
+        # OpenRouter: sk-or-v1-...
+        (r'sk-or-v1-[A-Za-z0-9]{64}', '***REDACTED_OPENROUTER***'),
+        # Claude: sk-ant-api03-...
+        (r'sk-ant-api03-[A-Za-z0-9_-]{95}', '***REDACTED_CLAUDE***'),
+        # OpenAI: sk-...
+        (r'sk-[A-Za-z0-9]{48}(?=["\']?\s|$|[,\n])', '***REDACTED_OPENAI***'),
+        # Gemini: 39 char alphanumeric
+        (r'[A-Za-z0-9_-]{39}(?=["\']?\s|$|[,\n])', '***REDACTED_GEMINI***'),
+        # Z.AI: 32+ char alphanumeric
+        (r'(?:z_ai_)?[A-Za-z0-9]{32,}(?=["\']?\s|$|[,\n])', '***REDACTED_ZAI***'),
+        # Chutes: chutes_...
+        (r'chutes_[A-Za-z0-9]{32}', '***REDACTED_CHUTES***'),
+        # Generic: any string that looks like a base64-encoded secret (contains = padding)
+        (r'[A-Za-z0-9+/]{40,}={0,2}(?=["\']?\s|$|[,\n])', '***REDACTED_SECRET***'),
+        # Headers that might contain authorization
+        (r'(Authorization["\']?\s*[:=]\s*["\']?)([^"\']+)(["\']?)', r'\1***REDACTED***\3'),
+        (r'(api[_-]?key["\']?\s*[:=]\s*["\']?)([^"\']+)(["\']?)', r'\1***REDACTED***\3', 're.IGNORECASE'),
+    ]
+
+    sanitized = error_msg
+    for pattern_item in sanitization_patterns:
+        if len(pattern_item) == 2:
+            pattern, replacement = pattern_item
+            flags = 0
+        else:
+            pattern, replacement, flags = pattern_item
+            flags = re.IGNORECASE if 're.IGNORECASE' in str(flags) else 0
+
+        sanitized = re.sub(pattern, replacement, sanitized, flags=flags)
+
+    return sanitized
+
+
+class LLMProviderError(Exception):
+    """
+    Standardized exception for LLM provider errors.
+
+    Provides consistent error handling across all providers with error types,
+    messages, and actionable remediation suggestions.
+    """
+
+    ERROR_TYPES = {
+        'AUTH': 'authentication',
+        'RATE_LIMIT': 'rate_limit',
+        'TIMEOUT': 'timeout',
+        'NOT_FOUND': 'not_found',
+        'SERVER_ERROR': 'server_error',
+        'NETWORK': 'network',
+        'UNKNOWN': 'unknown'
+    }
+
+    def __init__(self, error_type, message, provider, http_status=None):
+        """
+        Initialize LLMProviderError.
+
+        Args:
+            error_type (str): Error category (key from ERROR_TYPES)
+            message (str): Human-readable error description
+            provider (str): Provider name (e.g., "OpenRouter")
+            http_status (int, optional): HTTP status code if applicable
+        """
+        self.error_type = error_type
+        self.message = message
+        self.provider = provider
+        self.http_status = http_status
+        super().__init__(self.message)
+
+    def to_dict(self):
+        """
+        Convert exception to JSON-serializable dictionary.
+
+        Returns:
+            dict: Error information with remediation suggestions
+        """
+        return {
+            "success": False,
+            "error": self.message,
+            "error_type": self.error_type,
+            "provider": self.provider,
+            "http_status": self.http_status,
+            "remediation": self._get_remediation()
+        }
+
+    def _get_remediation(self):
+        """
+        Get user-friendly remediation suggestion based on error type.
+
+        Returns:
+            str: Actionable remediation text
+        """
+        remediation_map = {
+            'authentication': "Verify your API key is correct and not expired. Check the provider's console for key details.",
+            'rate_limit': "Wait a few minutes and try again. Check your account's rate limits and usage.",
+            'timeout': "Check your network connectivity. The provider may be experiencing slow responses. Try again later.",
+            'not_found': "Verify the model name is correct and available in your provider account.",
+            'network': "Check your internet connection and firewall settings. Verify the provider's API endpoint is accessible.",
+            'server_error': "The provider is experiencing issues. Wait a few minutes and try again.",
+            'unknown': "Contact support if the issue persists. Include the error details in your report."
+        }
+        return remediation_map.get(self.error_type, "Try again or contact support.")
+
+
+def validate_api_key_format(provider, key):
+    """
+    Validate API key format for a specific provider.
+
+    Checks if the API key matches the expected format for the provider.
+    This is a quick check to catch common typos and misconfigurations.
+
+    Args:
+        provider (str): Provider name (lowercase, e.g., 'openrouter', 'claude')
+        key (str): API key to validate
+
+    Returns:
+        tuple: (is_valid, error_message)
+            - is_valid (bool): True if valid format, False if invalid
+            - error_message (str): Error message if invalid, None if valid or no pattern
+    """
+    if not key:
+        return True, None  # Empty is valid (optional configuration)
+
+    pattern = API_KEY_PATTERNS.get(provider)
+    if not pattern:
+        return True, None  # No pattern defined for this provider
+
+    if not re.match(pattern, key):
+        return False, f"Invalid {provider} API key format"
+
+    return True, None
 
 _DEFAULT_PROPRIETARY_CONCURRENCY = int(
     os.getenv("DEFAULT_PROPRIETARY_CONCURRENCY", "4")
@@ -349,6 +546,113 @@ class LLMProvider(ABC):
           - temperature: Model temperature.
           - max_tokens: Maximum tokens for the response.
         """
+
+    def test_connection(self, model=None, timeout=60):
+        """
+        Test API connectivity with a minimal request.
+
+        Attempts to make a minimal API call to verify the provider is accessible
+        and the API key is valid. Returns latency information on success.
+
+        Args:
+            model (str, optional): Provider-specific model to test
+            timeout (int): Request timeout in seconds
+
+        Returns:
+            dict: {
+                "success": bool,
+                "latency_ms": int (on success),
+                "message": str,
+                "error_type": str (on failure)
+            }
+
+        Raises:
+            LLMProviderError: On API errors with specific error type
+        """
+        start_time = time.time()
+        try:
+            # Use a minimal test prompt and text
+            result = self.grade_document(
+                text="Test",
+                prompt="Respond with exactly 'OK'",
+                model=model or self._get_default_model(),
+                max_tokens=10,
+                temperature=0.0
+            )
+
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "message": "Connection successful",
+                    "latency_ms": latency_ms
+                }
+            else:
+                error_msg = result.get("error", "Unknown error")
+                raise LLMProviderError(
+                    'UNKNOWN',
+                    f"API returned error: {error_msg}",
+                    self.__class__.__name__
+                )
+        except LLMProviderError:
+            # Re-raise LLMProviderError as-is
+            raise
+        except Exception as e:
+            latency_ms = int((time.time() - start_time) * 1000)
+            # Map common errors to LLMProviderError types
+            error_str = str(e).lower()
+            if 'timeout' in error_str or 'deadline' in error_str:
+                raise LLMProviderError(
+                    'TIMEOUT',
+                    f"Request timed out after {timeout} seconds",
+                    self.__class__.__name__
+                )
+            elif '401' in error_str or 'unauthorized' in error_str:
+                raise LLMProviderError(
+                    'AUTH',
+                    "Authentication failed - check your API key",
+                    self.__class__.__name__,
+                    http_status=401
+                )
+            elif '429' in error_str or 'rate limit' in error_str:
+                raise LLMProviderError(
+                    'RATE_LIMIT',
+                    "Rate limit exceeded",
+                    self.__class__.__name__,
+                    http_status=429
+                )
+            elif '404' in error_str or 'not found' in error_str:
+                raise LLMProviderError(
+                    'NOT_FOUND',
+                    f"Endpoint not found or model not available: {e}",
+                    self.__class__.__name__,
+                    http_status=404
+                )
+            elif 'network' in error_str or 'connection' in error_str:
+                raise LLMProviderError(
+                    'NETWORK',
+                    f"Network error: {e}",
+                    self.__class__.__name__
+                )
+            else:
+                raise LLMProviderError(
+                    'UNKNOWN',
+                    f"Unexpected error during connection test: {e}",
+                    self.__class__.__name__
+                )
+
+    def _get_default_model(self):
+        """
+        Get the default model for this provider.
+
+        Can be overridden by subclasses to provide provider-specific defaults.
+
+        Returns:
+            str: Default model identifier
+        """
+        # Default implementation - subclasses should override
+        return None
 
 
 class OpenRouterLLMProvider(LLMProvider):

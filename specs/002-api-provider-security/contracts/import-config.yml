@@ -1,0 +1,225 @@
+openapi: 3.0.3
+info:
+  title: Configuration Import Endpoint
+  description: Import configuration settings from JSON file
+  version: 1.0.0
+
+paths:
+  /import_config:
+    post:
+      summary: Import configuration
+      description: |
+        Validates and applies configuration settings from uploaded JSON file.
+        Performs version compatibility check and API key format validation before applying.
+      operationId: importConfig
+      tags:
+        - Configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - version
+                - exported_at
+              properties:
+                version:
+                  type: string
+                  description: Import format version (must be "1.0")
+                  example: "1.0"
+                exported_at:
+                  type: string
+                  format: date-time
+                  description: Original export timestamp
+                  example: "2025-01-15T14:30:00Z"
+                warning:
+                  type: string
+                  description: Security warning (ignored during import)
+
+                # API Keys (all optional)
+                openrouter_api_key:
+                  type: string
+                  description: OpenRouter API key
+                claude_api_key:
+                  type: string
+                  description: Claude API key
+                gemini_api_key:
+                  type: string
+                  description: Gemini API key
+                openai_api_key:
+                  type: string
+                  description: OpenAI API key
+                nanogpt_api_key:
+                  type: string
+                  description: NanoGPT API key
+                chutes_api_key:
+                  type: string
+                  description: Chutes API key
+                zai_api_key:
+                  type: string
+                  description: Z.AI API key
+
+                # URLs (optional)
+                lm_studio_url:
+                  type: string
+                  description: LM Studio endpoint URL
+                ollama_url:
+                  type: string
+                  description: Ollama endpoint URL
+
+                # Default Models (all optional)
+                openrouter_default_model:
+                  type: string
+                claude_default_model:
+                  type: string
+                gemini_default_model:
+                  type: string
+                openai_default_model:
+                  type: string
+                nanogpt_default_model:
+                  type: string
+                chutes_default_model:
+                  type: string
+                zai_default_model:
+                  type: string
+                lm_studio_default_model:
+                  type: string
+                ollama_default_model:
+                  type: string
+
+                # Other Settings (optional)
+                default_prompt:
+                  type: string
+                  description: Default grading prompt
+                zai_pricing_plan:
+                  type: string
+                  enum: [normal, coding]
+                  description: Z.AI pricing plan
+
+            examples:
+              valid_import:
+                summary: Valid configuration import
+                value:
+                  version: "1.0"
+                  exported_at: "2025-01-15T14:30:00Z"
+                  openrouter_api_key: "sk-or-v1-abcd1234..."
+                  claude_api_key: "sk-ant-api03-xyz789..."
+                  lm_studio_url: "http://localhost:1234/v1"
+                  default_prompt: "Custom grading prompt..."
+
+              partial_import:
+                summary: Partial configuration (only some fields)
+                value:
+                  version: "1.0"
+                  exported_at: "2025-01-15T14:30:00Z"
+                  openai_api_key: "sk-proj-..."
+                  openai_default_model: "gpt-4o"
+
+      responses:
+        '200':
+          description: Configuration imported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - message
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether import succeeded
+                    example: true
+                  message:
+                    type: string
+                    description: Result message
+                    example: "Configuration imported successfully"
+                  fields_updated:
+                    type: integer
+                    description: Number of configuration fields updated
+                    example: 5
+              examples:
+                success:
+                  summary: Successful import
+                  value:
+                    success: true
+                    message: "Configuration imported successfully"
+                    fields_updated: 5
+
+        '400':
+          description: Invalid import data
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - error
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    description: Specific validation error
+                  validation_errors:
+                    type: array
+                    items:
+                      type: string
+                    description: List of all validation errors found
+              examples:
+                version_mismatch:
+                  summary: Unsupported version
+                  value:
+                    success: false
+                    error: "Unsupported configuration version: 2.0"
+                invalid_key_format:
+                  summary: Invalid API key format
+                  value:
+                    success: false
+                    error: "Configuration validation failed"
+                    validation_errors:
+                      - "Invalid openrouter API key format"
+                      - "Invalid claude API key format"
+                invalid_url:
+                  summary: Invalid URL format
+                  value:
+                    success: false
+                    error: "Configuration validation failed"
+                    validation_errors:
+                      - "lm_studio_url must start with http:// or https://"
+                missing_version:
+                  summary: Missing required field
+                  value:
+                    success: false
+                    error: "Missing required field: version"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Failed to import configuration: Database error"
+
+components:
+  schemas:
+    ValidationError:
+      type: object
+      properties:
+        field:
+          type: string
+          description: Field name that failed validation
+        error:
+          type: string
+          description: Validation error message
+      example:
+        field: "openrouter_api_key"
+        error: "Invalid API key format"
