@@ -3,6 +3,7 @@
 Auto-generated from all feature plans. Last updated: 2025-11-14
 
 ## Active Technologies
+- Python 3.13.7 (existing project) (004-optional-auth-system)
 
 - Python 3.13.7 (001-ocr-image-grading)
 
@@ -23,6 +24,7 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13.7: Follow standard conventions
 
 ## Recent Changes
+- 004-optional-auth-system: Added Python 3.13.7 (existing project)
 
 - 001-ocr-image-grading: Added Python 3.13.7
 
