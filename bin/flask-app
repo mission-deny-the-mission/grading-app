@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Wrapper script to run Flask app, handles nix-shell if needed
+
+if [ -z "$FLASK_ENV" ]; then
+    # Not in nix-shell, wrap with nix-shell
+    exec nix-shell --run "python app.py $*"
+else
+    # Already in nix-shell, run directly
+    exec python app.py "$@"
+fi

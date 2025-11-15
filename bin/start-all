@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Start all services: Flask, Celery worker, and Celery beat
+
+if [ -z "$FLASK_ENV" ]; then
+    # Not in nix-shell, wrap with nix-shell
+    exec nix-shell --run "
+        echo 'Starting all services...'
+        python app.py &
+        sleep 2
+        celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance &
+        sleep 2
+        celery -A tasks beat --loglevel=info
+        wait
+    "
+else
+    # Already in nix-shell, run directly
+    echo "Starting all services..."
+    python app.py &
+    FLASK_PID=$!
+    sleep 2
+    celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance &
+    WORKER_PID=$!
+    sleep 2
+    celery -A tasks beat --loglevel=info &
+    BEAT_PID=$!
+
+    echo ""
+    echo "Services started:"
+    echo "  Flask (PID: $FLASK_PID)"
+    echo "  Celery Worker (PID: $WORKER_PID)"
+    echo "  Celery Beat (PID: $BEAT_PID)"
+    echo ""
+    echo "Press Ctrl+C to stop all services"
+
+    wait
+fi

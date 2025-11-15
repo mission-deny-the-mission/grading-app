@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Grading Schemes - Document Grading App{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <!-- Header with Search and Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-0">
+                <i class="fas fa-list-check text-primary me-2"></i>Grading Schemes
+            </h1>
+            <p class="text-muted mt-2">Create and manage your grading rubrics</p>
+        </div>
+        <a href="{{ url_for('schemes_ui.create_scheme') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create Scheme
+        </a>
+    </div>
+
+    <!-- Search and Filter Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-6">
+                    <input
+                        type="text"
+                        name="search"
+                        class="form-control"
+                        placeholder="Search by scheme name..."
+                        value="{{ search or '' }}"
+                    >
+                </div>
+                <div class="col-md-2">
+                    <select name="sort" class="form-select">
+                        <option value="created_at" {% if sort == 'created_at' %}selected{% endif %}>Latest</option>
+                        <option value="name" {% if sort == 'name' %}selected{% endif %}>Name</option>
+                        <option value="total_points" {% if sort == 'total_points' %}selected{% endif %}>Total Points</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="order" class="form-select">
+                        <option value="desc" {% if order == 'desc' %}selected{% endif %}>Newest</option>
+                        <option value="asc" {% if order == 'asc' %}selected{% endif %}>Oldest</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Schemes Table -->
+    {% if schemes %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Questions</th>
+                    <th>Total Points</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scheme in schemes %}
+                <tr>
+                    <td>
+                        <strong>{{ scheme.name }}</strong>
+                    </td>
+                    <td>
+                        <span class="text-muted">
+                            {% if scheme.description %}
+                                {{ scheme.description[:50] }}{% if scheme.description|length > 50 %}...{% endif %}
+                            {% else %}
+                                <em>No description</em>
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-info">{{ scheme.questions|length }} questions</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-success">{{ scheme.total_possible_points }} pts</span>
+                    </td>
+                    <td class="text-muted small">
+                        {{ scheme.created_at.strftime('%b %d, %Y') if scheme.created_at else 'N/A' }}
+                    </td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('schemes_ui.view_scheme', scheme_id=scheme.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('schemes_ui.edit_scheme', scheme_id=scheme.id) }}"
+                               class="btn btn-sm btn-outline-secondary" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{{ url_for('schemes_ui.view_statistics', scheme_id=scheme.id) }}"
+                               class="btn btn-sm btn-outline-info" title="Statistics">
+                                <i class="fas fa-chart-bar"></i>
+                            </a>
+                            <a href="{{ url_for('schemes_ui.clone_scheme_form', scheme_id=scheme.id) }}"
+                               class="btn btn-sm btn-outline-warning" title="Clone">
+                                <i class="fas fa-copy"></i>
+                            </a>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger delete-scheme"
+                                    data-scheme-id="{{ scheme.id }}"
+                                    data-scheme-name="{{ scheme.name }}"
+                                    title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('schemes_ui.list_schemes', page=1, search=search, sort=sort, order=order) }}">
+                    First
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('schemes_ui.list_schemes', page=pagination.prev_num, search=search, sort=sort, order=order) }}">
+                    &laquo;
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">First</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num == pagination.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('schemes_ui.list_schemes', page=page_num, search=search, sort=sort, order=order) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('schemes_ui.list_schemes', page=pagination.next_num, search=search, sort=sort, order=order) }}">
+                    &raquo;
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('schemes_ui.list_schemes', page=pagination.pages, search=search, sort=sort, order=order) }}">
+                    Last
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">Last</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-inbox fa-3x text-muted"></i>
+        </div>
+        <h5 class="text-muted mb-3">No schemes found</h5>
+        <p class="text-muted mb-4">
+            {% if search %}
+                No schemes match your search. <a href="{{ url_for('schemes_ui.list_schemes') }}">Clear search</a>
+            {% else %}
+                Get started by creating your first grading scheme.
+            {% endif %}
+        </p>
+        <a href="{{ url_for('schemes_ui.create_scheme') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create First Scheme
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Scheme</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteSchemeName"></strong>?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    let schemeIdToDelete = null;
+
+    // Handle delete button clicks
+    document.querySelectorAll('.delete-scheme').forEach(button => {
+        button.addEventListener('click', function() {
+            schemeIdToDelete = this.dataset.schemeId;
+            document.getElementById('deleteSchemeName').textContent = this.dataset.schemeName;
+            deleteModal.show();
+        });
+    });
+
+    // Handle delete confirmation
+    document.getElementById('confirmDelete').addEventListener('click', async function() {
+        if (!schemeIdToDelete) return;
+
+        ui.showLoading('Deleting scheme...');
+
+        try {
+            const response = await fetch(`/api/schemes/${schemeIdToDelete}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                ui.success('Scheme deleted successfully');
+                // Reload page to refresh list after showing success message
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                const error = await response.json();
+                ui.error(error.error || 'Failed to delete scheme');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            ui.error('Error deleting scheme: ' + error.message);
+        } finally {
+            deleteModal.hide();
+            ui.hideLoading();
+        }
+    });
+});
+</script>
+{% endblock %}

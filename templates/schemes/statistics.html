@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}{{ scheme.name }} - Statistics - Grading Schemes{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <a href="{{ url_for('schemes_ui.view_scheme', scheme_id=scheme.id) }}" class="text-muted text-decoration-none small mb-3 d-inline-block">
+                <i class="fas fa-arrow-left me-2"></i>Back to Scheme
+            </a>
+            <h1 class="mb-2">{{ scheme.name }} - Statistics</h1>
+            <p class="text-muted">Usage and performance analytics</p>
+        </div>
+        <a href="{{ url_for('schemes_ui.view_scheme', scheme_id=scheme.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>View Scheme
+        </a>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingSpinner" class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading statistics...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading statistics...</p>
+    </div>
+
+    <!-- Statistics Content (hidden until loaded) -->
+    <div id="statsContent" style="display: none;">
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="display-6 text-primary" id="totalSubmissions">0</div>
+                        <small class="text-muted">Total Submissions</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="display-6 text-success" id="averageScore">0.0</div>
+                        <small class="text-muted">Average Score</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="display-6 text-info" id="highestScore">0.0</div>
+                        <small class="text-muted">Highest Score</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="display-6 text-warning" id="lowestScore">0.0</div>
+                        <small class="text-muted">Lowest Score</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Per-Question Statistics -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-bar-chart me-2 text-primary"></i>Per-Question Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="questionStats" class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Question</th>
+                                <th>Max Points</th>
+                                <th>Average Score</th>
+                                <th>Achievement %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="questionStatsBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Per-Criterion Statistics -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-check me-2 text-primary"></i>Per-Criterion Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="criterionStats" class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Criterion</th>
+                                <th>Question</th>
+                                <th>Max Points</th>
+                                <th>Average Score</th>
+                                <th>Achievement %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="criterionStatsBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-download me-2 text-primary"></i>Export Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col">
+                        <button type="button" class="btn btn-outline-primary w-100" id="exportCSV">
+                            <i class="fas fa-file-csv me-2"></i>Export as CSV
+                        </button>
+                    </div>
+                    <div class="col">
+                        <button type="button" class="btn btn-outline-primary w-100" id="exportJSON">
+                            <i class="fas fa-file-code me-2"></i>Export as JSON
+                        </button>
+                    </div>
+                    <div class="col">
+                        <button type="button" class="btn btn-outline-primary w-100" id="printStats">
+                            <i class="fas fa-print me-2"></i>Print Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- No Data State -->
+    <div id="noDataContent" style="display: none;" class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-chart-line fa-3x text-muted"></i>
+        </div>
+        <h5 class="text-muted mb-3">No submissions yet</h5>
+        <p class="text-muted">Statistics will appear once submissions are graded with this scheme.</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorContent" style="display: none;">
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <strong>Error loading statistics:</strong> <span id="errorMessage"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+const schemeId = '{{ scheme.id }}';
+
+async function loadStatistics() {
+    try {
+        const response = await fetch(`/api/schemes/${schemeId}/statistics`);
+        if (!response.ok) throw new Error('Failed to load statistics');
+
+        const stats = await response.json();
+
+        // Hide loading spinner
+        document.getElementById('loadingSpinner').style.display = 'none';
+
+        if (stats.total_submissions === 0) {
+            document.getElementById('noDataContent').style.display = 'block';
+            return;
+        }
+
+        // Display stats content
+        document.getElementById('statsContent').style.display = 'block';
+
+        // Update summary cards
+        document.getElementById('totalSubmissions').textContent = stats.total_submissions;
+        document.getElementById('averageScore').textContent = (stats.average_score || 0).toFixed(1);
+        document.getElementById('highestScore').textContent = (stats.highest_score || 0).toFixed(1);
+        document.getElementById('lowestScore').textContent = (stats.lowest_score || 0).toFixed(1);
+
+        // Populate question statistics
+        if (stats.per_question_stats && stats.per_question_stats.length > 0) {
+            const tbody = document.getElementById('questionStatsBody');
+            tbody.innerHTML = stats.per_question_stats.map(q => {
+                const achievement = q.max_points > 0 ? ((q.average_score / q.max_points) * 100).toFixed(1) : 0;
+                return `
+                    <tr>
+                        <td><strong>${q.question_title}</strong></td>
+                        <td>${q.max_points}</td>
+                        <td>${(q.average_score || 0).toFixed(2)}</td>
+                        <td>
+                            <span class="badge bg-${achievement >= 80 ? 'success' : achievement >= 60 ? 'warning' : 'danger'}">
+                                ${achievement}%
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Populate criterion statistics
+        if (stats.per_criterion_stats && stats.per_criterion_stats.length > 0) {
+            const tbody = document.getElementById('criterionStatsBody');
+            tbody.innerHTML = stats.per_criterion_stats.map(c => {
+                const achievement = c.max_points > 0 ? ((c.average_score / c.max_points) * 100).toFixed(1) : 0;
+                return `
+                    <tr>
+                        <td><strong>${c.criterion_name}</strong></td>
+                        <td>${c.question_title}</td>
+                        <td>${c.max_points}</td>
+                        <td>${(c.average_score || 0).toFixed(2)}</td>
+                        <td>
+                            <span class="badge bg-${achievement >= 80 ? 'success' : achievement >= 60 ? 'warning' : 'danger'}">
+                                ${achievement}%
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('errorContent').style.display = 'block';
+        document.getElementById('errorMessage').textContent = error.message;
+    }
+}
+
+// Export handlers
+document.getElementById('exportCSV').addEventListener('click', async () => {
+    ui.showLoading('Generating CSV export...');
+    try {
+        const response = await fetch(`/api/schemes/${schemeId}/statistics`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to fetch statistics');
+        }
+        const stats = await response.json();
+
+        let csv = 'Scheme Statistics Report\n';
+        csv += `Scheme: ${document.querySelector('h1').textContent}\n\n`;
+        csv += 'Summary\n';
+        csv += `Total Submissions,${stats.total_submissions}\n`;
+        csv += `Average Score,${(stats.average_score || 0).toFixed(2)}\n\n`;
+
+        if (stats.per_question_stats) {
+            csv += 'Per-Question Statistics\n';
+            csv += 'Question,Max Points,Average Score,Achievement %\n';
+            stats.per_question_stats.forEach(q => {
+                const achievement = q.max_points > 0 ? ((q.average_score / q.max_points) * 100).toFixed(1) : 0;
+                csv += `"${q.question_title}",${q.max_points},${(q.average_score || 0).toFixed(2)},${achievement}%\n`;
+            });
+        }
+
+        // Download CSV
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${document.querySelector('h1').textContent.split(' - ')[0]}-statistics.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        ui.success('CSV exported successfully');
+    } catch (error) {
+        ui.error(`Failed to export CSV: ${error.message}`);
+    } finally {
+        ui.hideLoading();
+    }
+});
+
+document.getElementById('exportJSON').addEventListener('click', async () => {
+    ui.showLoading('Generating JSON export...');
+    try {
+        const response = await fetch(`/api/schemes/${schemeId}/statistics`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to fetch statistics');
+        }
+        const stats = await response.json();
+
+        const json = JSON.stringify(stats, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${document.querySelector('h1').textContent.split(' - ')[0]}-statistics.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        ui.success('JSON exported successfully');
+    } catch (error) {
+        ui.error(`Failed to export JSON: ${error.message}`);
+    } finally {
+        ui.hideLoading();
+    }
+});
+
+document.getElementById('printStats').addEventListener('click', () => {
+    window.print();
+});
+
+// Load statistics on page load
+document.addEventListener('DOMContentLoaded', loadStatistics);
+</script>
+
+<style>
+    @media print {
+        .main-container::before {
+            content: 'Statistics Report';
+            display: block;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+    }
+</style>
+{% endblock %}

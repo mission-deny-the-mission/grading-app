@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Wrapper script to run Celery beat, handles nix-shell if needed
+
+if [ -z "$FLASK_ENV" ]; then
+    # Not in nix-shell, wrap with nix-shell
+    exec nix-shell --run "celery -A tasks beat --loglevel=info $*"
+else
+    # Already in nix-shell, run directly
+    exec celery -A tasks beat --loglevel=info "$@"
+fi

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Run tests, handling nix-shell if needed
+
+if [ -z "$FLASK_ENV" ]; then
+    # Not in nix-shell, wrap with nix-shell
+    exec nix-shell --run "python3 -m pytest tests/ $*"
+else
+    # Already in nix-shell, run directly
+    exec python3 -m pytest tests/ "$@"
+fi
