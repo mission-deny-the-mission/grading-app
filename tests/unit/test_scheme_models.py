@@ -173,10 +173,15 @@ class TestSchemeCriterion:
 class TestGradedSubmission:
     """Test GradedSubmission model (T063, T064, T065)."""
 
-    def test_graded_submission_creation(self):
+    def test_graded_submission_creation(self, app_context):
         """[T063] Verify GradedSubmission model creation."""
+        # Create a scheme first
+        scheme = GradingScheme(name="Test Scheme", category="essay")
+        db.session.add(scheme)
+        db.session.commit()
+
         submission = GradedSubmission(
-            scheme_id="scheme_123",
+            scheme_id=scheme.id,
             scheme_version=1,
             student_id="STU001",
             student_name="John Doe",
@@ -184,9 +189,11 @@ class TestGradedSubmission:
             graded_by="instructor@example.com",
             total_points_possible=Decimal("100.00"),
         )
+        db.session.add(submission)
+        db.session.commit()
 
         assert submission.id is not None
-        assert submission.scheme_id == "scheme_123"
+        assert submission.scheme_id == scheme.id
         assert submission.scheme_version == 1
         assert submission.student_id == "STU001"
         assert submission.student_name == "John Doe"
@@ -194,49 +201,96 @@ class TestGradedSubmission:
         assert submission.graded_by == "instructor@example.com"
         assert submission.is_complete is False
         assert submission.evaluation_version == 1
-        assert submission.total_points_earned == 0
+        assert float(submission.total_points_earned) == 0.0
         assert submission.percentage_score is None
         assert submission.graded_at is None
 
-    def test_submission_completion_triggers_graded_at(self):
+    def test_submission_completion_triggers_graded_at(self, app_context):
         """[T065] Verify is_complete triggers graded_at."""
+        # Create a scheme first
+        scheme = GradingScheme(name="Test Scheme", category="essay")
+        db.session.add(scheme)
+        db.session.commit()
+
         submission = GradedSubmission(
-            scheme_id="scheme_123",
+            scheme_id=scheme.id,
             scheme_version=1,
             student_id="STU001",
             graded_by="instructor",
             total_points_possible=Decimal("100.00"),
         )
+        db.session.add(submission)
+        db.session.commit()
 
         # Initially not complete
         assert submission.is_complete is False
         assert submission.graded_at is None
 
-        # Mark as complete (in real app, this would be a setter/property)
+        # Mark as complete
         submission.is_complete = True
-        # graded_at would be set by application logic
+        submission.graded_at = datetime.now(timezone.utc)
+        db.session.commit()
 
         assert submission.is_complete is True
+        assert submission.graded_at is not None
 
 
 class TestCriterionEvaluation:
     """Test CriterionEvaluation model (T064, T066)."""
 
-    def test_criterion_evaluation_creation(self):
+    def test_criterion_evaluation_creation(self, app_context):
         """[T064] Verify evaluation model creation."""
+        # Create a scheme first
+        scheme = GradingScheme(name="Test Scheme", category="essay")
+        db.session.add(scheme)
+        db.session.commit()
+
+        # Create a question
+        question = SchemeQuestion(
+            scheme_id=scheme.id,
+            title="Question 1",
+            display_order=1,
+        )
+        db.session.add(question)
+        db.session.commit()
+
+        # Create a criterion
+        criterion = SchemeCriterion(
+            question_id=question.id,
+            name="Clarity",
+            max_points=Decimal("10.00"),
+            display_order=1,
+        )
+        db.session.add(criterion)
+        db.session.commit()
+
+        # Create a submission
+        submission = GradedSubmission(
+            scheme_id=scheme.id,
+            scheme_version=1,
+            student_id="STU001",
+            graded_by="instructor",
+            total_points_possible=Decimal("10.00"),
+        )
+        db.session.add(submission)
+        db.session.commit()
+
+        # Create an evaluation
         evaluation = CriterionEvaluation(
-            submission_id="sub_123",
-            criterion_id="crit_456",
+            submission_id=submission.id,
+            criterion_id=criterion.id,
             points_awarded=Decimal("8.50"),
             feedback="Good work",
             max_points=Decimal("10.00"),
             criterion_name="Clarity",
             question_title="Question 1",
         )
+        db.session.add(evaluation)
+        db.session.commit()
 
         assert evaluation.id is not None
-        assert evaluation.submission_id == "sub_123"
-        assert evaluation.criterion_id == "crit_456"
+        assert evaluation.submission_id == submission.id
+        assert evaluation.criterion_id == criterion.id
         assert evaluation.points_awarded == Decimal("8.50")
         assert evaluation.feedback == "Good work"
         assert evaluation.max_points == Decimal("10.00")

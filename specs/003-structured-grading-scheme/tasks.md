@@ -128,44 +128,44 @@
 
 > **CONSTITUTION REQUIREMENT**: Write these tests FIRST, ensure they FAIL, THEN implement (TDD cycle: Red → Green → Refactor)
 
-- [ ] T063 [P] [US2] Write test_graded_submission_creation in tests/unit/test_scheme_models.py (verify GradedSubmission model)
-- [ ] T064 [P] [US2] Write test_criterion_evaluation_creation in tests/unit/test_scheme_models.py (verify CriterionEvaluation model)
-- [ ] T065 [P] [US2] Write test_submission_completion in tests/unit/test_scheme_models.py (verify is_complete triggers graded_at)
-- [ ] T066 [P] [US2] Write test_evaluation_points_range in tests/unit/test_scheme_models.py (verify points_awarded constraints)
-- [ ] T067 [P] [US2] Write test_percentage_calculation in tests/unit/test_scheme_calculator.py (verify percentage_score accuracy)
-- [ ] T068 [P] [US2] Write test_create_submission in tests/integration/test_grading_routes.py (POST /api/grading/submissions)
-- [ ] T069 [P] [US2] Write test_create_evaluation in tests/integration/test_grading_routes.py (POST /api/grading/evaluations)
-- [ ] T070 [P] [US2] Write test_update_evaluation in tests/integration/test_grading_routes.py (PUT /api/grading/evaluations/{id})
-- [ ] T071 [P] [US2] Write test_complete_submission in tests/integration/test_grading_routes.py (PATCH /api/grading/submissions/{id})
-- [ ] T072 [P] [US2] Write test_partial_grading in tests/integration/test_grading_routes.py (save incomplete, resume later)
-- [ ] T073 [P] [US2] Write test_concurrent_evaluation_conflict in tests/integration/test_grading_routes.py (optimistic locking 409)
-- [ ] T074 [P] [US2] Run all US2 tests and verify they FAIL (pytest tests/ -k "US2 or grading" --tb=short)
+- [X] T063 [P] [US2] Write test_graded_submission_creation in tests/unit/test_scheme_models.py (verify GradedSubmission model)
+- [X] T064 [P] [US2] Write test_criterion_evaluation_creation in tests/unit/test_scheme_models.py (verify CriterionEvaluation model)
+- [X] T065 [P] [US2] Write test_submission_completion in tests/unit/test_scheme_models.py (verify is_complete triggers graded_at)
+- [X] T066 [P] [US2] Write test_evaluation_points_range in tests/unit/test_scheme_models.py (verify points_awarded constraints)
+- [X] T067 [P] [US2] Write test_percentage_calculation in tests/unit/test_scheme_calculator.py (verify percentage_score accuracy)
+- [X] T068 [P] [US2] Write test_create_submission in tests/integration/test_grading_routes.py (POST /api/grading/submissions)
+- [X] T069 [P] [US2] Write test_create_evaluation in tests/integration/test_grading_routes.py (POST /api/grading/evaluations)
+- [X] T070 [P] [US2] Write test_update_evaluation in tests/integration/test_grading_routes.py (PUT /api/grading/evaluations/{id})
+- [X] T071 [P] [US2] Write test_complete_submission in tests/integration/test_grading_routes.py (PATCH /api/grading/submissions/{id})
+- [X] T072 [P] [US2] Write test_partial_grading in tests/integration/test_grading_routes.py (save incomplete, resume later)
+- [X] T073 [P] [US2] Write test_concurrent_evaluation_conflict in tests/integration/test_grading_routes.py (optimistic locking 409)
+- [X] T074 [P] [US2] Run all US2 tests and verify they FAIL (pytest tests/ -k "US2 or grading" --tb=short)
 
 ### Implementation for User Story 2
 
-- [ ] T075 [P] [US2] Implement GradedSubmission model in models.py (all fields, scheme version snapshot, optimistic locking)
-- [ ] T076 [P] [US2] Implement CriterionEvaluation model in models.py (points, feedback, denormalized names for export)
-- [ ] T077 [US2] Add to_dict() method to GradedSubmission model (include evaluations)
-- [ ] T078 [US2] Add to_dict() method to CriterionEvaluation model
-- [ ] T079 [US2] Implement auto-calculation listener for GradedSubmission.total_points_earned
-- [ ] T080 [US2] Implement percentage_score calculation when is_complete=True
-- [ ] T081 [US2] Implement calculate_submission_total() in utils/scheme_calculator.py
-- [ ] T082 [US2] Implement calculate_percentage_score() in utils/scheme_calculator.py with Decimal precision
-- [ ] T083 [US2] Create grading blueprint in routes/grading.py
-- [ ] T084 [US2] Implement POST /api/grading/submissions endpoint (create new graded submission)
-- [ ] T085 [US2] Implement GET /api/grading/submissions/{id} endpoint with eager loaded evaluations
-- [ ] T086 [US2] Implement PATCH /api/grading/submissions/{id} endpoint (mark complete/reopen)
-- [ ] T087 [US2] Implement POST /api/grading/evaluations endpoint (create/update criterion evaluation)
-- [ ] T088 [US2] Implement PUT /api/grading/evaluations/{id} endpoint (update points/feedback)
-- [ ] T089 [US2] Add optimistic locking check in update routes (evaluation_version validation, return 409 on conflict)
-- [ ] T090 [US2] Add validation to grading routes (points within 0 to max_points)
-- [ ] T091 [US2] Add error handling to grading routes (400, 404, 409 responses)
-- [ ] T092 [US2] Register grading blueprint in app.py
-- [ ] T093 [US2] Create templates/schemes/grade.html (grading form with all criteria from scheme)
-- [ ] T094 [US2] Add JavaScript for grading form (point validation, feedback text, save progress, submit complete)
-- [ ] T095 [US2] Add route to render grade.html with submission context
-- [ ] T096 [US2] Run all US2 tests and verify they PASS (pytest tests/ -k "US2 or grading" -v)
-- [ ] T097 [US2] Manual test: Grade submission with 20+ criteria, save partial, resume, complete, verify totals
+- [X] T075 [P] [US2] Implement GradedSubmission model in models.py (all fields, scheme version snapshot, optimistic locking)
+- [X] T076 [P] [US2] Implement CriterionEvaluation model in models.py (points, feedback, denormalized names for export)
+- [X] T077 [US2] Add to_dict() method to GradedSubmission model (include evaluations)
+- [X] T078 [US2] Add to_dict() method to CriterionEvaluation model
+- [X] T079 [US2] Implement auto-calculation listener for GradedSubmission.total_points_earned
+- [X] T080 [US2] Implement percentage_score calculation when is_complete=True
+- [X] T081 [US2] Implement calculate_submission_total() in utils/scheme_calculator.py
+- [X] T082 [US2] Implement calculate_percentage_score() in utils/scheme_calculator.py with Decimal precision
+- [X] T083 [US2] Create grading blueprint in routes/grading.py
+- [X] T084 [US2] Implement POST /api/grading/submissions endpoint (create new graded submission)
+- [X] T085 [US2] Implement GET /api/grading/submissions/{id} endpoint with eager loaded evaluations
+- [X] T086 [US2] Implement PATCH /api/grading/submissions/{id} endpoint (mark complete/reopen)
+- [X] T087 [US2] Implement POST /api/grading/evaluations endpoint (create/update criterion evaluation)
+- [X] T088 [US2] Implement PUT /api/grading/evaluations/{id} endpoint (update points/feedback)
+- [X] T089 [US2] Add optimistic locking check in update routes (evaluation_version validation, return 409 on conflict)
+- [X] T090 [US2] Add validation to grading routes (points within 0 to max_points)
+- [X] T091 [US2] Add error handling to grading routes (400, 404, 409 responses)
+- [X] T092 [US2] Register grading blueprint in app.py
+- [X] T093 [US2] Create templates/schemes/grade.html (grading form with all criteria from scheme)
+- [X] T094 [US2] Add JavaScript for grading form (point validation, feedback text, save progress, submit complete)
+- [X] T095 [US2] Add route to render grade.html with submission context
+- [X] T096 [US2] Run all US2 tests and verify they PASS (pytest tests/ -k "US2 or grading" -v)
+- [X] T097 [US2] Manual test: Grade submission with 20+ criteria, save partial, resume, complete, verify totals
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - schemes can be created and applied to grade submissions
 

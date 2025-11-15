@@ -1899,3 +1899,28 @@ class CriterionEvaluation(db.Model):
             "criterion_name": self.criterion_name,
             "question_title": self.question_title,
         }
+
+
+# ===== Helper Methods for Auto-Calculation =====
+# These methods are called from routes to recalculate submission totals
+
+
+def recalculate_submission_total(submission_id):
+    """
+    Recalculate submission total points earned from all evaluations.
+
+    Args:
+        submission_id: ID of the submission to recalculate
+    """
+    submission = GradedSubmission.query.filter_by(id=submission_id).first()
+    if not submission:
+        return
+
+    evaluations = CriterionEvaluation.query.filter_by(
+        submission_id=submission_id
+    ).all()
+    new_total = Decimal("0.00")
+    for eval_item in evaluations:
+        new_total += eval_item.points_awarded
+
+    submission.total_points_earned = new_total
