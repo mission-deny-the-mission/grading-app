@@ -5,6 +5,7 @@ from flask import Flask, jsonify, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import RequestEntityTooLarge
 
 try:
@@ -27,7 +28,48 @@ from routes.upload import upload_bp
 load_dotenv()
 
 app = Flask(__name__, template_folder="templates")
-app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-here")
+
+# SECRET_KEY validation - CRITICAL SECURITY
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+FLASK_ENV = os.getenv("FLASK_ENV", "production")
+
+# In production, SECRET_KEY must be properly set
+if FLASK_ENV == "production":
+    if SECRET_KEY == "your-secret-key-here" or not SECRET_KEY or len(SECRET_KEY) < 32:
+        raise ValueError(
+            "CRITICAL SECURITY ERROR: SECRET_KEY must be set to a secure random value in production. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
+
+# In development, warn if using default key
+if FLASK_ENV != "production" and SECRET_KEY == "your-secret-key-here":
+    print("WARNING: Using default SECRET_KEY. Generate a secure key for production.")
+
+app.secret_key = SECRET_KEY
+
+# DB_ENCRYPTION_KEY validation - CRITICAL SECURITY
+# Validate encryption key at startup to fail fast if misconfigured
+if FLASK_ENV == "production":
+    DB_ENCRYPTION_KEY = os.getenv("DB_ENCRYPTION_KEY")
+    if not DB_ENCRYPTION_KEY:
+        raise ValueError(
+            "CRITICAL SECURITY ERROR: DB_ENCRYPTION_KEY must be set in production. "
+            "Generate one with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+        )
+    # Validate key format
+    try:
+        from cryptography.fernet import Fernet
+        Fernet(DB_ENCRYPTION_KEY.encode())
+    except Exception as e:
+        raise ValueError(
+            f"CRITICAL SECURITY ERROR: DB_ENCRYPTION_KEY is invalid: {e}. "
+            "Generate a new one with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+        )
+
+# In development, warn if encryption key is missing
+if FLASK_ENV != "production" and not os.getenv("DB_ENCRYPTION_KEY"):
+    print("WARNING: DB_ENCRYPTION_KEY not set. Encryption features will fail. Generate one for development.")
+
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100MB max file size
 
 # Flask-Login configuration
@@ -37,11 +79,13 @@ login_manager.login_view = 'auth.login'
 login_manager.session_protection = 'strong'
 
 # Session configuration (security & timeouts)
-app.config['REMEMBER_COOKIE_SECURE'] = True  # HTTPS only in production
-app.config['REMEMBER_COOKIE_HTTPONLY'] = True  # No JS access to cookie
-app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only in production
-app.config['SESSION_COOKIE_HTTPONLY'] = True  # No JS access to cookie
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+# Cookie security flags based on environment (HTTPS required in production, optional in dev)
+IS_PRODUCTION = FLASK_ENV == "production"
+app.config['REMEMBER_COOKIE_SECURE'] = IS_PRODUCTION  # HTTPS only in production
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True  # No JS access to cookie (always enforced)
+app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION  # HTTPS only in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # No JS access to cookie (always enforced)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection (always enforced)
 app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes idle timeout
 
 # Database configuration (use absolute path for SQLite to avoid CWD-related resets)
@@ -61,6 +105,9 @@ db.init_app(app)
 # Initialize Flask-Migrate for database migrations (optional)
 if FLASK_MIGRATE_AVAILABLE:
     migrate = Migrate(app, db)
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
 
 # Initialize rate limiter BEFORE importing blueprints to avoid circular imports
 limiter = Limiter(

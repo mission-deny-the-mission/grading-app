@@ -74,7 +74,39 @@ def init_auth_middleware(app):
 
     @app.after_request
     def after_request(response):
-        """Execute after each request."""
-        # Ensure secure cookies in production
-        # This will be enforced at Flask config level
+        """Execute after each request - add security headers."""
+        # Content Security Policy - prevent XSS and injection attacks
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        )
+
+        # X-Frame-Options - prevent clickjacking
+        response.headers['X-Frame-Options'] = 'DENY'
+
+        # X-Content-Type-Options - prevent MIME sniffing
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+
+        # Strict-Transport-Security (HSTS) - enforce HTTPS
+        # Only set in production to avoid localhost issues in development
+        import os
+        if os.getenv('FLASK_ENV') == 'production':
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
+        # Referrer-Policy - control information leakage
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+        # Permissions-Policy - restrict browser features
+        response.headers['Permissions-Policy'] = (
+            'geolocation=(), '
+            'microphone=(), '
+            'camera=(), '
+            'payment=()'
+        )
+
         return response

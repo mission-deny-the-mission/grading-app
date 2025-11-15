@@ -163,9 +163,9 @@ def register():
     if DeploymentService.is_single_user_mode():
         return jsonify({"success": False, "message": "Registration disabled in single-user mode"}), 400
 
-    # Check admin privilege (TODO: implement admin-only check)
-    # if not current_user.is_authenticated or not current_user.is_admin:
-    #     return jsonify({"success": False, "message": "Admin only"}), 403
+    # Check admin privilege - only admins can create users
+    if not current_user.is_authenticated or not current_user.is_admin:
+        return jsonify({"success": False, "message": "Admin only"}), 403
 
     data = request.get_json() or {}
     email = data.get("email")

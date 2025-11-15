@@ -1777,6 +1777,10 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True, index=True)
 
+    # Account lockout fields for security
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
+
     # Relationships
     ai_quotas = db.relationship("AIProviderQuota", backref="user", lazy=True, cascade="all, delete-orphan")
     usage_records = db.relationship("UsageRecord", backref="user", lazy=True)

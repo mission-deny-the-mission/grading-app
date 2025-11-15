@@ -123,6 +123,40 @@ class SharingService:
         return [s.to_dict() for s in shares]
 
     @staticmethod
+    def update_share_permissions(project_id, share_id, permission_level):
+        """
+        Update permission level for an existing share.
+
+        Args:
+            project_id: str - Project ID
+            share_id: str - Share record ID
+            permission_level: str - New permission level ("read" or "write")
+
+        Returns:
+            ProjectShare: Updated share record
+
+        Raises:
+            ValueError: If share not found or invalid permission level
+        """
+        if permission_level not in ("read", "write"):
+            raise ValueError(f"Invalid permission level: {permission_level}")
+
+        try:
+            share = ProjectShare.query.filter_by(id=share_id, project_id=project_id).first()
+
+            if not share:
+                raise ValueError(f"Share {share_id} not found for project {project_id}")
+
+            share.permission_level = permission_level
+            db.session.commit()
+            logger.info(f"Share permissions updated: {share_id} -> {permission_level}")
+            return share
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error updating share permissions: {e}")
+            raise
+
+    @staticmethod
     def revoke_share(project_id, share_id):
         """
         Revoke access to a project.

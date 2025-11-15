@@ -116,16 +116,7 @@ def update_share_permissions(project_id, share_id):
         return jsonify({"success": False, "message": "Valid permission_level required (read or write)"}), 400
 
     try:
-        from models import ProjectShare, db
-
-        share = ProjectShare.query.filter_by(id=share_id, project_id=project_id).first()
-
-        if not share:
-            return jsonify({"success": False, "message": "Share not found"}), 404
-
-        share.permission_level = permission_level
-        db.session.commit()
-        logger.info(f"Share permissions updated: {share_id} -> {permission_level}")
+        share = SharingService.update_share_permissions(project_id, share_id, permission_level)
 
         return jsonify(
             {
@@ -135,6 +126,8 @@ def update_share_permissions(project_id, share_id):
             }
         ), 200
 
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 404
     except Exception as e:
         logger.error(f"Error updating share permissions: {e}")
         return jsonify({"success": False, "message": "Could not update permissions"}), 500
