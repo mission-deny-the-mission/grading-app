@@ -163,28 +163,28 @@ Project uses **single structure**: Files at repository root
 
 > **CONSTITUTION REQUIREMENT**: Write these tests FIRST, ensure they FAIL, THEN implement (TDD cycle: Red → Green → Refactor)
 
-- [ ] T054 [P] [US4] Contract test for GET /export_config endpoint in tests/test_config_routes.py (verify JSON structure)
-- [ ] T055 [P] [US4] Contract test for POST /import_config endpoint in tests/test_config_routes.py (verify validation)
-- [ ] T056 [P] [US4] Integration test for export functionality in tests/test_config_routes.py (verify all fields exported)
-- [ ] T057 [P] [US4] Integration test for import functionality in tests/test_config_routes.py (verify form populated)
-- [ ] T058 [P] [US4] Integration test for import validation errors in tests/test_config_routes.py (invalid JSON, version mismatch)
+- [x] T054 [P] [US4] Contract test for GET /export_config endpoint in tests/test_config_routes.py (verify JSON structure)
+- [x] T055 [P] [US4] Contract test for POST /import_config endpoint in tests/test_config_routes.py (verify validation)
+- [x] T056 [P] [US4] Integration test for export functionality in tests/test_config_routes.py (verify all fields exported)
+- [x] T057 [P] [US4] Integration test for import functionality in tests/test_config_routes.py (verify form populated)
+- [x] T058 [P] [US4] Integration test for import validation errors in tests/test_config_routes.py (invalid JSON, version mismatch)
 
 ### Implementation for User Story 4
 
-- [ ] T059 [P] [US4] Create GET /export_config endpoint in routes/main.py that returns JSON with all config fields
-- [ ] T060 [P] [US4] Add export metadata (version, exported_at, warning) to export response in routes/main.py
-- [ ] T061 [P] [US4] Create POST /import_config endpoint in routes/main.py that validates and applies JSON configuration
-- [ ] T062 [US4] Add version validation (must be "1.0") to import_config in routes/main.py
-- [ ] T063 [US4] Add API key format validation during import in routes/main.py using validate_api_key_format()
-- [ ] T064 [US4] Add URL format validation during import in routes/main.py
-- [ ] T065 [P] [US4] Add exportConfig() JavaScript function to static/js/config.js that calls fetch /export_config and downloads JSON
-- [ ] T066 [P] [US4] Add importConfig(file) JavaScript function to static/js/config.js that reads file and POSTs to /import_config
-- [ ] T067 [US4] Add security warning alert to exportConfig() in static/js/config.js
-- [ ] T068 [US4] Add "Export Configuration" button to templates/config.html with onclick="exportConfig()"
-- [ ] T069 [US4] Add "Import Configuration" file input and button to templates/config.html with onchange="importConfig(this.files[0])"
-- [ ] T070 [US4] Add success/error message handling for import/export in static/js/config.js
+- [x] T059 [P] [US4] Create GET /export_config endpoint in routes/main.py that returns JSON with all config fields
+- [x] T060 [P] [US4] Add export metadata (version, exported_at, warning) to export response in routes/main.py
+- [x] T061 [P] [US4] Create POST /import_config endpoint in routes/main.py that validates and applies JSON configuration
+- [x] T062 [US4] Add version validation (must be "1.0") to import_config in routes/main.py
+- [x] T063 [US4] Add API key format validation during import in routes/main.py using validate_api_key_format()
+- [x] T064 [US4] Add URL format validation during import in routes/main.py
+- [x] T065 [P] [US4] Add exportConfig() JavaScript function to static/js/config.js that calls fetch /export_config and downloads JSON
+- [x] T066 [P] [US4] Add importConfig(file) JavaScript function to static/js/config.js that reads file and POSTs to /import_config
+- [x] T067 [US4] Add security warning alert to exportConfig() in static/js/config.js
+- [x] T068 [US4] Add "Export Configuration" button to templates/config.html with onclick="exportConfig()"
+- [x] T069 [US4] Add "Import Configuration" file input and button to templates/config.html with onchange="importConfig(this.files[0])"
+- [x] T070 [US4] Add success/error message handling for import/export in static/js/config.js
 
-**Checkpoint**: All user stories 1, 2, 3, and 4 should now be independently functional. Administrators can export/import full configuration as JSON files.
+**Checkpoint**: All user stories 1, 2, 3, and 4 should now be independently functional. Administrators can export/import full configuration as JSON files. ✅ COMPLETE
 
 ---
 

@@ -13,6 +13,7 @@
 
         pythonEnv = pkgs.python3.withPackages (ps: with ps; [
           flask
+          flask-migrate
           python-docx
           pypdf2
           requests
@@ -26,6 +27,7 @@
           redis
           psycopg2-binary
           beautifulsoup4
+          cryptography
 
           # Development dependencies
           black

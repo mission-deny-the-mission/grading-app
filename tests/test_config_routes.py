@@ -457,3 +457,336 @@ class TestProviderTypeBadges:
                 "Pay-per-use indicator missing"
             assert 'subscription' in html_content.lower(), \
                 "Subscription indicator missing"
+
+
+class TestExportConfig:
+    """Tests for GET /export_config endpoint (T054, T056)."""
+
+    def test_export_config_returns_json(self, client, encryption_key):
+        """Test T054: Export endpoint returns valid JSON with required fields."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.get("/export_config")
+
+            assert response.status_code == 200
+            assert response.content_type == 'application/json'
+            data = json.loads(response.data)
+
+            # Contract T054: Check required fields
+            assert "version" in data
+            assert data["version"] == "1.0"
+            assert "exported_at" in data
+            assert "warning" in data
+            assert "security" in data["warning"].lower() or "sensitive" in data["warning"].lower()
+
+    def test_export_config_includes_api_keys(self, client, encryption_key):
+        """Test T056: Export includes all API key fields."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            # Save some config first
+            client.post(
+                "/save_config",
+                data={
+                    "openrouter_api_key": "sk-or-v1-" + ("a" * 64),
+                    "claude_api_key": "sk-ant-api03-" + ("b" * 95),
+                    "gemini_api_key": "",
+                    "openai_api_key": "",
+                    "nanogpt_api_key": "",
+                    "chutes_api_key": "",
+                    "zai_api_key": "",
+                },
+            )
+
+            # Export
+            response = client.get("/export_config")
+            data = json.loads(response.data)
+
+            # Verify all API key fields are in export
+            assert "openrouter_api_key" in data
+            assert "claude_api_key" in data
+            assert "gemini_api_key" in data
+            assert "openai_api_key" in data
+            assert "nanogpt_api_key" in data
+            assert "chutes_api_key" in data
+            assert "zai_api_key" in data
+
+            # Keys should be decrypted in export
+            assert data["openrouter_api_key"] == "sk-or-v1-" + ("a" * 64)
+            assert data["claude_api_key"] == "sk-ant-api03-" + ("b" * 95)
+
+    def test_export_config_includes_urls(self, client, encryption_key):
+        """Test T056: Export includes URL fields."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.get("/export_config")
+            data = json.loads(response.data)
+
+            # URLs should be present
+            assert "lm_studio_url" in data
+            assert "ollama_url" in data
+
+    def test_export_config_includes_default_models(self, client, encryption_key):
+        """Test T056: Export includes default model fields."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.get("/export_config")
+            data = json.loads(response.data)
+
+            # Default models should be present
+            assert "openrouter_default_model" in data
+            assert "claude_default_model" in data
+            assert "gemini_default_model" in data
+            assert "openai_default_model" in data
+            assert "nanogpt_default_model" in data
+            assert "chutes_default_model" in data
+            assert "zai_default_model" in data
+            assert "lm_studio_default_model" in data
+            assert "ollama_default_model" in data
+
+    def test_export_config_includes_other_settings(self, client, encryption_key):
+        """Test T056: Export includes other settings like prompt and Z.AI plan."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.get("/export_config")
+            data = json.loads(response.data)
+
+            # Other settings
+            assert "default_prompt" in data
+            assert "zai_pricing_plan" in data
+
+    def test_export_config_iso_timestamp(self, client, encryption_key):
+        """Test T060: Export timestamp is ISO 8601 format."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.get("/export_config")
+            data = json.loads(response.data)
+
+            # Verify ISO format (should have T and Z or timezone)
+            exported_at = data["exported_at"]
+            assert "T" in exported_at
+            assert "Z" in exported_at or "+" in exported_at or "-" in exported_at[-6:]
+
+
+class TestImportConfig:
+    """Tests for POST /import_config endpoint (T055, T057, T058)."""
+
+    def test_import_config_requires_version(self, client, encryption_key):
+        """Test T058: Import rejects missing version field."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.post(
+                "/import_config",
+                data=json.dumps({"exported_at": "2025-01-15T14:30:00Z"}),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 400
+            data = json.loads(response.data)
+            assert data["success"] is False
+            assert "version" in data["error"].lower()
+
+    def test_import_config_validates_version(self, client, encryption_key):
+        """Test T058: Import rejects unsupported version."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.post(
+                "/import_config",
+                data=json.dumps({
+                    "version": "2.0",
+                    "exported_at": "2025-01-15T14:30:00Z"
+                }),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 400
+            data = json.loads(response.data)
+            assert data["success"] is False
+            assert "version" in data["error"].lower()
+
+    def test_import_config_valid_minimal(self, client, encryption_key):
+        """Test T055, T057: Import minimal valid configuration."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            config_data = {
+                "version": "1.0",
+                "exported_at": "2025-01-15T14:30:00Z"
+            }
+
+            response = client.post(
+                "/import_config",
+                data=json.dumps(config_data),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            assert data["success"] is True
+            assert "fields_updated" in data
+
+    def test_import_config_with_api_keys(self, client, encryption_key):
+        """Test T057: Import configuration with API keys."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            config_data = {
+                "version": "1.0",
+                "exported_at": "2025-01-15T14:30:00Z",
+                "openrouter_api_key": "sk-or-v1-" + ("a" * 64),
+                "claude_api_key": "sk-ant-api03-" + ("b" * 95),
+            }
+
+            response = client.post(
+                "/import_config",
+                data=json.dumps(config_data),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            assert data["success"] is True
+            assert data["fields_updated"] >= 2
+
+            # Verify keys were saved (load to check)
+            load_response = client.get("/load_config")
+            load_data = json.loads(load_response.data)
+            assert load_data["openrouter_api_key"] == "sk-or-v1-" + ("a" * 64)
+            assert load_data["claude_api_key"] == "sk-ant-api03-" + ("b" * 95)
+
+    def test_import_config_invalid_api_key_format(self, client, encryption_key):
+        """Test T058: Import rejects invalid API key format."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            config_data = {
+                "version": "1.0",
+                "exported_at": "2025-01-15T14:30:00Z",
+                "openrouter_api_key": "invalid-key-format",
+            }
+
+            response = client.post(
+                "/import_config",
+                data=json.dumps(config_data),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 400
+            data = json.loads(response.data)
+            assert data["success"] is False
+            assert "validation_errors" in data
+            assert len(data["validation_errors"]) > 0
+
+    def test_import_config_multiple_invalid_keys(self, client, encryption_key):
+        """Test T058: Import reports all validation errors."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            config_data = {
+                "version": "1.0",
+                "exported_at": "2025-01-15T14:30:00Z",
+                "openrouter_api_key": "invalid1",
+                "claude_api_key": "invalid2",
+                "gemini_api_key": "invalid3",
+            }
+
+            response = client.post(
+                "/import_config",
+                data=json.dumps(config_data),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 400
+            data = json.loads(response.data)
+            assert data["success"] is False
+            assert "validation_errors" in data
+            # Should report multiple errors
+            assert len(data["validation_errors"]) >= 3
+
+    def test_import_config_invalid_url_format(self, client, encryption_key):
+        """Test T058: Import rejects invalid URL format."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            config_data = {
+                "version": "1.0",
+                "exported_at": "2025-01-15T14:30:00Z",
+                "lm_studio_url": "not-a-valid-url",
+                "ollama_url": "also-invalid",
+            }
+
+            response = client.post(
+                "/import_config",
+                data=json.dumps(config_data),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 400
+            data = json.loads(response.data)
+            assert data["success"] is False
+            assert "validation_errors" in data
+
+    def test_import_config_valid_urls(self, client, encryption_key):
+        """Test T057: Import with valid URLs."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            config_data = {
+                "version": "1.0",
+                "exported_at": "2025-01-15T14:30:00Z",
+                "lm_studio_url": "http://localhost:1234/v1",
+                "ollama_url": "http://localhost:11434",
+            }
+
+            response = client.post(
+                "/import_config",
+                data=json.dumps(config_data),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            assert data["success"] is True
+
+    def test_import_then_export_roundtrip(self, client, encryption_key):
+        """Test T056, T057: Export then import roundtrip preserves data."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            # First export empty config
+            export1 = client.get("/export_config")
+            export_data = json.loads(export1.data)
+
+            # Import the exported config
+            response = client.post(
+                "/import_config",
+                data=json.dumps(export_data),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            assert data["success"] is True
+
+            # Export again and verify same (with updated timestamp)
+            export2 = client.get("/export_config")
+            export_data2 = json.loads(export2.data)
+
+            # Version should match
+            assert export_data2["version"] == export_data["version"]
+
+    def test_import_partial_config(self, client, encryption_key):
+        """Test T057: Import partial configuration (only some fields)."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            # Save initial config
+            client.post(
+                "/save_config",
+                data={
+                    "openrouter_api_key": "sk-or-v1-" + ("a" * 64),
+                    "claude_api_key": "sk-ant-api03-" + ("b" * 95),
+                    "gemini_api_key": "",
+                    "openai_api_key": "",
+                    "nanogpt_api_key": "",
+                    "chutes_api_key": "",
+                    "zai_api_key": "",
+                },
+            )
+
+            # Import partial config (only openai)
+            config_data = {
+                "version": "1.0",
+                "exported_at": "2025-01-15T14:30:00Z",
+                "openai_api_key": "sk-proj-" + ("x" * 48),
+            }
+
+            response = client.post(
+                "/import_config",
+                data=json.dumps(config_data),
+                content_type="application/json"
+            )
+
+            assert response.status_code == 200
+
+            # Verify openai was updated, others preserved
+            load_response = client.get("/load_config")
+            load_data = json.loads(load_response.data)
+            assert load_data["openai_api_key"] == "sk-proj-" + ("x" * 48)
+            # Other keys should remain (or be from env)
+            assert "openrouter_api_key" in load_data

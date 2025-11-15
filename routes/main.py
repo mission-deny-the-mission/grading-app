@@ -4,6 +4,7 @@ Handles index, jobs, config, and other main navigation routes.
 """
 
 import os
+from datetime import datetime, timezone
 
 import openai
 import requests
@@ -207,6 +208,176 @@ def load_config():
             "ollama_default_model": "",
         }
         return jsonify(config_data)
+
+
+@main_bp.route("/export_config", methods=["GET"])
+def export_config():
+    """Export configuration as JSON with metadata (T059, T060)."""
+    try:
+        from utils.llm_providers import validate_api_key_format
+
+        # Get config from database
+        config = Config.get_or_create()
+
+        # Build complete export with all fields
+        export_data = {
+            "version": "1.0",
+            "exported_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "warning": "This file contains sensitive API keys. Protect it accordingly.",
+            # API Keys (decrypted from database)
+            "openrouter_api_key": config.openrouter_api_key or "",
+            "claude_api_key": config.claude_api_key or "",
+            "gemini_api_key": config.gemini_api_key or "",
+            "openai_api_key": config.openai_api_key or "",
+            "nanogpt_api_key": config.nanogpt_api_key or "",
+            "chutes_api_key": config.chutes_api_key or "",
+            "zai_api_key": config.zai_api_key or "",
+            # URLs
+            "lm_studio_url": config.lm_studio_url or "http://localhost:1234/v1",
+            "ollama_url": config.ollama_url or "http://localhost:11434",
+            # Default Models
+            "openrouter_default_model": config.openrouter_default_model or "",
+            "claude_default_model": config.claude_default_model or "",
+            "gemini_default_model": config.gemini_default_model or "",
+            "openai_default_model": config.openai_default_model or "",
+            "nanogpt_default_model": config.nanogpt_default_model or "",
+            "chutes_default_model": config.chutes_default_model or "",
+            "zai_default_model": config.zai_default_model or "",
+            "lm_studio_default_model": config.lm_studio_default_model or "",
+            "ollama_default_model": config.ollama_default_model or "",
+            # Other Settings
+            "default_prompt": config.default_prompt or (
+                "Please grade this document and provide detailed feedback on:\n"
+                "1. Content quality and relevance\n"
+                "2. Structure and organization\n"
+                "3. Writing style and clarity\n"
+                "4. Grammar and mechanics\n"
+                "5. Overall assessment with specific suggestions for improvement\n\n"
+                "Please provide a comprehensive evaluation with specific examples from the text."
+            ),
+            "zai_pricing_plan": config.zai_pricing_plan or "normal",
+        }
+        return jsonify(export_data)
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to export configuration: {str(e)}"}), 500
+
+
+@main_bp.route("/import_config", methods=["POST"])
+def import_config():
+    """Import configuration from JSON (T061, T062, T063, T064)."""
+    try:
+        from utils.llm_providers import validate_api_key_format
+
+        # Parse JSON from request
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No JSON data provided"}), 400
+
+        # T062: Validate version field is present and correct
+        if "version" not in data:
+            return jsonify({"success": False, "error": "Missing required field: version"}), 400
+
+        if data.get("version") != "1.0":
+            return jsonify({
+                "success": False,
+                "error": f"Unsupported configuration version: {data.get('version')}"
+            }), 400
+
+        # Validate all provided data
+        validation_errors = []
+
+        # T063: API key format validation
+        api_key_fields = {
+            "openrouter": "openrouter_api_key",
+            "claude": "claude_api_key",
+            "gemini": "gemini_api_key",
+            "openai": "openai_api_key",
+            "nanogpt": "nanogpt_api_key",
+            "chutes": "chutes_api_key",
+            "zai": "zai_api_key",
+        }
+
+        for provider, field in api_key_fields.items():
+            if field in data and data[field]:
+                is_valid, error = validate_api_key_format(provider, data[field])
+                if not is_valid:
+                    validation_errors.append(error)
+
+        # T064: URL format validation
+        url_fields = ["lm_studio_url", "ollama_url"]
+        for field in url_fields:
+            if field in data and data[field]:
+                url = data[field]
+                if not (url.startswith("http://") or url.startswith("https://")):
+                    validation_errors.append(f"{field} must start with http:// or https://")
+
+        # Return validation errors if any
+        if validation_errors:
+            return jsonify({
+                "success": False,
+                "error": "Configuration validation failed",
+                "validation_errors": validation_errors
+            }), 400
+
+        # Get or create config
+        config = Config.get_or_create()
+
+        # Apply all fields (only update provided ones)
+        fields_updated = 0
+
+        # API Keys
+        for provider, field in api_key_fields.items():
+            if field in data:
+                setattr(config, field, data[field] or None)
+                fields_updated += 1
+
+        # URLs
+        if "lm_studio_url" in data:
+            config.lm_studio_url = data["lm_studio_url"] or None
+            fields_updated += 1
+        if "ollama_url" in data:
+            config.ollama_url = data["ollama_url"] or None
+            fields_updated += 1
+
+        # Default Models
+        model_fields = [
+            "openrouter_default_model",
+            "claude_default_model",
+            "gemini_default_model",
+            "openai_default_model",
+            "nanogpt_default_model",
+            "chutes_default_model",
+            "zai_default_model",
+            "lm_studio_default_model",
+            "ollama_default_model",
+        ]
+        for field in model_fields:
+            if field in data:
+                setattr(config, field, data[field] or None)
+                fields_updated += 1
+
+        # Other Settings
+        if "default_prompt" in data:
+            config.default_prompt = data["default_prompt"] or None
+            fields_updated += 1
+        if "zai_pricing_plan" in data:
+            config.zai_pricing_plan = data["zai_pricing_plan"] or "normal"
+            fields_updated += 1
+
+        # Save to database
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Configuration imported successfully",
+            "fields_updated": fields_updated
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "success": False,
+            "error": f"Failed to import configuration: {str(e)}"
+        }), 500
 
 
 @main_bp.route("/test_api_key", methods=["POST"])
