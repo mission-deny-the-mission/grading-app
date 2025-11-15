@@ -1630,3 +1630,140 @@ def get_llm_provider(provider_name):
         return NanoGPTLLMProvider()
     else:
         raise ValueError(f"Unknown LLM provider: {provider_name}")
+
+
+# OCR Provider Functions
+
+def extract_text_from_image_azure(image_path):
+    """
+    Extract text from image using Azure Computer Vision OCR.
+
+    Args:
+        image_path: Path to image file
+
+    Returns:
+        dict: {
+            'status': 'success' or 'error',
+            'text': str (full extracted text),
+            'confidence': float (overall confidence 0.0-1.0),
+            'text_regions': list (detailed regions with bounding boxes),
+            'processing_time_ms': int,
+            'error': str (if status='error')
+        }
+    """
+    import time
+    from azure.cognitiveservices.vision.computervision import ComputerVisionClient
+    from azure.cognitiveservices.vision.computervision.models import OperationStatusCodes
+    from msrest.authentication import CognitiveServicesCredentials
+
+    start_time = time.time()
+
+    try:
+        # Get Azure credentials from environment
+        endpoint = os.getenv('AZURE_VISION_ENDPOINT')
+        key = os.getenv('AZURE_VISION_KEY')
+
+        if not endpoint or not key:
+            return {
+                'status': 'error',
+                'error': 'Azure Vision credentials not configured. Set AZURE_VISION_ENDPOINT and AZURE_VISION_KEY'
+            }
+
+        # Create client
+        credentials = CognitiveServicesCredentials(key)
+        client = ComputerVisionClient(endpoint, credentials)
+
+        # Read image file
+        with open(image_path, 'rb') as image_stream:
+            # Call Read API
+            read_operation = client.read_in_stream(image_stream, raw=True)
+
+        # Get operation location (URL with operation ID)
+        operation_location = read_operation.headers["Operation-Location"]
+        operation_id = operation_location.split("/")[-1]
+
+        # Poll for result (Azure Read API is asynchronous)
+        max_attempts = 30
+        wait_seconds = 0.5
+
+        for attempt in range(max_attempts):
+            result = client.get_read_result(operation_id)
+
+            if result.status == OperationStatusCodes.succeeded:
+                # Extract text from result
+                text_regions = []
+                full_text_lines = []
+                total_confidence = 0.0
+                confidence_count = 0
+
+                for page in result.analyze_result.read_results:
+                    for line in page.lines:
+                        full_text_lines.append(line.text)
+
+                        # Calculate line confidence (average of word confidences)
+                        if line.words:
+                            line_confidence = sum(
+                                word.confidence for word in line.words if hasattr(word, 'confidence')
+                            ) / len(line.words)
+                        else:
+                            line_confidence = 1.0
+
+                        total_confidence += line_confidence
+                        confidence_count += 1
+
+                        # Extract bounding box (convert to [x, y, w, h] format)
+                        bbox = line.bounding_box
+                        if bbox and len(bbox) >= 8:
+                            x = min(bbox[0], bbox[6])
+                            y = min(bbox[1], bbox[3])
+                            w = max(bbox[2], bbox[4]) - x
+                            h = max(bbox[5], bbox[7]) - y
+                        else:
+                            x = y = w = h = 0
+
+                        text_regions.append({
+                            'text': line.text,
+                            'confidence': line_confidence,
+                            'bounding_box': [int(x), int(y), int(w), int(h)]
+                        })
+
+                # Calculate overall confidence
+                overall_confidence = total_confidence / confidence_count if confidence_count > 0 else 0.0
+
+                processing_time_ms = int((time.time() - start_time) * 1000)
+
+                return {
+                    'status': 'success',
+                    'text': '\n'.join(full_text_lines),
+                    'confidence': round(overall_confidence, 4),
+                    'text_regions': text_regions,
+                    'processing_time_ms': processing_time_ms,
+                    'line_count': len(full_text_lines),
+                    'text_length': len('\n'.join(full_text_lines))
+                }
+
+            elif result.status == OperationStatusCodes.failed:
+                return {
+                    'status': 'error',
+                    'error': 'Azure Read API operation failed'
+                }
+
+            # Wait before next poll
+            time.sleep(wait_seconds)
+
+        # Timeout
+        return {
+            'status': 'error',
+            'error': f'Azure Read API timeout after {max_attempts * wait_seconds}s'
+        }
+
+    except FileNotFoundError:
+        return {
+            'status': 'error',
+            'error': f'Image file not found: {image_path}'
+        }
+    except Exception as e:
+        return {
+            'status': 'error',
+            'error': f'Azure Vision OCR error: {str(e)}'
+        }

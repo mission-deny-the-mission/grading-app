@@ -1,0 +1,919 @@
+openapi: 3.0.3
+info:
+  title: Image Grading API
+  description: |
+    API for uploading, processing, and validating image submissions (screenshots, diagrams)
+    with OCR text extraction, quality assessment, and automated content validation.
+  version: 1.0.0
+  contact:
+    name: Grading System API
+    email: support@example.com
+
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+  - url: https://grading.example.com/api
+    description: Production server
+
+tags:
+  - name: Image Upload
+    description: Upload and manage image submissions
+  - name: OCR Processing
+    description: OCR text extraction and processing status
+  - name: Quality Assessment
+    description: Image quality validation and metrics
+  - name: Content Validation
+    description: Automated content validation against criteria
+
+paths:
+  /submissions/{submission_id}/images:
+    post:
+      tags:
+        - Image Upload
+      summary: Upload image for submission
+      description: |
+        Upload an image file (screenshot, diagram) for a student submission.
+        Accepts PNG, JPG, JPEG, GIF, WebP, BMP formats up to 50MB.
+        Image is validated, stored, and queued for OCR processing.
+      operationId: uploadSubmissionImage
+      parameters:
+        - name: submission_id
+          in: path
+          description: Submission ID to attach image to
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: Image file to upload
+                description:
+                  type: string
+                  description: Optional description/caption for the image
+                  maxLength: 500
+              required:
+                - image
+      responses:
+        '201':
+          description: Image uploaded successfully and queued for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageSubmissionResponse'
+        '400':
+          description: Invalid request (bad file format, too large, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidFormat:
+                  summary: Invalid file format
+                  value:
+                    error: "Invalid file extension. Allowed: png, jpg, jpeg, gif, webp, bmp"
+                    status: "error"
+                fileTooLarge:
+                  summary: File too large
+                  value:
+                    error: "File too large. Maximum size: 50MB"
+                    status: "error"
+        '404':
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      tags:
+        - Image Upload
+      summary: List images for submission
+      description: Get all images associated with a submission
+      operationId: getSubmissionImages
+      parameters:
+        - name: submission_id
+          in: path
+          description: Submission ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by processing status
+          schema:
+            type: string
+            enum: [uploaded, queued, processing, completed, failed]
+        - name: include_content
+          in: query
+          description: Include OCR extracted content and quality metrics
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of images
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  images:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImageSubmission'
+                  total:
+                    type: integer
+                    description: Total number of images
+        '404':
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /images/{image_id}:
+    get:
+      tags:
+        - Image Upload
+      summary: Get image details
+      description: Retrieve detailed information about a specific image submission
+      operationId: getImageById
+      parameters:
+        - name: image_id
+          in: path
+          description: Image submission ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Image details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageSubmissionDetailed'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Image Upload
+      summary: Delete image submission
+      description: |
+        Delete an image submission and all associated data (OCR content, quality metrics,
+        validation results). Also deletes the physical file from storage.
+      operationId: deleteImage
+      parameters:
+        - name: image_id
+          in: path
+          description: Image submission ID to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Image deleted successfully
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error during deletion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /images/{image_id}/download:
+    get:
+      tags:
+        - Image Upload
+      summary: Download original image file
+      description: Download the original uploaded image file
+      operationId: downloadImage
+      parameters:
+        - name: image_id
+          in: path
+          description: Image submission ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Image file
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /images/{image_id}/ocr:
+    get:
+      tags:
+        - OCR Processing
+      summary: Get OCR extraction results
+      description: Retrieve OCR-extracted text and metadata for an image
+      operationId: getOCRResults
+      parameters:
+        - name: image_id
+          in: path
+          description: Image submission ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OCR extraction results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtractedContent'
+        '404':
+          description: Image not found or OCR not yet completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '202':
+          description: OCR processing still in progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [queued, processing]
+                  message:
+                    type: string
+                    example: "OCR processing in progress"
+
+    post:
+      tags:
+        - OCR Processing
+      summary: Trigger OCR re-processing
+      description: |
+        Manually trigger OCR re-processing for an image. Useful if initial processing
+        failed or if you want to use a different OCR provider.
+      operationId: reprocessOCR
+      parameters:
+        - name: image_id
+          in: path
+          description: Image submission ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ocr_provider:
+                  type: string
+                  enum: [azure_vision, tesseract, google_vision]
+                  description: OCR provider to use for reprocessing
+                  default: azure_vision
+      responses:
+        '202':
+          description: OCR reprocessing queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "queued"
+                  message:
+                    type: string
+                    example: "OCR reprocessing queued"
+                  task_id:
+                    type: string
+                    description: Celery task ID for tracking
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /images/{image_id}/quality:
+    get:
+      tags:
+        - Quality Assessment
+      summary: Get image quality metrics
+      description: Retrieve automated quality assessment results (blur, resolution, cropping)
+      operationId: getQualityMetrics
+      parameters:
+        - name: image_id
+          in: path
+          description: Image submission ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quality assessment results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageQualityMetrics'
+        '404':
+          description: Image not found or quality assessment not completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /images/{image_id}/validate:
+    post:
+      tags:
+        - Content Validation
+      summary: Validate image against criteria
+      description: |
+        Run content validation for an image against specified criteria.
+        Uses OCR text matching for text patterns, VLM for UI elements/visual states.
+      operationId: validateImageContent
+      parameters:
+        - name: image_id
+          in: path
+          description: Image submission ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                criteria_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: List of validation criteria IDs to apply
+                  minItems: 1
+              required:
+                - criteria_ids
+      responses:
+        '200':
+          description: Validation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  validation_results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImageValidationResult'
+                  overall_status:
+                    type: string
+                    enum: [passed, failed, partial]
+                  total_points_awarded:
+                    type: number
+                    format: float
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Image or criteria not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /validation-criteria:
+    get:
+      tags:
+        - Content Validation
+      summary: List validation criteria
+      description: Get all available validation criteria (optionally filtered by type)
+      operationId: listValidationCriteria
+      parameters:
+        - name: criteria_type
+          in: query
+          description: Filter by criteria type
+          schema:
+            type: string
+            enum: [text_pattern, ui_element, visual_state, layout]
+        - name: marking_scheme_id
+          in: query
+          description: Filter by marking scheme
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of validation criteria
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  criteria:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImageValidationCriteria'
+                  total:
+                    type: integer
+
+    post:
+      tags:
+        - Content Validation
+      summary: Create validation criteria
+      description: Define new image content validation criteria
+      operationId: createValidationCriteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageValidationCriteriaCreate'
+      responses:
+        '201':
+          description: Validation criteria created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageValidationCriteria'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /validation-criteria/{criteria_id}:
+    get:
+      tags:
+        - Content Validation
+      summary: Get validation criteria details
+      description: Retrieve details of a specific validation criteria
+      operationId: getValidationCriteria
+      parameters:
+        - name: criteria_id
+          in: path
+          description: Criteria ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Criteria details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageValidationCriteria'
+        '404':
+          description: Criteria not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Content Validation
+      summary: Update validation criteria
+      description: Update existing validation criteria
+      operationId: updateValidationCriteria
+      parameters:
+        - name: criteria_id
+          in: path
+          description: Criteria ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageValidationCriteriaCreate'
+      responses:
+        '200':
+          description: Criteria updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageValidationCriteria'
+        '404':
+          description: Criteria not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Content Validation
+      summary: Delete validation criteria
+      description: Delete validation criteria (also deletes associated validation results)
+      operationId: deleteValidationCriteria
+      parameters:
+        - name: criteria_id
+          in: path
+          description: Criteria ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Criteria deleted
+        '404':
+          description: Criteria not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    ImageSubmissionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Image submission ID
+        submission_id:
+          type: string
+          format: uuid
+          description: Parent submission ID
+        file_uuid:
+          type: string
+          format: uuid
+          description: Unique file identifier
+        original_filename:
+          type: string
+          description: Original uploaded filename
+        file_size_bytes:
+          type: integer
+          description: File size in bytes
+        mime_type:
+          type: string
+          description: MIME type
+        processing_status:
+          type: string
+          enum: [uploaded, queued, processing, completed, failed]
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - submission_id
+        - file_uuid
+        - processing_status
+
+    ImageSubmission:
+      allOf:
+        - $ref: '#/components/schemas/ImageSubmissionResponse'
+        - type: object
+          properties:
+            width_pixels:
+              type: integer
+              description: Image width in pixels
+            height_pixels:
+              type: integer
+              description: Image height in pixels
+            aspect_ratio:
+              type: number
+              format: float
+              description: Width/height ratio
+            passes_quality_check:
+              type: boolean
+              description: Whether image passes quality assessment
+            requires_manual_review:
+              type: boolean
+              description: Whether image needs manual grader review
+
+    ImageSubmissionDetailed:
+      allOf:
+        - $ref: '#/components/schemas/ImageSubmission'
+        - type: object
+          properties:
+            extracted_content:
+              $ref: '#/components/schemas/ExtractedContent'
+            quality_metrics:
+              $ref: '#/components/schemas/ImageQualityMetrics'
+            validation_results:
+              type: array
+              items:
+                $ref: '#/components/schemas/ImageValidationResult'
+
+    ExtractedContent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        image_submission_id:
+          type: string
+          format: uuid
+        extracted_text:
+          type: string
+          description: Full OCR-extracted text
+        text_length:
+          type: integer
+          description: Character count
+        line_count:
+          type: integer
+          description: Number of text lines
+        ocr_provider:
+          type: string
+          enum: [azure_vision, tesseract, google_vision, gemini_vision]
+        ocr_model:
+          type: string
+          description: OCR model version
+        confidence_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Overall OCR confidence (0-1)
+        processing_time_ms:
+          type: integer
+          description: Processing duration in milliseconds
+        text_regions:
+          type: array
+          description: Detected text regions with bounding boxes
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+              confidence:
+                type: number
+                format: float
+              bounding_box:
+                type: array
+                items:
+                  type: integer
+                minItems: 4
+                maxItems: 4
+                description: "[x, y, width, height] in pixels"
+        created_at:
+          type: string
+          format: date-time
+
+    ImageQualityMetrics:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        image_submission_id:
+          type: string
+          format: uuid
+        overall_quality:
+          type: string
+          enum: [excellent, good, poor, rejected]
+        passes_quality_check:
+          type: boolean
+        blur_score:
+          type: number
+          format: float
+          description: Laplacian variance (higher = sharper)
+        is_blurry:
+          type: boolean
+        blur_threshold:
+          type: number
+          format: float
+        meets_min_resolution:
+          type: boolean
+        min_width_required:
+          type: integer
+        min_height_required:
+          type: integer
+        likely_cropped:
+          type: boolean
+        issues:
+          type: array
+          items:
+            type: string
+          description: List of quality issues found
+        assessment_duration_ms:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ImageValidationCriteria:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        marking_scheme_id:
+          type: string
+          format: uuid
+          nullable: true
+        criteria_name:
+          type: string
+        criteria_description:
+          type: string
+        criteria_type:
+          type: string
+          enum: [text_pattern, ui_element, visual_state, layout]
+        validation_rules:
+          type: object
+          description: Type-specific validation configuration
+        points_value:
+          type: number
+          format: float
+        is_required:
+          type: boolean
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        use_vlm:
+          type: boolean
+        vlm_provider:
+          type: string
+          enum: [gemini, claude, openai]
+          nullable: true
+        vlm_prompt:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ImageValidationCriteriaCreate:
+      type: object
+      properties:
+        marking_scheme_id:
+          type: string
+          format: uuid
+          nullable: true
+        criteria_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        criteria_description:
+          type: string
+        criteria_type:
+          type: string
+          enum: [text_pattern, ui_element, visual_state, layout]
+        validation_rules:
+          type: object
+          description: Type-specific validation configuration
+        points_value:
+          type: number
+          format: float
+          minimum: 0
+        is_required:
+          type: boolean
+          default: false
+        weight:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        use_vlm:
+          type: boolean
+          default: false
+        vlm_provider:
+          type: string
+          enum: [gemini, claude, openai]
+          nullable: true
+        vlm_prompt:
+          type: string
+          nullable: true
+      required:
+        - criteria_name
+        - criteria_type
+        - validation_rules
+
+    ImageValidationResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        image_submission_id:
+          type: string
+          format: uuid
+        criteria_id:
+          type: string
+          format: uuid
+        validation_status:
+          type: string
+          enum: [passed, failed, partial, error]
+        passes_criteria:
+          type: boolean
+        confidence_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        detected_elements:
+          type: object
+          description: Elements/patterns found during validation
+        validation_message:
+          type: string
+          description: Human-readable result description
+        points_awarded:
+          type: number
+          format: float
+        processing_method:
+          type: string
+          enum: [ocr_text_match, vlm_analysis]
+        vlm_provider:
+          type: string
+          enum: [gemini, claude, openai]
+          nullable: true
+        vlm_model:
+          type: string
+          nullable: true
+        processing_duration_ms:
+          type: integer
+        error_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        status:
+          type: string
+          enum: [error, failed]
+        details:
+          type: object
+          description: Additional error details
+      required:
+        - error
+        - status
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
