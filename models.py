@@ -1634,7 +1634,9 @@ class User(db.Model):
     ai_quotas = db.relationship("AIProviderQuota", backref="user", lazy=True, cascade="all, delete-orphan")
     usage_records = db.relationship("UsageRecord", backref="user", lazy=True)
     sessions = db.relationship("AuthSession", backref="user", lazy=True, cascade="all, delete-orphan")
-    shared_projects = db.relationship("ProjectShare", backref="user", lazy=True, cascade="all, delete-orphan")
+    # ProjectShare has two foreign keys to User (user_id and granted_by), so specify which one to use
+    shared_projects = db.relationship("ProjectShare", foreign_keys="ProjectShare.user_id", backref="recipient_user", lazy=True, cascade="all, delete-orphan")
+    granted_shares = db.relationship("ProjectShare", foreign_keys="ProjectShare.granted_by", backref="granter_user", lazy=True)
 
     # Flask-Login required properties
     @property

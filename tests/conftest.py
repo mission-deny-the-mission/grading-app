@@ -8,6 +8,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+# Set TESTING environment variable before importing app
+os.environ["TESTING"] = "True"
+
 # Import the app and models
 from app import app as flask_app
 from models import (GradingJob, JobBatch, MarkingScheme, Submission,

@@ -3,7 +3,7 @@
 import logging
 from functools import wraps
 
-from flask import redirect, request, session, url_for
+from flask import jsonify, redirect, request, session, url_for
 from flask_login import current_user
 
 from services.deployment_service import DeploymentService
@@ -29,6 +29,11 @@ def require_login(f):
     return decorated_function
 
 
+def _is_api_request():
+    """Check if the current request is an API request."""
+    return request.path.startswith("/api/")
+
+
 def init_auth_middleware(app):
     """Initialize authentication middleware for the Flask application."""
 
@@ -50,13 +55,20 @@ def init_auth_middleware(app):
             public_routes = {
                 "auth.login",
                 "auth.register",
+                "config.get_deployment_mode",  # Allow checking deployment mode
+                "config.health_check",  # Allow health checks
                 "main.index",
                 "main.setup",
             }
 
             if request.endpoint not in public_routes:
                 logger.warning(f"Unauthenticated request to {request.endpoint}: {request.path}")
-                return redirect(url_for("auth.login", next=request.url))
+
+                # For API requests, return JSON error instead of redirecting
+                if _is_api_request():
+                    return jsonify({"error": "Unauthorized"}), 401
+                else:
+                    return redirect(url_for("auth.login", next=request.url))
 
         logger.debug(f"User {current_user.email if current_user.is_authenticated else 'anonymous'} accessing {request.path}")
 

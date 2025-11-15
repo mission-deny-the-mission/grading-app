@@ -1,6 +1,7 @@
 """Authentication service for user management and authentication."""
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 
 from email_validator import EmailNotValidError, validate_email
@@ -18,12 +19,14 @@ class AuthService:
     """Service for authentication and user management."""
 
     @staticmethod
-    def validate_email(email):
+    def validate_email(email, check_deliverability=None):
         """
         Validate email format using email-validator.
 
         Args:
             email: str - Email address to validate
+            check_deliverability: bool - Whether to check if domain can receive email.
+                                        Defaults to False if TESTING env var is set, else True
 
         Returns:
             str: Normalized email address
@@ -31,8 +34,12 @@ class AuthService:
         Raises:
             ValueError: If email is invalid
         """
+        if check_deliverability is None:
+            # Disable deliverability checks in test environments
+            check_deliverability = not os.getenv("TESTING", False)
+
         try:
-            valid_email = validate_email(email)
+            valid_email = validate_email(email, check_deliverability=check_deliverability)
             return valid_email.normalized
         except EmailNotValidError as e:
             raise ValueError(f"Invalid email address: {str(e)}")
