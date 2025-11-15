@@ -23,11 +23,19 @@
           anthropic
           google-generativeai
           flask-sqlalchemy
+          flask-migrate
           celery
           redis
           psycopg2-binary
           beautifulsoup4
           cryptography
+
+          # Image processing dependencies
+          pillow
+          opencv4
+          python-magic
+          # Note: azure-cognitiveservices-vision-computervision and msrest
+          # may need to be installed via pip in the shell
 
           # Development dependencies
           black

@@ -11,7 +11,15 @@ import requests
 from anthropic import Anthropic
 from flask import Blueprint, jsonify, render_template, request, session
 
-from models import Config, GradingJob, SavedMarkingScheme, SavedPrompt, db
+from models import (
+    Config,
+    GradingJob,
+    ImageSubmission,
+    SavedMarkingScheme,
+    SavedPrompt,
+    Submission,
+    db,
+)
 
 main_bp = Blueprint("main", __name__)
 
@@ -764,4 +772,25 @@ def saved_configurations():
         "saved_configurations.html",
         saved_prompts=saved_prompts,
         saved_marking_schemes=saved_marking_schemes,
+    )
+
+
+@main_bp.route("/submissions/<submission_id>/images")
+def submission_images(submission_id):
+    """Page for viewing and managing image submissions."""
+    submission = Submission.query.get_or_404(submission_id)
+
+    # Get all images for this submission with eager loading
+    images = (
+        ImageSubmission.query.filter_by(submission_id=submission_id)
+        .options(
+            db.joinedload(ImageSubmission.extracted_content),
+            db.joinedload(ImageSubmission.quality_metrics),
+        )
+        .order_by(ImageSubmission.uploaded_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "image_submissions.html", submission=submission, images=images
     )
