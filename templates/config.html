@@ -22,9 +22,11 @@ endblock %} {% block content %}
             <div class="card-body p-4">
                 <form id="configForm" autocomplete="off">
                     <!-- OpenRouter Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section cloud">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-cloud me-2"></i>OpenRouter API
+                            <span class="provider-badge cloud">Cloud API</span>
+                            <span class="provider-badge pricing pay-per-use">Pay-Per-Use</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
@@ -116,9 +118,11 @@ endblock %} {% block content %}
                     </div>
 
                     <!-- Claude API Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section cloud">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-robot me-2"></i>Claude API (Direct)
+                            <span class="provider-badge cloud">Cloud API</span>
+                            <span class="provider-badge pricing pay-per-use">Pay-Per-Use</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
@@ -208,9 +212,11 @@ endblock %} {% block content %}
                     </div>
 
                     <!-- Google Gemini Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section cloud">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-star me-2"></i>Google Gemini
+                            <span class="provider-badge cloud">Cloud API</span>
+                            <span class="provider-badge pricing pay-per-use">Pay-Per-Use</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
@@ -300,9 +306,11 @@ endblock %} {% block content %}
                     </div>
 
                     <!-- OpenAI Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section cloud">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-brain me-2"></i>OpenAI (Direct)
+                            <span class="provider-badge cloud">Cloud API</span>
+                            <span class="provider-badge pricing pay-per-use">Pay-Per-Use</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
@@ -392,9 +400,11 @@ endblock %} {% block content %}
                     </div>
 
                     <!-- NanoGPT Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section cloud">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-brain me-2"></i>NanoGPT
+                            <span class="provider-badge cloud">Cloud API</span>
+                            <span class="provider-badge pricing pay-per-use">Pay-Per-Use</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
@@ -484,9 +494,11 @@ endblock %} {% block content %}
                     </div>
 
                     <!-- Chutes AI Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section cloud">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-rocket me-2"></i>Chutes AI
+                            <span class="provider-badge cloud">Cloud API</span>
+                            <span class="provider-badge pricing pay-per-use">Pay-Per-Use</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
@@ -576,9 +588,12 @@ endblock %} {% block content %}
                     </div>
 
                     <!-- Z.AI Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section cloud">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-star me-2"></i>Z.AI
+                            <span class="provider-badge cloud">Cloud API</span>
+                            <span class="provider-badge pricing pay-per-use" id="zai-pricing-badge-normal">Pay-Per-Use</span>
+                            <span class="provider-badge pricing subscription" id="zai-pricing-badge-coding" style="display:none;">Subscription</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-6">
@@ -679,6 +694,45 @@ endblock %} {% block content %}
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Z.AI Pricing Explanation Panel (T052 & T053) -->
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="pricing-plan-explanation">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>Pricing Plan Comparison
+                                    </h6>
+                                    <table class="pricing-comparison-table">
+                                        <tr>
+                                            <td class="feature">Model Availability</td>
+                                            <td class="normal-api"><strong>More Models</strong></td>
+                                            <td class="coding-plan"><strong>Fewer Models</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="feature">Billing Model</td>
+                                            <td class="normal-api"><strong>Pay-Per-Use</strong></td>
+                                            <td class="coding-plan"><strong>Monthly Subscription</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="feature">Cost Control</td>
+                                            <td class="normal-api">Variable (by usage)</td>
+                                            <td class="coding-plan">Fixed monthly fee</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="feature">Best For</td>
+                                            <td class="normal-api">Flexible usage</td>
+                                            <td class="coding-plan">Heavy users</td>
+                                        </tr>
+                                    </table>
+                                    <p class="mt-3 mb-0 small text-muted">
+                                        <i class="fas fa-lightbulb me-1"></i>
+                                        Choose <strong>Normal API Pricing</strong> for pay-as-you-go flexibility,
+                                        or <strong>Coding Plan Subscription</strong> if you use Z.AI frequently and need predictable costs.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <label
@@ -719,9 +773,11 @@ endblock %} {% block content %}
                     </div>
 
                     <!-- LM Studio Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section local">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-server me-2"></i>LM Studio (Local)
+                            <span class="provider-badge local">Local Only</span>
+                            <span class="provider-badge pricing pay-per-use">Free</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-8">
@@ -794,9 +850,11 @@ endblock %} {% block content %}
                     </div>
 
                     <!-- Ollama Configuration -->
-                    <div class="mb-4">
+                    <div class="mb-4 provider-section local">
                         <h6 class="fw-bold text-primary">
                             <i class="fas fa-cube me-2"></i>Ollama (Local)
+                            <span class="provider-badge local">Local Only</span>
+                            <span class="provider-badge pricing pay-per-use">Free</span>
                         </h6>
                         <div class="row">
                             <div class="col-md-8">
@@ -1312,6 +1370,104 @@ endblock %} {% block content %}
     .status-indicator.offline {
         background-color: #dc3545;
     }
+
+    /* Provider type badges (User Story 3) */
+    .provider-badge {
+        display: inline-block;
+        padding: 0.35rem 0.65rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .provider-badge.cloud {
+        background-color: #cfe2ff;
+        color: #084298;
+        border: 1px solid #b6d4fe;
+    }
+
+    .provider-badge.local {
+        background-color: #f8d7da;
+        color: #842029;
+        border: 1px solid #f5c2c7;
+    }
+
+    .provider-badge.pricing {
+        display: inline-block;
+        font-size: 0.70rem;
+        font-weight: 500;
+        margin-left: 0.25rem;
+        padding: 0.25rem 0.45rem;
+    }
+
+    .provider-badge.pricing.pay-per-use {
+        background-color: #e7f3ff;
+        color: #0056b3;
+    }
+
+    .provider-badge.pricing.subscription {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+
+    .provider-section {
+        border-left: 4px solid #e9ecef;
+        padding-left: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .provider-section.cloud {
+        border-left-color: #0d6efd;
+    }
+
+    .provider-section.local {
+        border-left-color: #dc3545;
+    }
+
+    .pricing-plan-explanation {
+        background-color: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-radius: 0.25rem;
+    }
+
+    .pricing-plan-explanation.warning {
+        background-color: #fffbea;
+        border-left-color: #ffc107;
+    }
+
+    .pricing-comparison-table {
+        width: 100%;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .pricing-comparison-table tr {
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .pricing-comparison-table td {
+        padding: 0.5rem;
+    }
+
+    .pricing-comparison-table .feature {
+        font-weight: 500;
+        width: 40%;
+    }
+
+    .pricing-comparison-table .normal-api {
+        text-align: center;
+        color: #0056b3;
+    }
+
+    .pricing-comparison-table .coding-plan {
+        text-align: center;
+        color: #856404;
+    }
 </style>
 
 <script>
@@ -1806,6 +1962,19 @@ endblock %} {% block content %}
         ).value;
         const modelSelect = document.getElementById("zai_default_model");
         const refreshBtn = document.getElementById("zai-refresh-btn");
+
+        // Update pricing badges (T053)
+        const normalBadge = document.getElementById("zai-pricing-badge-normal");
+        const codingBadge = document.getElementById("zai-pricing-badge-coding");
+        if (normalBadge && codingBadge) {
+            if (pricingPlan === "coding_plan") {
+                normalBadge.style.display = "none";
+                codingBadge.style.display = "inline-block";
+            } else {
+                normalBadge.style.display = "inline-block";
+                codingBadge.style.display = "none";
+            }
+        }
 
         // Clear current models
         modelSelect.innerHTML = '<option value="">Loading models...</option>';

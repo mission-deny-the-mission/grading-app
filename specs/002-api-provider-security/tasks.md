@@ -130,24 +130,24 @@ Project uses **single structure**: Files at repository root
 
 > **CONSTITUTION REQUIREMENT**: Write these tests FIRST, ensure they FAIL, THEN implement (TDD cycle: Red → Green → Refactor)
 
-- [ ] T039 [P] [US3] Integration test for config page HTML contains cloud provider badges in tests/test_config_routes.py
-- [ ] T040 [P] [US3] Integration test for config page HTML contains local provider badges in tests/test_config_routes.py
-- [ ] T041 [P] [US3] Integration test for Z.AI explanation panel in tests/test_config_routes.py
+- [x] T039 [P] [US3] Integration test for config page HTML contains cloud provider badges in tests/test_config_routes.py
+- [x] T040 [P] [US3] Integration test for config page HTML contains local provider badges in tests/test_config_routes.py
+- [x] T041 [P] [US3] Integration test for Z.AI explanation panel in tests/test_config_routes.py
 
 ### Implementation for User Story 3
 
-- [ ] T042 [P] [US3] Add CSS classes for provider badges in templates/config.html (provider-section, cloud, local)
-- [ ] T043 [P] [US3] Add "Cloud API" badge HTML to OpenRouter section in templates/config.html
-- [ ] T044 [P] [US3] Add "Cloud API" badge HTML to Claude section in templates/config.html
-- [ ] T045 [P] [US3] Add "Cloud API" badge HTML to Gemini section in templates/config.html
-- [ ] T046 [P] [US3] Add "Cloud API" badge HTML to OpenAI section in templates/config.html
-- [ ] T047 [P] [US3] Add "Cloud API" badge HTML to NanoGPT section in templates/config.html
-- [ ] T048 [P] [US3] Add "Cloud API" badge HTML to Chutes section in templates/config.html
-- [ ] T049 [P] [US3] Add "Cloud API" badge HTML to Z.AI sections in templates/config.html
-- [ ] T050 [P] [US3] Add "Local Only" badge HTML to LM Studio section in templates/config.html
-- [ ] T051 [P] [US3] Add "Local Only" badge HTML to Ollama section in templates/config.html
-- [ ] T052 [US3] Add Z.AI pricing plan explanation panel HTML in templates/config.html with comparison of Normal API vs Coding Plan
-- [ ] T053 [US3] Add pricing model indicators (pay-per-use, subscription) to cloud provider badges in templates/config.html
+- [x] T042 [P] [US3] Add CSS classes for provider badges in templates/config.html (provider-section, cloud, local)
+- [x] T043 [P] [US3] Add "Cloud API" badge HTML to OpenRouter section in templates/config.html
+- [x] T044 [P] [US3] Add "Cloud API" badge HTML to Claude section in templates/config.html
+- [x] T045 [P] [US3] Add "Cloud API" badge HTML to Gemini section in templates/config.html
+- [x] T046 [P] [US3] Add "Cloud API" badge HTML to OpenAI section in templates/config.html
+- [x] T047 [P] [US3] Add "Cloud API" badge HTML to NanoGPT section in templates/config.html
+- [x] T048 [P] [US3] Add "Cloud API" badge HTML to Chutes section in templates/config.html
+- [x] T049 [P] [US3] Add "Cloud API" badge HTML to Z.AI sections in templates/config.html
+- [x] T050 [P] [US3] Add "Local Only" badge HTML to LM Studio section in templates/config.html
+- [x] T051 [P] [US3] Add "Local Only" badge HTML to Ollama section in templates/config.html
+- [x] T052 [US3] Add Z.AI pricing plan explanation panel HTML in templates/config.html with comparison of Normal API vs Coding Plan
+- [x] T053 [US3] Add pricing model indicators (pay-per-use, subscription) to cloud provider badges in templates/config.html
 
 **Checkpoint**: All user stories 1, 2, and 3 should now be independently functional. Configuration page clearly shows provider types with visual badges.
 

@@ -385,3 +385,75 @@ class TestConfigErrorHandling:
             data = json.loads(response.data)
             # Should still return a response (empty/null for decryption failures)
             assert isinstance(data, dict)
+
+
+class TestProviderTypeBadges:
+    """Tests for provider type clarity UI (User Story 3 - Phase 5)."""
+
+    def test_config_page_contains_cloud_provider_badges(self, client, encryption_key):
+        """Test T039: Config page HTML contains cloud provider badges."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.get("/config")
+
+            assert response.status_code == 200
+            html_content = response.data.decode('utf-8')
+
+            # Check for cloud provider badges
+            cloud_providers = [
+                'openrouter',  # OpenRouter
+                'claude',      # Claude API
+                'gemini',      # Google Gemini
+                'openai',      # OpenAI
+                'nanogpt',     # NanoGPT
+                'chutes',      # Chutes AI
+                'zai',         # Z.AI
+            ]
+
+            for provider in cloud_providers:
+                # Each cloud provider should have a badge with provider type indicator
+                assert f'provider-section' in html_content, f"Provider section class missing for {provider}"
+                assert f'class="cloud-provider"' in html_content or 'cloud-api' in html_content.lower(), \
+                    f"Cloud provider badge missing for {provider}"
+
+    def test_config_page_contains_local_provider_badges(self, client, encryption_key):
+        """Test T040: Config page HTML contains local provider badges."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.get("/config")
+
+            assert response.status_code == 200
+            html_content = response.data.decode('utf-8')
+
+            # Check for local provider badges
+            local_providers = [
+                'lm_studio',   # LM Studio
+                'ollama',      # Ollama
+            ]
+
+            for provider in local_providers:
+                # Each local provider should have a badge with provider type indicator
+                assert f'provider-section' in html_content, f"Provider section class missing for {provider}"
+                assert f'class="local-provider"' in html_content or 'local-only' in html_content.lower(), \
+                    f"Local provider badge missing for {provider}"
+
+    def test_config_page_contains_zai_explanation_panel(self, client, encryption_key):
+        """Test T041: Config page contains Z.AI explanation panel with pricing comparison."""
+        with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
+            response = client.get("/config")
+
+            assert response.status_code == 200
+            html_content = response.data.decode('utf-8')
+
+            # Check for Z.AI pricing plan radio buttons
+            assert 'zai_pricing_plan' in html_content, "Z.AI pricing plan controls missing"
+
+            # Check for pricing plan labels
+            assert 'Normal API Pricing' in html_content or 'normal' in html_content.lower(), \
+                "Normal API pricing option missing"
+            assert 'Coding Plan' in html_content or 'coding_plan' in html_content.lower(), \
+                "Coding Plan option missing"
+
+            # Check for pricing indicators in the description
+            assert 'Pay per use' in html_content or 'pay-per-use' in html_content.lower(), \
+                "Pay-per-use indicator missing"
+            assert 'subscription' in html_content.lower(), \
+                "Subscription indicator missing"
