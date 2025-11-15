@@ -218,11 +218,13 @@ class GradingJob(db.Model):
 
     # Foreign keys
     batch_id = db.Column(db.String(36), db.ForeignKey("job_batches.id"), nullable=True)
+    owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True, index=True)
 
     # Relationships
     submissions = db.relationship(
         "Submission", backref="job", lazy=True, cascade="all, delete-orphan"
     )
+    owner = db.relationship("User", backref="grading_jobs", foreign_keys=[owner_id])
 
     def to_dict(self):
         """Convert job to dictionary."""

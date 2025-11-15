@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Document Grading App{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card auth-card">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-sign-in-alt fa-3x text-primary mb-3"></i>
+                        <h2 class="mb-2">Welcome Back</h2>
+                        <p class="text-muted">Sign in to continue to Document Grader</p>
+                    </div>
+
+                    <!-- Alert Messages -->
+                    <div id="alert-container"></div>
+
+                    <!-- Login Form -->
+                    <form id="login-form" novalidate>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-envelope"></i>
+                                </span>
+                                <input
+                                    type="email"
+                                    class="form-control"
+                                    id="email"
+                                    name="email"
+                                    placeholder="Enter your email"
+                                    required
+                                    autocomplete="email"
+                                >
+                                <div class="invalid-feedback">
+                                    Please enter a valid email address.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="password"
+                                    name="password"
+                                    placeholder="Enter your password"
+                                    required
+                                    autocomplete="current-password"
+                                >
+                                <button
+                                    class="btn btn-outline-secondary"
+                                    type="button"
+                                    id="toggle-password"
+                                    title="Show/hide password"
+                                >
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <div class="invalid-feedback">
+                                    Password is required.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input
+                                type="checkbox"
+                                class="form-check-input"
+                                id="remember"
+                                name="remember"
+                            >
+                            <label class="form-check-label" for="remember">
+                                Remember me
+                            </label>
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="btn btn-primary w-100 mb-3"
+                            id="login-btn"
+                        >
+                            <span id="login-btn-text">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </span>
+                            <span id="login-btn-loading" style="display: none;">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Signing in...
+                            </span>
+                        </button>
+
+                        <div class="text-center">
+                            <a href="/auth/forgot-password" class="text-muted">
+                                <i class="fas fa-question-circle me-1"></i>Forgot your password?
+                            </a>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <p class="text-muted mb-2">Don't have an account?</p>
+                        <a href="/auth/register" class="btn btn-outline-primary">
+                            <i class="fas fa-user-plus me-2"></i>Create Account
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 0;
+    }
+
+    .auth-card {
+        border: none;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    }
+
+    .input-group-text {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+
+    .alert {
+        border-radius: 10px;
+        border: none;
+    }
+
+    .alert-success {
+        background: linear-gradient(45deg, rgba(40, 167, 69, 0.1), rgba(32, 201, 151, 0.1));
+        color: #28a745;
+    }
+
+    .alert-danger {
+        background: linear-gradient(45deg, rgba(220, 53, 69, 0.1), rgba(255, 77, 79, 0.1));
+        color: #dc3545;
+    }
+
+    #toggle-password {
+        border-left: none;
+    }
+
+    #toggle-password:focus {
+        box-shadow: none;
+    }
+</style>
+
+<script src="{{ url_for('static', filename='js/authClient.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const loginForm = document.getElementById('login-form');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const rememberInput = document.getElementById('remember');
+        const loginBtn = document.getElementById('login-btn');
+        const loginBtnText = document.getElementById('login-btn-text');
+        const loginBtnLoading = document.getElementById('login-btn-loading');
+        const togglePasswordBtn = document.getElementById('toggle-password');
+        const alertContainer = document.getElementById('alert-container');
+
+        // Toggle password visibility
+        togglePasswordBtn.addEventListener('click', function() {
+            const type = passwordInput.type === 'password' ? 'text' : 'password';
+            passwordInput.type = type;
+
+            const icon = this.querySelector('i');
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        });
+
+        // Email validation
+        emailInput.addEventListener('blur', function() {
+            validateEmail();
+        });
+
+        // Form validation
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Clear previous alerts
+            alertContainer.innerHTML = '';
+
+            // Validate inputs
+            if (!validateEmail() || !validatePassword()) {
+                return;
+            }
+
+            // Disable form and show loading
+            setLoadingState(true);
+
+            try {
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+                const remember = rememberInput.checked;
+
+                const response = await AuthClient.login(email, password, remember);
+
+                // Show success message
+                showAlert('success', 'Login successful! Redirecting...');
+
+                // Redirect to dashboard or intended page
+                setTimeout(() => {
+                    const redirectUrl = new URLSearchParams(window.location.search).get('next') || '/';
+                    window.location.href = redirectUrl;
+                }, 1000);
+
+            } catch (error) {
+                showAlert('danger', error.message || 'Login failed. Please check your credentials.');
+                setLoadingState(false);
+            }
+        });
+
+        function validateEmail() {
+            const email = emailInput.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!email) {
+                emailInput.classList.add('is-invalid');
+                return false;
+            }
+
+            if (!emailRegex.test(email)) {
+                emailInput.classList.add('is-invalid');
+                emailInput.setCustomValidity('Invalid email format');
+                return false;
+            }
+
+            emailInput.classList.remove('is-invalid');
+            emailInput.classList.add('is-valid');
+            emailInput.setCustomValidity('');
+            return true;
+        }
+
+        function validatePassword() {
+            const password = passwordInput.value;
+
+            if (!password) {
+                passwordInput.classList.add('is-invalid');
+                return false;
+            }
+
+            passwordInput.classList.remove('is-invalid');
+            passwordInput.classList.add('is-valid');
+            return true;
+        }
+
+        function setLoadingState(loading) {
+            loginBtn.disabled = loading;
+            emailInput.disabled = loading;
+            passwordInput.disabled = loading;
+            rememberInput.disabled = loading;
+            togglePasswordBtn.disabled = loading;
+
+            if (loading) {
+                loginBtnText.style.display = 'none';
+                loginBtnLoading.style.display = 'inline';
+            } else {
+                loginBtnText.style.display = 'inline';
+                loginBtnLoading.style.display = 'none';
+            }
+        }
+
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            alertContainer.appendChild(alertDiv);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 150);
+            }, 5000);
+        }
+
+        // Check for query parameter messages
+        const urlParams = new URLSearchParams(window.location.search);
+        const message = urlParams.get('message');
+        const messageType = urlParams.get('type');
+
+        if (message) {
+            showAlert(messageType || 'info', decodeURIComponent(message));
+        }
+    });
+</script>
+{% endblock %}

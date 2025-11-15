@@ -41,7 +41,7 @@ def init_auth_middleware(app):
     def before_request():
         """Execute authentication checks before each request."""
         # Skip auth checks for static files and auth blueprint
-        if request.path.startswith("/static") or request.endpoint.startswith("auth."):
+        if request.path.startswith("/static") or (request.endpoint and request.endpoint.startswith("auth.")):
             return
 
         # In single-user mode, skip all authentication

@@ -2,6 +2,8 @@
 
 import logging
 import os
+import secrets
+import re
 from datetime import datetime, timedelta, timezone
 
 from email_validator import EmailNotValidError, validate_email
@@ -45,12 +47,19 @@ class AuthService:
             raise ValueError(f"Invalid email address: {str(e)}")
 
     @staticmethod
-    def validate_password(password):
+    def validate_password(password, check_complexity=True):
         """
         Validate password meets requirements.
 
+        Password requirements:
+        - Minimum 8 characters
+        - At least 1 uppercase letter
+        - At least 1 number
+        - At least 1 special character
+
         Args:
             password: str - Password to validate
+            check_complexity: bool - Whether to enforce complexity rules
 
         Returns:
             bool: True if valid
@@ -60,6 +69,20 @@ class AuthService:
         """
         if not password or len(password) < MIN_PASSWORD_LENGTH:
             raise ValueError(f"Password must be at least {MIN_PASSWORD_LENGTH} characters long")
+
+        if check_complexity:
+            # Check for uppercase letter
+            if not re.search(r'[A-Z]', password):
+                raise ValueError("Password must contain at least 1 uppercase letter")
+
+            # Check for number
+            if not re.search(r'\d', password):
+                raise ValueError("Password must contain at least 1 number")
+
+            # Check for special character
+            if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+                raise ValueError("Password must contain at least 1 special character")
+
         return True
 
     @staticmethod
@@ -260,3 +283,131 @@ class AuthService:
             "limit": limit,
             "offset": offset,
         }
+
+    @staticmethod
+    def generate_password_reset_token(email):
+        """
+        Generate a password reset token for a user.
+
+        Token is stored in memory/database with 1-hour expiration.
+        In production, this would send an email (not implemented yet).
+
+        Args:
+            email: str - User email
+
+        Returns:
+            dict: {"token": str, "expires_at": datetime, "user_id": str}
+
+        Raises:
+            ValueError: If user not found
+        """
+        # Normalize email
+        email = AuthService.validate_email(email)
+
+        # Find user
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            # For security, don't reveal whether email exists
+            logger.warning(f"Password reset requested for non-existent email: {email}")
+            raise ValueError("If this email exists, a reset link has been sent")
+
+        # Generate secure token
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+
+        # Store token in session or database
+        # For now, we'll use a simple in-memory store (in production, use Redis or database)
+        # This implementation stores it as a class variable for demonstration
+        if not hasattr(AuthService, '_reset_tokens'):
+            AuthService._reset_tokens = {}
+
+        AuthService._reset_tokens[token] = {
+            "user_id": user.id,
+            "email": email,
+            "expires_at": expires_at,
+        }
+
+        logger.info(f"Password reset token generated for {email}")
+
+        return {
+            "token": token,
+            "expires_at": expires_at.isoformat(),
+            "user_id": user.id,
+            "message": "Password reset token generated (email not sent in current implementation)",
+        }
+
+    @staticmethod
+    def validate_reset_token(token):
+        """
+        Validate a password reset token.
+
+        Args:
+            token: str - Reset token
+
+        Returns:
+            dict: {"valid": bool, "user_id": str, "email": str}
+
+        Raises:
+            ValueError: If token is invalid or expired
+        """
+        if not hasattr(AuthService, '_reset_tokens'):
+            AuthService._reset_tokens = {}
+
+        if token not in AuthService._reset_tokens:
+            raise ValueError("Invalid or expired reset token")
+
+        token_data = AuthService._reset_tokens[token]
+        expires_at = token_data["expires_at"]
+
+        if datetime.now(timezone.utc) > expires_at:
+            # Clean up expired token
+            del AuthService._reset_tokens[token]
+            raise ValueError("Reset token has expired")
+
+        return {
+            "valid": True,
+            "user_id": token_data["user_id"],
+            "email": token_data["email"],
+        }
+
+    @staticmethod
+    def reset_password_with_token(token, new_password):
+        """
+        Reset password using a valid token.
+
+        Args:
+            token: str - Reset token
+            new_password: str - New password
+
+        Returns:
+            User: Updated user object
+
+        Raises:
+            ValueError: If token is invalid or password doesn't meet requirements
+        """
+        # Validate token
+        token_data = AuthService.validate_reset_token(token)
+        user_id = token_data["user_id"]
+
+        # Validate new password
+        AuthService.validate_password(new_password)
+
+        # Update password
+        user = User.query.get(user_id)
+        if not user:
+            raise ValueError("User not found")
+
+        try:
+            user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
+
+            # Invalidate token after use
+            if hasattr(AuthService, '_reset_tokens') and token in AuthService._reset_tokens:
+                del AuthService._reset_tokens[token]
+
+            logger.info(f"Password reset successful for user {user.email}")
+            return user
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error resetting password: {e}")
+            raise

@@ -125,7 +125,7 @@ class TestUserCreationInMultiUserMode:
     def test_create_user_in_multi_user_mode(self, app_multi_user):
         """Test creating user in multi-user mode."""
         with app_multi_user.app_context():
-            user = AuthService.create_user("test@example.com", "password123")
+            user = AuthService.create_user("test@example.com", "Password123!")
 
             assert user.email == "test@example.com"
             assert user.is_active
@@ -133,12 +133,12 @@ class TestUserCreationInMultiUserMode:
     def test_authentication_in_multi_user_mode(self, app_multi_user, client_multi_user):
         """Test authentication in multi-user mode."""
         with app_multi_user.app_context():
-            AuthService.create_user("test@example.com", "password123")
+            AuthService.create_user("test@example.com", "Password123!")
 
         # Try to login
         response = client_multi_user.post(
             "/api/auth/login",
-            json={"email": "test@example.com", "password": "password123"},
+            json={"email": "test@example.com", "password": "Password123!"},
         )
 
         assert response.status_code == 200

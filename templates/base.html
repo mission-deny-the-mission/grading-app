@@ -91,28 +91,89 @@
                 <i class="fas fa-graduation-cap me-2"></i>
                 Document Grader
             </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/">
-                    <i class="fas fa-upload me-1"></i>Single Upload
-                </a>
-                <a class="nav-link" href="/bulk_upload">
-                    <i class="fas fa-layer-group me-1"></i>Bulk Upload
-                </a>
-                <a class="nav-link" href="/jobs">
-                    <i class="fas fa-tasks me-1"></i>Jobs
-                </a>
-                <a class="nav-link" href="/batches">
-                    <i class="fas fa-layer-group me-1"></i>Batches
-                </a>
-                <a class="nav-link" href="/saved-configurations">
-                    <i class="fas fa-bookmark me-1"></i>Saved Configurations
-                </a>
-                <a class="nav-link" href="/templates">
-                    <i class="fas fa-layer-group me-1"></i>Templates
-                </a>
-                <a class="nav-link" href="/config">
-                    <i class="fas fa-cog me-1"></i>Configuration
-                </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="/">
+                        <i class="fas fa-upload me-1"></i>Single Upload
+                    </a>
+                    <a class="nav-link" href="/bulk_upload">
+                        <i class="fas fa-layer-group me-1"></i>Bulk Upload
+                    </a>
+                    <a class="nav-link" href="/jobs">
+                        <i class="fas fa-tasks me-1"></i>Jobs
+                    </a>
+                    <a class="nav-link" href="/batches">
+                        <i class="fas fa-layer-group me-1"></i>Batches
+                    </a>
+                    <a class="nav-link" href="/saved-configurations">
+                        <i class="fas fa-bookmark me-1"></i>Saved Configurations
+                    </a>
+                    <a class="nav-link" href="/templates">
+                        <i class="fas fa-layer-group me-1"></i>Templates
+                    </a>
+                    <a class="nav-link" href="/config">
+                        <i class="fas fa-cog me-1"></i>Configuration
+                    </a>
+
+                    <!-- Multi-User Mode: Auth Links (hidden if not logged in) -->
+                    {% if current_user %}
+                        <a class="nav-link" href="/dashboard/usage">
+                            <i class="fas fa-chart-line me-1"></i>Usage
+                        </a>
+                        <a class="nav-link" href="/dashboard/shared">
+                            <i class="fas fa-share-alt me-1"></i>Shared
+                        </a>
+                        {% if current_user.role == 'admin' %}
+                            <a class="nav-link" href="/admin/users">
+                                <i class="fas fa-users me-1"></i>Users
+                            </a>
+                        {% endif %}
+
+                        <!-- User Dropdown -->
+                        <div class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i>{{ current_user.display_name }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="/profile">
+                                    <i class="fas fa-user me-2"></i>Profile
+                                </a></li>
+                                {% if current_user.role == 'admin' %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/admin/quotas">
+                                        <i class="fas fa-sliders-h me-2"></i>Quota Management
+                                    </a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="logout()">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <!-- Not logged in: Show login/register links only in multi-user mode -->
+                        <div id="auth-links" style="display: none;">
+                            <a class="nav-link" href="/auth/login">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login
+                            </a>
+                            <a class="nav-link" href="/auth/register">
+                                <i class="fas fa-user-plus me-1"></i>Register
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <!-- Deployment Mode Indicator (admin only) -->
+                    {% if current_user and current_user.role == 'admin' %}
+                        <span class="navbar-text ms-3" id="mode-indicator">
+                            <small class="badge bg-secondary" id="mode-badge">
+                                <i class="fas fa-info-circle me-1"></i><span id="mode-text">Loading...</span>
+                            </small>
+                        </span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
@@ -125,6 +186,44 @@
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/configClient.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/authClient.js') }}"></script>
+    <script>
+        // Global logout function
+        async function logout() {
+            try {
+                await AuthClient.logout();
+                window.location.href = '/auth/login?message=Logged out successfully&type=success';
+            } catch (error) {
+                console.error('Logout failed:', error);
+                window.location.href = '/auth/login';
+            }
+        }
+
+        // Check deployment mode and update UI
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const config = await ConfigClient.getDeploymentMode();
+                const isMultiUser = config.mode === 'multi-user';
+
+                // Show/hide auth links based on mode
+                const authLinks = document.getElementById('auth-links');
+                if (authLinks && isMultiUser) {
+                    authLinks.style.display = 'block';
+                }
+
+                // Update mode indicator for admins
+                const modeText = document.getElementById('mode-text');
+                const modeBadge = document.getElementById('mode-badge');
+                if (modeText && modeBadge) {
+                    modeText.textContent = isMultiUser ? 'Multi-User' : 'Single-User';
+                    modeBadge.className = `badge ${isMultiUser ? 'bg-success' : 'bg-primary'}`;
+                }
+            } catch (error) {
+                console.error('Failed to check deployment mode:', error);
+            }
+        });
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

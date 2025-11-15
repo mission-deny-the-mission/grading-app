@@ -1,12 +1,15 @@
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from models import db
+from routes.admin_routes import admin_bp
 from routes.api import api_bp
 from routes.auth_routes import auth_bp
 from routes.batches import batches_bp
@@ -55,6 +58,15 @@ db.init_app(app)
 # Initialize Flask-Migrate for database migrations
 migrate = Migrate(app, db)
 
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["1000 per day", "100 per hour"],
+    storage_uri="memory://",
+    strategy="fixed-window"
+)
+
 # Flask-Login user_loader callback (will be properly configured after User model is available)
 @login_manager.user_loader
 def load_user(user_id):
@@ -71,6 +83,7 @@ app.register_blueprint(templates_bp)
 
 # Register authentication and configuration blueprints
 app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(usage_bp)
 app.register_blueprint(sharing_bp)

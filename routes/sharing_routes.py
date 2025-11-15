@@ -91,6 +91,55 @@ def share_project(project_id):
         return jsonify({"success": False, "message": "Could not share project"}), 500
 
 
+@sharing_bp.route("/<project_id>/shares/<share_id>", methods=["PATCH"])
+@login_required
+def update_share_permissions(project_id, share_id):
+    """
+    Update permissions for a project share.
+
+    Request body:
+        {
+            "permission_level": "read" | "write"
+        }
+
+    Response:
+        {
+            "success": bool,
+            "share": {...},
+            "message": str
+        }
+    """
+    data = request.get_json() or {}
+    permission_level = data.get("permission_level")
+
+    if not permission_level or permission_level not in ("read", "write"):
+        return jsonify({"success": False, "message": "Valid permission_level required (read or write)"}), 400
+
+    try:
+        from models import ProjectShare, db
+
+        share = ProjectShare.query.filter_by(id=share_id, project_id=project_id).first()
+
+        if not share:
+            return jsonify({"success": False, "message": "Share not found"}), 404
+
+        share.permission_level = permission_level
+        db.session.commit()
+        logger.info(f"Share permissions updated: {share_id} -> {permission_level}")
+
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Permissions updated to {permission_level}",
+                "share": share.to_dict(),
+            }
+        ), 200
+
+    except Exception as e:
+        logger.error(f"Error updating share permissions: {e}")
+        return jsonify({"success": False, "message": "Could not update permissions"}), 500
+
+
 @sharing_bp.route("/<project_id>/shares/<share_id>", methods=["DELETE"])
 @login_required
 def revoke_share(project_id, share_id):
@@ -118,3 +167,28 @@ def revoke_share(project_id, share_id):
     except Exception as e:
         logger.error(f"Error revoking share: {e}")
         return jsonify({"success": False, "message": "Could not revoke share"}), 500
+
+
+@sharing_bp.route("/shared", methods=["GET"])
+@login_required
+def get_shared_with_me():
+    """
+    Get projects shared with current user.
+
+    Response:
+        {
+            "user_id": str,
+            "shared_projects": [
+                {
+                    "project_id": str,
+                    "permission_level": str
+                }
+            ]
+        }
+    """
+    try:
+        result = SharingService.get_user_accessible_projects(current_user.id)
+        return jsonify(result), 200
+    except Exception as e:
+        logger.error(f"Error getting shared projects: {e}")
+        return jsonify({"error": "Could not retrieve shared projects"}), 500
