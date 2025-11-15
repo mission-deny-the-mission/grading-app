@@ -60,8 +60,11 @@ endblock %} {% block content %}
                                         type="button"
                                         class="btn btn-outline-primary"
                                         onclick="togglePassword('openrouter_api_key')"
+                                        aria-label="Toggle OpenRouter API key visibility"
+                                        aria-pressed="false"
+                                        id="toggle-openrouter_api_key"
                                     >
-                                        <i class="fas fa-eye"></i> Show/Hide
+                                        <i class="fas fa-eye" aria-hidden="true"></i> Show/Hide
                                     </button>
                                 </div>
                             </div>
@@ -154,8 +157,11 @@ endblock %} {% block content %}
                                         type="button"
                                         class="btn btn-outline-primary"
                                         onclick="togglePassword('claude_api_key')"
+                                        aria-label="Toggle Claude API key visibility"
+                                        aria-pressed="false"
+                                        id="toggle-claude_api_key"
                                     >
-                                        <i class="fas fa-eye"></i> Show/Hide
+                                        <i class="fas fa-eye" aria-hidden="true"></i> Show/Hide
                                     </button>
                                 </div>
                             </div>
@@ -248,8 +254,11 @@ endblock %} {% block content %}
                                         type="button"
                                         class="btn btn-outline-primary"
                                         onclick="togglePassword('gemini_api_key')"
+                                        aria-label="Toggle Gemini API key visibility"
+                                        aria-pressed="false"
+                                        id="toggle-gemini_api_key"
                                     >
-                                        <i class="fas fa-eye"></i> Show/Hide
+                                        <i class="fas fa-eye" aria-hidden="true"></i> Show/Hide
                                     </button>
                                 </div>
                             </div>
@@ -342,8 +351,11 @@ endblock %} {% block content %}
                                         type="button"
                                         class="btn btn-outline-primary"
                                         onclick="togglePassword('openai_api_key')"
+                                        aria-label="Toggle OpenAI API key visibility"
+                                        aria-pressed="false"
+                                        id="toggle-openai_api_key"
                                     >
-                                        <i class="fas fa-eye"></i> Show/Hide
+                                        <i class="fas fa-eye" aria-hidden="true"></i> Show/Hide
                                     </button>
                                 </div>
                             </div>
@@ -436,8 +448,11 @@ endblock %} {% block content %}
                                         type="button"
                                         class="btn btn-outline-primary"
                                         onclick="togglePassword('nanogpt_api_key')"
+                                        aria-label="Toggle NanoGPT API key visibility"
+                                        aria-pressed="false"
+                                        id="toggle-nanogpt_api_key"
                                     >
-                                        <i class="fas fa-eye"></i> Show/Hide
+                                        <i class="fas fa-eye" aria-hidden="true"></i> Show/Hide
                                     </button>
                                 </div>
                             </div>
@@ -530,8 +545,11 @@ endblock %} {% block content %}
                                         type="button"
                                         class="btn btn-outline-primary"
                                         onclick="togglePassword('chutes_api_key')"
+                                        aria-label="Toggle Chutes API key visibility"
+                                        aria-pressed="false"
+                                        id="toggle-chutes_api_key"
                                     >
-                                        <i class="fas fa-eye"></i> Show/Hide
+                                        <i class="fas fa-eye" aria-hidden="true"></i> Show/Hide
                                     </button>
                                 </div>
                             </div>
@@ -623,8 +641,11 @@ endblock %} {% block content %}
                                         type="button"
                                         class="btn btn-outline-primary"
                                         onclick="togglePassword('zai_api_key')"
+                                        aria-label="Toggle Z.AI API key visibility"
+                                        aria-pressed="false"
+                                        id="toggle-zai_api_key"
                                     >
-                                        <i class="fas fa-eye"></i> Show/Hide
+                                        <i class="fas fa-eye" aria-hidden="true"></i> Show/Hide
                                     </button>
                                 </div>
                             </div>
@@ -1406,6 +1427,31 @@ endblock %} {% block content %}
         background-color: #dc3545;
     }
 
+    /* Accessibility: Focus indicators for keyboard navigation (US6) */
+    button:focus,
+    button:focus-visible {
+        outline: 2px solid #667eea;
+        outline-offset: 2px;
+    }
+
+    .btn:focus,
+    .btn:focus-visible {
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.5);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    /* Ensure focus outline is always visible */
+    *:focus-visible {
+        outline: 2px solid #667eea;
+        outline-offset: 2px;
+    }
+
     /* Provider type badges (User Story 3) */
     .provider-badge {
         display: inline-block;
@@ -1508,15 +1554,17 @@ endblock %} {% block content %}
 <script>
     function togglePassword(fieldId) {
         const field = document.getElementById(fieldId);
-        const button = event.target;
+        const button = event.target.closest("button");
         const icon = button.querySelector("i");
 
         if (field.type === "password") {
             field.type = "text";
             icon.className = "fas fa-eye-slash";
+            button.setAttribute("aria-pressed", "true");
         } else {
             field.type = "password";
             icon.className = "fas fa-eye";
+            button.setAttribute("aria-pressed", "false");
         }
     }
 
