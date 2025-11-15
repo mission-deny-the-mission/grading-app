@@ -4,6 +4,12 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify
 from werkzeug.exceptions import RequestEntityTooLarge
 
+try:
+    from flask_migrate import Migrate
+    FLASK_MIGRATE_AVAILABLE = True
+except ImportError:
+    FLASK_MIGRATE_AVAILABLE = False
+
 from models import db
 from routes.api import api_bp
 from routes.batches import batches_bp
@@ -35,6 +41,10 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Initialize database
 db.init_app(app)
+
+# Initialize Flask-Migrate for database migrations (optional)
+if FLASK_MIGRATE_AVAILABLE:
+    migrate = Migrate(app, db)
 
 # Register blueprints
 app.register_blueprint(main_bp)
