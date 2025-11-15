@@ -207,9 +207,11 @@ class GradingJob(db.Model):
 
     # Foreign keys
     batch_id = db.Column(db.String(36), db.ForeignKey("job_batches.id"), nullable=True)
+    scheme_id = db.Column(db.String(36), db.ForeignKey("grading_schemes.id"), nullable=True)
 
     # Relationships
     submissions = db.relationship("Submission", backref="job", lazy=True, cascade="all, delete-orphan")
+    scheme = db.relationship("GradingScheme", backref="jobs_using_scheme", lazy=True)
 
     def to_dict(self):
         """Convert job to dictionary."""
@@ -268,6 +270,7 @@ class GradingJob(db.Model):
                 "saved_prompt": saved_prompt_dict,
                 "saved_marking_scheme_id": self.saved_marking_scheme_id,
                 "saved_marking_scheme": saved_marking_scheme_dict,
+                "scheme_id": self.scheme_id,
                 "progress": progress,
                 "can_retry": can_retry,
             }
@@ -759,10 +762,12 @@ class JobBatch(db.Model):
     # Saved configurations references
     saved_prompt_id = db.Column(db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True)
     saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True)
+    scheme_id = db.Column(db.String(36), db.ForeignKey("grading_schemes.id"), nullable=True)
 
     # Relationships
     jobs = db.relationship("GradingJob", backref="batch", lazy=True, foreign_keys="GradingJob.batch_id")
     template = db.relationship("BatchTemplate", backref="batches", lazy=True)
+    scheme = db.relationship("GradingScheme", backref="batches_using_scheme", lazy=True)
 
     def to_dict(self):
         """Convert batch to dictionary."""
@@ -838,6 +843,7 @@ class JobBatch(db.Model):
                 "shared_with": self.shared_with or [],
                 "saved_prompt_id": self.saved_prompt_id,
                 "saved_marking_scheme_id": self.saved_marking_scheme_id,
+                "scheme_id": self.scheme_id,
                 "progress": progress,
                 "can_retry": can_retry,
                 "can_start": can_start,
@@ -1036,6 +1042,7 @@ class JobBatch(db.Model):
             "priority": kwargs.get("priority", 5),
             "saved_prompt_id": kwargs.get("saved_prompt_id") or self.saved_prompt_id,
             "saved_marking_scheme_id": kwargs.get("saved_marking_scheme_id") or self.saved_marking_scheme_id,
+            "scheme_id": kwargs.get("scheme_id") or self.scheme_id,
             "batch_id": self.id,
         }
 

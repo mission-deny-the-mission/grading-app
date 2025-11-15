@@ -303,3 +303,114 @@ class TestExportWithFilters:
         assert response.status_code == 200
         data = json.loads(response.data)
         assert "submissions" in data
+
+
+class TestLargeExportPerformance:
+    """Test export performance with large datasets (T252)."""
+
+    def test_export_large_dataset_performance(self, client, app):
+        """Test export with 100+ students × 50+ criteria completes within 30 seconds."""
+        import time
+
+        with app.app_context():
+            db.create_all()
+
+            # Create scheme with 50+ criteria
+            scheme = GradingScheme(
+                name="Large Export Test Scheme",
+                category="comprehensive_exam",
+                total_possible_points=Decimal("500.00"),
+            )
+            db.session.add(scheme)
+            db.session.commit()
+
+            # Create 10 questions
+            questions = []
+            for q_idx in range(10):
+                question = SchemeQuestion(
+                    scheme_id=scheme.id,
+                    title=f"Question {q_idx + 1}",
+                    display_order=q_idx + 1,
+                )
+                db.session.add(question)
+                questions.append(question)
+            db.session.commit()
+
+            # Create 5 criteria per question (50 total)
+            criteria = []
+            for question in questions:
+                for c_idx in range(5):
+                    criterion = SchemeCriterion(
+                        question_id=question.id,
+                        name=f"Criterion {c_idx + 1}",
+                        max_points=Decimal("10.00"),
+                        display_order=c_idx + 1,
+                    )
+                    db.session.add(criterion)
+                    criteria.append(criterion)
+            db.session.commit()
+
+            # Create 100 graded submissions
+            for student_idx in range(100):
+                submission = GradedSubmission(
+                    scheme_id=scheme.id,
+                    scheme_version=1,
+                    student_id=f"STU_{student_idx:03d}",
+                    student_name=f"Student {student_idx}",
+                    graded_by="prof@example.com",
+                    total_points_possible=Decimal("500.00"),
+                    is_complete=True,
+                    graded_at=datetime.now(timezone.utc),
+                )
+                db.session.add(submission)
+            db.session.commit()
+
+            # Create evaluations for each submission (100 students × 50 criteria = 5000 evaluations)
+            submissions = GradedSubmission.query.all()
+            for submission in submissions:
+                total_earned = Decimal("0.00")
+                for criterion in criteria:
+                    # Award random points between 0 and max_points
+                    points = Decimal(str(float(criterion.max_points) * 0.8))  # 80% average
+                    eval = CriterionEvaluation(
+                        submission_id=submission.id,
+                        criterion_id=criterion.id,
+                        points_awarded=points,
+                        max_points=criterion.max_points,
+                        criterion_name=criterion.name,
+                        question_title="",  # Will be populated by fixture
+                    )
+                    db.session.add(eval)
+                    total_earned += points
+
+                submission.total_points_earned = total_earned
+                submission.percentage_score = (total_earned / submission.total_points_possible) * 100
+
+            db.session.commit()
+            scheme_id = scheme.id
+
+        # Measure export time for CSV
+        start_time = time.time()
+        response_csv = client.get(f"/api/export/schemes/{scheme_id}?format=csv")
+        csv_duration = time.time() - start_time
+
+        assert response_csv.status_code == 200
+        assert csv_duration < 30, f"CSV export took {csv_duration:.2f}s, expected <30s"
+
+        # Measure export time for JSON
+        start_time = time.time()
+        response_json = client.get(f"/api/export/schemes/{scheme_id}?format=json")
+        json_duration = time.time() - start_time
+
+        assert response_json.status_code == 200
+        assert json_duration < 30, f"JSON export took {json_duration:.2f}s, expected <30s"
+
+        # Verify data completeness
+        data = json.loads(response_json.data)
+        assert data["metadata"]["total_submissions"] == 100
+        assert len(data["submissions"]) == 100
+
+        # Print performance metrics
+        print(f"\nLarge export performance (100 students × 50 criteria):")
+        print(f"  CSV export: {csv_duration:.2f}s")
+        print(f"  JSON export: {json_duration:.2f}s")

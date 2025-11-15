@@ -125,3 +125,119 @@ An instructor or administrator needs to export grading results in standardized f
 - Standard decimal precision (2 decimal places) is sufficient for point calculations
 - Grading is performed by authenticated users (instructors/TAs) with appropriate permissions
 - The system handles timezone conversions for timestamps in exports
+
+---
+
+## Implementation Status & Gap Analysis
+
+**Last Updated**: 2025-11-15
+**Status**: 30% Complete (Backend models complete, APIs and UI missing)
+
+### What's Implemented ✅
+
+**Backend Models (95% Complete)**:
+- ✅ `GradingScheme` model with versioning (models.py:1466-1520)
+- ✅ `SchemeQuestion` model with ordering (models.py:1523-1575)
+- ✅ `SchemeCriterion` model with constraints (models.py:1578-1633)
+- ✅ `GradedSubmission` model with optimistic locking (models.py:1636-1710)
+- ✅ `CriterionEvaluation` model with denormalization (models.py:1713-1801)
+
+**Backend Utilities (100% Complete)**:
+- ✅ Point calculation utilities (utils/scheme_calculator.py)
+- ✅ Validation logic (utils/scheme_validator.py)
+
+**Backend APIs - Grading (100% Complete)**:
+- ✅ POST /api/grading/submissions - Create graded submission (routes/grading.py)
+- ✅ GET /api/grading/submissions/<id> - Get submission details
+- ✅ PATCH /api/grading/submissions/<id> - Mark complete/reopen
+- ✅ POST /api/grading/evaluations - Award points for criterion
+- ✅ PUT /api/grading/evaluations/<id> - Update points/feedback
+
+**Backend APIs - Export (Partial)**:
+- ✅ GET /api/export/schemes/<scheme_id> - Export grades as CSV/JSON
+
+### Critical Gaps ❌
+
+**Backend APIs - Scheme Management (0% Complete)**:
+The `routes/schemes.py` file exists but is **EMPTY** (only 6 lines with blueprint definition).
+
+Missing endpoints:
+- ❌ POST /api/schemes - Create new grading scheme
+- ❌ GET /api/schemes - List all schemes
+- ❌ GET /api/schemes/<id> - Get scheme details
+- ❌ PUT /api/schemes/<id> - Update scheme
+- ❌ DELETE /api/schemes/<id> - Delete scheme
+- ❌ POST /api/schemes/<id>/questions - Add question to scheme
+- ❌ PUT /api/schemes/questions/<id> - Update question
+- ❌ DELETE /api/schemes/questions/<id> - Delete question
+- ❌ POST /api/schemes/questions/<id>/criteria - Add criterion
+- ❌ PUT /api/schemes/criteria/<id> - Update criterion
+- ❌ DELETE /api/schemes/criteria/<id> - Delete criterion
+- ❌ POST /api/schemes/<id>/clone - Clone scheme
+- ❌ GET /api/schemes/<id>/statistics - Get usage statistics
+
+**Frontend UI (0% Complete)**:
+No templates exist in `templates/schemes/` directory.
+
+Missing components:
+- ❌ Scheme management dashboard (list all schemes)
+- ❌ Scheme builder form (create/edit schemes with questions/criteria)
+- ❌ Real-time point validation and calculation UI
+- ❌ Drag-and-drop question/criterion reordering
+- ❌ Grading interface (apply scheme to submission)
+- ❌ Statistics and analytics display
+- ❌ Export buttons and file download
+
+**Integration Gaps**:
+- ❌ No bridge between `SavedMarkingScheme` (uploaded PDFs) and `GradingScheme` (structured data)
+- ❌ Job creation UI doesn't show grading scheme selection
+- ❌ Submission list doesn't show grading status
+
+### Impact Assessment
+
+**User Story 1 - Create Multi-Point Grading Scheme**:
+- ✅ Backend models work
+- ❌ Cannot create schemes (no API, no UI)
+- **Status**: 30% complete (models only)
+
+**User Story 2 - Apply Grading Scheme to Student Submissions**:
+- ✅ Backend models and grading APIs work
+- ❌ Cannot select scheme during job creation (no UI integration)
+- ❌ Cannot grade submissions using scheme (no grading interface)
+- **Status**: 40% complete (can save evaluations via API, but no UI)
+
+**User Story 3 - Export Grades and Feedback**:
+- ✅ Export API exists
+- ❌ Cannot trigger export from UI (no export buttons)
+- **Status**: 50% complete (API works, but inaccessible to users)
+
+### Remaining Work Estimate
+
+**Phase 7: Complete Scheme Management APIs** (12-15 hours):
+- Implement all 13 missing endpoints in routes/schemes.py
+- Add comprehensive validation and error handling
+- Write integration tests for all endpoints
+
+**Phase 8: Build Frontend UI** (25-30 hours):
+- Scheme management dashboard (4h)
+- Scheme builder form with dynamic fields (10-12h)
+- Real-time validation and UX polish (4-5h)
+- Grading interface (8-10h)
+- Statistics modal (2-3h)
+- Integration with job creation (2h)
+
+**Phase 9: End-to-End Testing** (4-6 hours):
+- Browser compatibility testing
+- Mobile responsiveness
+- Complete workflow validation
+- Performance testing with large datasets
+
+**Total Remaining**: 40-50 hours (5-7 days of focused development)
+
+### Priority Recommendation
+
+**Immediate Priority**: Implement Phase 7 (Scheme Management APIs) to unblock all frontend work. The frontend UI cannot function without these APIs.
+
+**Next Priority**: Phase 8.1-8.2 (Scheme builder UI) to enable basic scheme creation and management.
+
+**Final Priority**: Phase 8.3-8.5 (Grading interface and integration) to complete the feature.

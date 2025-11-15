@@ -129,3 +129,164 @@ tests/
 No violations requiring justification.
 
 **Note on Async-First**: Manual grading workflow is inherently synchronous (instructor fills form, submits evaluation). Individual operations (save evaluation, calculate points) complete in <100ms. Bulk exports for >100 students will use Celery background tasks to prevent request timeouts, following async-first principle where operation duration warrants it.
+
+---
+
+## Current Implementation Status
+
+**Last Updated**: 2025-11-15
+**Overall Completion**: 30%
+
+### Completed Components ✅
+
+**Phase 1: Setup** (100% Complete)
+- ✅ All directory structures created
+- ✅ Blueprint files initialized
+
+**Phase 2: Foundational** (100% Complete)
+- ✅ Database migrations complete (GradingScheme, SchemeQuestion, SchemeCriterion, GradedSubmission, CriterionEvaluation)
+- ✅ Point calculation utilities implemented (utils/scheme_calculator.py)
+- ✅ Validation utilities implemented (utils/scheme_validator.py)
+- ✅ All migrations tested and reversible
+
+**Phase 3: User Story 1** (30% Complete)
+- ✅ All backend models implemented and tested
+- ✅ Model serialization (to_dict methods) complete
+- ❌ **CRITICAL GAP**: routes/schemes.py is EMPTY (only blueprint definition, no endpoints)
+- ❌ No frontend templates exist (templates/schemes/ directory missing)
+- **Actual Status**: Models work, but unusable without APIs and UI
+
+**Phase 4: User Story 2** (40% Complete)
+- ✅ GradedSubmission and CriterionEvaluation models implemented
+- ✅ All grading API endpoints functional (routes/grading.py)
+- ✅ Point calculation and validation working
+- ❌ No grading interface UI (templates/schemes/grade.html doesn't exist)
+- ❌ No integration with job creation workflow
+- **Actual Status**: Can save evaluations via API, but no user interface
+
+**Phase 5: User Story 3** (50% Complete)
+- ✅ Export API endpoint exists (routes/export.py)
+- ❌ Export formatters incomplete
+- ❌ No UI buttons to trigger export
+- ❌ No statistics endpoint
+- **Actual Status**: API works but inaccessible to users
+
+**Phase 6: Polish** (100% Complete - for what exists)
+- ✅ All existing code documented
+- ✅ Tests passing for implemented components
+- ✅ Linting and formatting complete
+- **Note**: Polish was applied to completed components only
+
+### Critical Gaps Requiring Immediate Attention ❌
+
+**Gap 1: Scheme Management APIs (Blocks ALL Frontend Work)**
+
+File: `routes/schemes.py` (Currently 6 lines - EMPTY)
+
+Missing 13 essential endpoints:
+```python
+# Core CRUD
+POST   /api/schemes              # Create scheme
+GET    /api/schemes              # List all schemes
+GET    /api/schemes/<id>         # Get scheme details
+PUT    /api/schemes/<id>         # Update scheme
+DELETE /api/schemes/<id>         # Soft delete
+
+# Question Management
+POST   /api/schemes/<id>/questions        # Add question
+PUT    /api/schemes/questions/<id>        # Update question
+DELETE /api/schemes/questions/<id>        # Delete question
+
+# Criteria Management
+POST   /api/schemes/questions/<id>/criteria  # Add criterion
+PUT    /api/schemes/criteria/<id>            # Update criterion
+DELETE /api/schemes/criteria/<id>            # Delete criterion
+
+# Utilities
+POST   /api/schemes/<id>/clone              # Clone scheme
+GET    /api/schemes/<id>/statistics         # Get usage stats
+```
+
+**Impact**: Without these APIs, the frontend UI cannot function. This is the primary blocker.
+
+**Gap 2: Frontend UI (0% Complete)**
+
+Directory: `templates/schemes/` (MISSING)
+
+Required components:
+1. **Scheme Management Dashboard** (templates/schemes/index.html)
+   - List all schemes
+   - Create/Edit/Delete actions
+   - Clone functionality
+   - Statistics view
+
+2. **Scheme Builder Form** (templates/schemes/builder.html)
+   - Dynamic question/criterion editor
+   - Real-time point validation
+   - Drag-and-drop reordering
+   - Save/Cancel actions
+
+3. **Grading Interface** (templates/grading/grade_submission.html)
+   - Load scheme structure dynamically
+   - Input fields for each criterion
+   - Feedback text areas
+   - Save draft / Mark complete
+   - Live score calculation
+
+4. **Statistics Modal** (templates/schemes/statistics.html)
+   - Per-question averages
+   - Per-criterion analysis
+   - Export options
+
+5. **JavaScript Files** (static/js/)
+   - scheme-builder.js (dynamic form management)
+   - grading.js (grading interface logic)
+   - validation.js (real-time point validation)
+
+**Impact**: Users cannot interact with the system. Feature is completely unusable.
+
+**Gap 3: Integration Points**
+
+Missing integrations:
+- Job creation form doesn't show grading scheme selection
+- Submission list doesn't display grading status
+- No bridge between SavedMarkingScheme (PDFs) and GradingScheme (structured data)
+
+**Impact**: Fragmented user experience, feature feels disconnected from existing workflows.
+
+### Recommended Implementation Path
+
+**Phase 7: Complete Scheme Management APIs** (Priority: P0 - BLOCKING)
+- Implement all 13 missing endpoints in routes/schemes.py
+- Add comprehensive validation and error handling
+- Write integration tests for all endpoints
+- Estimated: 12-15 hours
+
+**Phase 8: Build Frontend UI** (Priority: P1 - HIGH)
+- Phase 8.1: Scheme management dashboard (4h)
+- Phase 8.2: Scheme builder form (10-12h)
+- Phase 8.3: Grading interface (8-10h)
+- Phase 8.4: Statistics and export UI (2-3h)
+- Phase 8.5: Integration with existing workflows (2h)
+- Estimated: 25-30 hours
+
+**Phase 9: End-to-End Testing and Polish** (Priority: P2 - MEDIUM)
+- Browser compatibility testing
+- Mobile responsiveness
+- Performance testing with large datasets
+- User acceptance testing
+- Estimated: 4-6 hours
+
+**Total Remaining Work**: 40-50 hours (5-7 days of focused development)
+
+### Why Tasks Were Marked Complete Prematurely
+
+The tasks.md file shows many tasks marked as [X] complete, but investigation reveals:
+
+1. **T047-T053 (Scheme Routes)**: Marked complete, but routes/schemes.py is empty
+2. **T057-T059 (Templates)**: Marked complete, but templates/schemes/ directory doesn't exist
+3. **T093-T095 (Grading UI)**: Marked complete, but templates/grading/ has no grade.html
+
+**Root Cause**: Tasks may have been auto-marked based on test passing, but the actual implementation files were never created or were created as placeholders only.
+
+**Corrective Action**: Phase 7-9 tasks will be added to tasks.md with explicit verification steps to ensure real implementation, not just placeholder files.

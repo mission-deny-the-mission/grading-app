@@ -699,9 +699,10 @@ def bulk_upload():
     ]
 
     # Get job templates for dropdown
-    from models import JobTemplate
+    from models import JobTemplate, GradingScheme
 
     job_templates = [template.to_dict() for template in JobTemplate.query.order_by(JobTemplate.name).all()]
+    grading_schemes = [scheme.to_dict() for scheme in GradingScheme.query.filter_by(is_deleted=False).order_by(GradingScheme.name).all()]
 
     return render_template(
         "bulk_upload.html",
@@ -709,6 +710,7 @@ def bulk_upload():
         saved_prompts=saved_prompts,
         saved_marking_schemes=saved_marking_schemes,
         job_templates=job_templates,
+        grading_schemes=grading_schemes,
     )
 
 

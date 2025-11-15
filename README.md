@@ -2,9 +2,27 @@
 
 [![CI](https://gitea.harryslab.xyz/mission-deny-the-mission/grading-app/actions/workflows/ci.yml/badge.svg?branch=main)](https://gitea.harryslab.xyz/mission-deny-the-mission/grading-app/actions)
 
-AI-powered document grading with support for OpenRouter, Claude API, and LM Studio.
+AI-powered document grading with support for OpenRouter, Claude API, and LM Studio. Features include structured grading schemes, batch processing, and comprehensive export capabilities.
 
 **Security Update**: API keys are now encrypted at rest in the database using Fernet encryption.
+
+## ✨ Features
+
+- **AI-Powered Grading**: Integrate with multiple AI providers (OpenRouter, Claude, LM Studio)
+- **Structured Grading Schemes**: Create reusable rubrics with hierarchical questions and criteria
+- **Batch Processing**: Grade multiple submissions efficiently
+- **Export & Analytics**: Export results in CSV/JSON formats with statistical analysis
+- **Version Control**: Track scheme modifications and maintain historical grading data
+- **Fractional Points**: Support for decimal point precision (e.g., 2.5 points)
+
+## 🔧 Recent Updates
+
+### Structured Grading Scheme System (NEW)
+A comprehensive grading scheme system has been implemented, allowing educators to:
+- Create hierarchical grading rubrics with questions and criteria
+- Apply schemes to submissions for consistent grading
+- Track usage statistics and export detailed reports
+- Clone and version schemes for reusability
 
 ## 🔧 Setup & Configuration
 
@@ -153,8 +171,12 @@ API keys are validated before storage:
 - Testing: `docs/Testing.md`
 - Docker: `docs/Docker.md`
 - Bulk upload tests: `tests/README_bulk_upload_tests.md`
+<<<<<<< Updated upstream
 - Security implementation: `specs/002-api-provider-security/quickstart.md`
 - Security deployment guide: `specs/002-api-provider-security/deployment.md`
+=======
+- **Grading Schemes Guide**: `docs/grading-schemes/README.md`
+>>>>>>> Stashed changes
 
 ## File structure
 

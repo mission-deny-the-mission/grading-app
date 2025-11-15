@@ -202,6 +202,58 @@ endblock %} {% block content %}
             </div>
         </div>
 
+        <!-- Grading Scheme Card (if batch has a scheme) -->
+        {% if batch.scheme_id %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-check-square me-2"></i>Grading Scheme
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <strong>Scheme Name:</strong>
+                            <span class="text-primary">{{ batch.scheme.name if batch.scheme else 'Scheme not found' }}</span>
+                        </div>
+                        {% if batch.scheme and batch.scheme.description %}
+                        <div class="mb-3">
+                            <strong>Description:</strong> {{ batch.scheme.description }}
+                        </div>
+                        {% endif %}
+                        {% if batch.scheme %}
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <strong>Questions:</strong> {{ batch.scheme.total_questions }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <strong>Criteria:</strong> {{ batch.scheme.total_criteria }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <strong>Max Points:</strong> {{ batch.scheme.total_possible_points }}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {% if batch.scheme %}
+                        <a href="/schemes/{{ batch.scheme.id }}" class="btn btn-sm btn-outline-primary w-100">
+                            <i class="fas fa-eye me-1"></i>View Scheme
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Jobs in this Batch -->
         <div class="card">
             <div

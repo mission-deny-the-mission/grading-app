@@ -8,7 +8,7 @@ import os
 from flask import Blueprint, jsonify, request, session
 from werkzeug.utils import secure_filename
 
-from models import GradingJob, MarkingScheme, Submission, db
+from models import GradingJob, MarkingScheme, Submission, GradingScheme, db
 from utils.file_utils import cleanup_file, determine_file_type
 from utils.llm_providers import get_llm_provider
 from utils.text_extraction import (
@@ -456,6 +456,7 @@ def upload_bulk():
                 model=request.form.get("customModel") or None,
                 temperature=float(request.form.get("temperature", "0.3")),
                 max_tokens=int(request.form.get("max_tokens", "2000")),
+                scheme_id=request.form.get("scheme_id"),
             )
             db.session.add(job)
             db.session.commit()
