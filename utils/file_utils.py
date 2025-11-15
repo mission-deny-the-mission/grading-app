@@ -13,6 +13,7 @@ from werkzeug.utils import secure_filename
 
 class ValidationError(Exception):
     """Custom exception for file validation errors."""
+
     pass
 
 
@@ -60,7 +61,7 @@ def validate_file_upload(file):
 
 # Image-specific validation and storage functions
 
-ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'}
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp", "bmp"}
 MAX_IMAGE_SIZE_BYTES = 52428800  # 50MB
 
 
@@ -83,19 +84,16 @@ def validate_uploaded_image(file):
 
     # Check file extension
     filename_lower = file.filename.lower()
-    file_ext = filename_lower.rsplit('.', 1)[1] if '.' in filename_lower else ''
+    file_ext = filename_lower.rsplit(".", 1)[1] if "." in filename_lower else ""
 
     if file_ext not in ALLOWED_IMAGE_EXTENSIONS:
         raise ValidationError(
-            f"Invalid file extension '.{file_ext}'. "
-            f"Allowed: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}"
+            f"Invalid file extension '.{file_ext}'. " f"Allowed: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}"
         )
 
     # Check MIME type
-    if not file.content_type or not file.content_type.startswith('image/'):
-        raise ValidationError(
-            f"Invalid MIME type '{file.content_type}'. Must be image/*"
-        )
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise ValidationError(f"Invalid MIME type '{file.content_type}'. Must be image/*")
 
     # Check file size
     file.seek(0, os.SEEK_END)
@@ -104,9 +102,7 @@ def validate_uploaded_image(file):
 
     if file_size > MAX_IMAGE_SIZE_BYTES:
         size_mb = file_size / (1024 * 1024)
-        raise ValidationError(
-            f"File too large ({size_mb:.1f}MB). Maximum: 50MB"
-        )
+        raise ValidationError(f"File too large ({size_mb:.1f}MB). Maximum: 50MB")
 
     if file_size == 0:
         raise ValidationError("File is empty")
@@ -123,7 +119,7 @@ def validate_uploaded_image(file):
     return True
 
 
-def generate_storage_path(file_extension, upload_folder='/app/uploads'):
+def generate_storage_path(file_extension, upload_folder="/app/uploads"):
     """
     Generate UUID-based storage path with two-level hashing.
 

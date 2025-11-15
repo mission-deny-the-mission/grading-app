@@ -11,7 +11,7 @@ from models import GradingJob, JobBatch, Submission, db
 from tasks import (
     cleanup_completed_batches,
     cleanup_old_files,
-    process_batch_with_priority
+    process_batch_with_priority,
 )
 
 
@@ -32,9 +32,7 @@ def test_cleanup_old_files_respects_failed_submission(app, tmp_path):
 
         # Create a job to satisfy NOT NULL job_id
 
-        job = GradingJob(
-            job_name="Cleanup Job", provider="openrouter", prompt="p"
-        )
+        job = GradingJob(job_name="Cleanup Job", provider="openrouter", prompt="p")
         db.session.add(job)
         db.session.commit()
 
@@ -65,13 +63,9 @@ def test_cleanup_completed_batches_archives_old(app):
 
     with app.app_context():
         old_batch = JobBatch(batch_name="Old", status="completed")
-        old_batch.completed_at = datetime.now(
-            timezone.utc
-        ) - timedelta(days=40)
+        old_batch.completed_at = datetime.now(timezone.utc) - timedelta(days=40)
         recent_batch = JobBatch(batch_name="Recent", status="completed")
-        recent_batch.completed_at = datetime.now(
-            timezone.utc
-        ) - timedelta(days=10)
+        recent_batch.completed_at = datetime.now(timezone.utc) - timedelta(days=10)
         db.session.add(old_batch)
         db.session.add(recent_batch)
         db.session.commit()
@@ -82,11 +76,7 @@ def test_cleanup_completed_batches_archives_old(app):
 
         assert count >= 1
         assert (
-            old_batch.status
-            in [
-                "archived", "completed_with_errors", "completed",
-                "failed", "cancelled"
-            ]
+            old_batch.status in ["archived", "completed_with_errors", "completed", "failed", "cancelled"]
             or old_batch.status == "archived"
         )
 
@@ -101,9 +91,7 @@ def test_process_batch_with_priority_triggers_pending(mock_delay, app):
         batch = JobBatch(batch_name="Priority", status="pending")
         db.session.add(batch)
         db.session.commit()
-        job = GradingJob(
-            job_name="J", provider="openrouter", prompt="p", batch_id=batch.id
-        )
+        job = GradingJob(job_name="J", provider="openrouter", prompt="p", batch_id=batch.id)
         db.session.add(job)
         db.session.commit()
 

@@ -7,11 +7,12 @@ This module provides functions for image quality analysis including:
 - File format validation
 """
 
-import cv2
-import numpy as np
 import os
 import uuid
-from typing import Dict, Any
+from typing import Any, Dict
+
+import cv2
+import numpy as np
 
 
 def detect_blur(image_path: str, threshold: float = 100.0) -> Dict[str, Any]:
@@ -49,18 +50,11 @@ def detect_blur(image_path: str, threshold: float = 100.0) -> Dict[str, Any]:
     # Classify as blurry if below threshold
     is_blurry = blur_score < threshold
 
-    return {
-        'is_blurry': is_blurry,
-        'blur_score': blur_score,
-        'threshold': threshold
-    }
+    return {"is_blurry": is_blurry, "blur_score": blur_score, "threshold": threshold}
 
 
 def check_resolution(
-    image_path: str,
-    min_width: int = 800,
-    min_height: int = 600,
-    max_size_mb: float = 50
+    image_path: str, min_width: int = 800, min_height: int = 600, max_size_mb: float = 50
 ) -> Dict[str, Any]:
     """Check image resolution and file size.
 
@@ -107,21 +101,17 @@ def check_resolution(
     is_valid = meets_minimum and not too_large
 
     return {
-        'width': width,
-        'height': height,
-        'aspect_ratio': round(aspect_ratio, 2),
-        'file_size_mb': round(file_size_mb, 2),
-        'meets_minimum': meets_minimum,
-        'too_large': too_large,
-        'is_valid': is_valid
+        "width": width,
+        "height": height,
+        "aspect_ratio": round(aspect_ratio, 2),
+        "file_size_mb": round(file_size_mb, 2),
+        "meets_minimum": meets_minimum,
+        "too_large": too_large,
+        "is_valid": is_valid,
     }
 
 
-def check_completeness(
-    image_path: str,
-    border_size: int = 20,
-    edge_threshold: int = 50
-) -> Dict[str, Any]:
+def check_completeness(image_path: str, border_size: int = 20, edge_threshold: int = 50) -> Dict[str, Any]:
     """Check if image appears cropped or incomplete using edge detection.
 
     Args:
@@ -173,10 +163,10 @@ def check_completeness(
     right_density = (np.count_nonzero(right_border) / right_border.size) * 100
 
     edge_density = {
-        'top': round(top_density, 2),
-        'bottom': round(bottom_density, 2),
-        'left': round(left_density, 2),
-        'right': round(right_density, 2)
+        "top": round(top_density, 2),
+        "bottom": round(bottom_density, 2),
+        "left": round(left_density, 2),
+        "right": round(right_density, 2),
     }
 
     # Calculate statistics
@@ -196,11 +186,11 @@ def check_completeness(
     likely_incomplete = any([top_uniform, bottom_uniform, left_uniform, right_uniform])
 
     return {
-        'edge_density': edge_density,
-        'avg_edge_density': round(avg_edge_density, 2),
-        'max_edge_density': round(max_edge_density, 2),
-        'likely_cropped': likely_cropped,
-        'likely_incomplete': likely_incomplete
+        "edge_density": edge_density,
+        "avg_edge_density": round(avg_edge_density, 2),
+        "max_edge_density": round(max_edge_density, 2),
+        "likely_cropped": likely_cropped,
+        "likely_incomplete": likely_incomplete,
     }
 
 
@@ -214,7 +204,7 @@ class ScreenshotQualityChecker:
         min_height: int = 600,
         max_size_mb: float = 50,
         border_size: int = 20,
-        edge_threshold: int = 50
+        edge_threshold: int = 50,
     ):
         """Initialize quality checker with thresholds.
 
@@ -254,93 +244,79 @@ class ScreenshotQualityChecker:
             ValueError: If image cannot be read or is invalid
         """
         import time
+
         start_time = time.time()
 
         # Run all quality checks
         blur_results = detect_blur(image_path, threshold=self.blur_threshold)
         resolution_results = check_resolution(
-            image_path,
-            min_width=self.min_width,
-            min_height=self.min_height,
-            max_size_mb=self.max_size_mb
+            image_path, min_width=self.min_width, min_height=self.min_height, max_size_mb=self.max_size_mb
         )
         completeness_results = check_completeness(
-            image_path,
-            border_size=self.border_size,
-            edge_threshold=self.edge_threshold
+            image_path, border_size=self.border_size, edge_threshold=self.edge_threshold
         )
 
         # Collect issues
         issues = []
 
         # Blur issues
-        if blur_results['is_blurry']:
+        if blur_results["is_blurry"]:
             issues.append(
-                f"Image is blurry (score: {blur_results['blur_score']:.2f}, "
-                f"threshold: {blur_results['threshold']})"
+                f"Image is blurry (score: {blur_results['blur_score']:.2f}, " f"threshold: {blur_results['threshold']})"
             )
 
         # Resolution issues
-        if not resolution_results['meets_minimum']:
+        if not resolution_results["meets_minimum"]:
             issues.append(
                 f"Resolution too low ({resolution_results['width']}x{resolution_results['height']}, "
                 f"minimum: {self.min_width}x{self.min_height})"
             )
 
-        if resolution_results['too_large']:
+        if resolution_results["too_large"]:
             issues.append(
-                f"File size too large ({resolution_results['file_size_mb']}MB, "
-                f"maximum: {self.max_size_mb}MB)"
+                f"File size too large ({resolution_results['file_size_mb']}MB, " f"maximum: {self.max_size_mb}MB)"
             )
 
         # Completeness issues
-        if completeness_results['likely_cropped']:
-            max_border = max(
-                completeness_results['edge_density'].items(),
-                key=lambda x: x[1]
-            )
-            issues.append(
-                f"Image appears cropped ({max_border[0]} border has {max_border[1]:.1f}% edge density)"
-            )
+        if completeness_results["likely_cropped"]:
+            max_border = max(completeness_results["edge_density"].items(), key=lambda x: x[1])
+            issues.append(f"Image appears cropped ({max_border[0]} border has {max_border[1]:.1f}% edge density)")
 
-        if completeness_results['likely_incomplete']:
+        if completeness_results["likely_incomplete"]:
             issues.append("Image has uniform borders suggesting incomplete capture")
 
         # Determine overall quality
-        critical_issues = [
-            resolution_results['too_large'],
-            blur_results['blur_score'] < 50  # Very blurry
-        ]
+        critical_issues = [resolution_results["too_large"], blur_results["blur_score"] < 50]  # Very blurry
 
         moderate_issues = [
-            blur_results['is_blurry'],
-            not resolution_results['meets_minimum'],
-            completeness_results['likely_cropped'],
-            completeness_results['likely_incomplete']
+            blur_results["is_blurry"],
+            not resolution_results["meets_minimum"],
+            completeness_results["likely_cropped"],
+            completeness_results["likely_incomplete"],
         ]
 
         if any(critical_issues):
-            overall_quality = 'rejected'
+            overall_quality = "rejected"
             passes_quality_check = False
         elif len([i for i in moderate_issues if i]) >= 3:
-            overall_quality = 'poor'
+            overall_quality = "poor"
             passes_quality_check = False
         elif len([i for i in moderate_issues if i]) >= 1:
-            overall_quality = 'good'
+            overall_quality = "good"
             passes_quality_check = True
         else:
-            overall_quality = 'excellent'
+            overall_quality = "excellent"
             passes_quality_check = True
 
         # Calculate processing time
         duration_ms = int((time.time() - start_time) * 1000)
 
         return {
-            'overall_quality': overall_quality,
-            'passes_quality_check': passes_quality_check,
-            'blur_assessment': blur_results,
-            'resolution_assessment': resolution_results,
-            'completeness_assessment': completeness_results,
-            'issues': issues,
-            'assessment_duration_ms': duration_ms
+            "overall_quality": overall_quality,
+            "passes_quality_check": passes_quality_check,
+            "blur_assessment": blur_results,
+            "resolution_assessment": resolution_results,
+            "completeness_assessment": completeness_results,
+            "issues": issues,
+            "assessment_duration_ms": duration_ms,
         }

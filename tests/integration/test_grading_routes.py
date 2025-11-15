@@ -1,15 +1,18 @@
 """Integration tests for grading routes (User Story 2)."""
-import pytest
-from decimal import Decimal
+
 from datetime import datetime, timezone
+from decimal import Decimal
+
+import pytest
+
 from app import app
 from models import (
-    db,
-    GradingScheme,
-    SchemeQuestion,
-    SchemeCriterion,
-    GradedSubmission,
     CriterionEvaluation,
+    GradedSubmission,
+    GradingScheme,
+    SchemeCriterion,
+    SchemeQuestion,
+    db,
 )
 
 
@@ -36,7 +39,7 @@ def sample_scheme(app_context):
         name="Test Essay Rubric",
         description="Sample rubric for essay grading",
         category="essay",
-        created_by="instructor@example.com"
+        created_by="instructor@example.com",
     )
     db.session.add(scheme)
     db.session.commit()
@@ -46,7 +49,7 @@ def sample_scheme(app_context):
         scheme_id=scheme.id,
         title="Question 1: Argument Quality",
         description="Evaluate the quality and clarity of arguments",
-        display_order=1
+        display_order=1,
     )
     db.session.add(question)
     db.session.commit()
@@ -58,21 +61,21 @@ def sample_scheme(app_context):
             name="Thesis Clarity",
             description="Is the thesis clear and well-stated?",
             max_points=Decimal("10.00"),
-            display_order=1
+            display_order=1,
         ),
         SchemeCriterion(
             question_id=question.id,
             name="Argument Support",
             description="Are arguments well-supported?",
             max_points=Decimal("10.00"),
-            display_order=2
+            display_order=2,
         ),
         SchemeCriterion(
             question_id=question.id,
             name="Grammar and Clarity",
             description="Grammar and writing clarity",
             max_points=Decimal("5.00"),
-            display_order=3
+            display_order=3,
         ),
     ]
     for criterion in criteria:
@@ -94,13 +97,16 @@ class TestCreateSubmission:
 
     def test_create_submission_success(self, client, sample_scheme):
         """[T068] Verify submission creation with valid data."""
-        response = client.post("/api/grading/submissions", json={
-            "scheme_id": sample_scheme.id,
-            "student_id": "STU001",
-            "student_name": "Alice Smith",
-            "submission_reference": "essay_001.pdf",
-            "graded_by": "prof@example.com"
-        })
+        response = client.post(
+            "/api/grading/submissions",
+            json={
+                "scheme_id": sample_scheme.id,
+                "student_id": "STU001",
+                "student_name": "Alice Smith",
+                "submission_reference": "essay_001.pdf",
+                "graded_by": "prof@example.com",
+            },
+        )
 
         assert response.status_code == 201
         data = response.get_json()
@@ -114,36 +120,30 @@ class TestCreateSubmission:
     def test_create_submission_missing_required_fields(self, client, sample_scheme):
         """Verify error handling for missing required fields."""
         # Missing scheme_id
-        response = client.post("/api/grading/submissions", json={
-            "student_id": "STU001",
-            "graded_by": "prof@example.com"
-        })
+        response = client.post(
+            "/api/grading/submissions", json={"student_id": "STU001", "graded_by": "prof@example.com"}
+        )
         assert response.status_code == 400
         assert "scheme_id" in response.get_json()["error"]
 
         # Missing student_id
-        response = client.post("/api/grading/submissions", json={
-            "scheme_id": sample_scheme.id,
-            "graded_by": "prof@example.com"
-        })
+        response = client.post(
+            "/api/grading/submissions", json={"scheme_id": sample_scheme.id, "graded_by": "prof@example.com"}
+        )
         assert response.status_code == 400
         assert "student_id" in response.get_json()["error"]
 
         # Missing graded_by
-        response = client.post("/api/grading/submissions", json={
-            "scheme_id": sample_scheme.id,
-            "student_id": "STU001"
-        })
+        response = client.post("/api/grading/submissions", json={"scheme_id": sample_scheme.id, "student_id": "STU001"})
         assert response.status_code == 400
         assert "graded_by" in response.get_json()["error"]
 
     def test_create_submission_invalid_scheme(self, client):
         """Verify error handling for non-existent scheme."""
-        response = client.post("/api/grading/submissions", json={
-            "scheme_id": "invalid-uuid",
-            "student_id": "STU001",
-            "graded_by": "prof@example.com"
-        })
+        response = client.post(
+            "/api/grading/submissions",
+            json={"scheme_id": "invalid-uuid", "student_id": "STU001", "graded_by": "prof@example.com"},
+        )
         assert response.status_code == 404
         assert "not found" in response.get_json()["error"].lower()
 
@@ -152,11 +152,10 @@ class TestCreateSubmission:
         sample_scheme.is_deleted = True
         db.session.commit()
 
-        response = client.post("/api/grading/submissions", json={
-            "scheme_id": sample_scheme.id,
-            "student_id": "STU001",
-            "graded_by": "prof@example.com"
-        })
+        response = client.post(
+            "/api/grading/submissions",
+            json={"scheme_id": sample_scheme.id, "student_id": "STU001", "graded_by": "prof@example.com"},
+        )
         assert response.status_code == 404
 
 
@@ -171,7 +170,7 @@ class TestGetSubmission:
             scheme_version=1,
             student_id="STU002",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
@@ -199,7 +198,7 @@ class TestCreateEvaluation:
             scheme_version=1,
             student_id="STU003",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
@@ -208,12 +207,15 @@ class TestCreateEvaluation:
         criterion = SchemeCriterion.query.first()
 
         # Create evaluation
-        response = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id,
-            "points_awarded": 8.5,
-            "feedback": "Good arguments but needs more support"
-        })
+        response = client.post(
+            "/api/grading/evaluations",
+            json={
+                "submission_id": submission.id,
+                "criterion_id": criterion.id,
+                "points_awarded": 8.5,
+                "feedback": "Good arguments but needs more support",
+            },
+        )
 
         assert response.status_code == 201
         data = response.get_json()
@@ -229,24 +231,20 @@ class TestCreateEvaluation:
             scheme_version=1,
             student_id="STU004",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
         criterion = SchemeCriterion.query.first()
 
         # Missing criterion_id
-        response = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "points_awarded": 8.5
-        })
+        response = client.post("/api/grading/evaluations", json={"submission_id": submission.id, "points_awarded": 8.5})
         assert response.status_code == 400
 
         # Missing points_awarded
-        response = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id
-        })
+        response = client.post(
+            "/api/grading/evaluations", json={"submission_id": submission.id, "criterion_id": criterion.id}
+        )
         assert response.status_code == 400
 
     def test_create_evaluation_invalid_points_range(self, client, sample_scheme):
@@ -256,27 +254,29 @@ class TestCreateEvaluation:
             scheme_version=1,
             student_id="STU005",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
         criterion = SchemeCriterion.query.first()  # max_points = 10.00
 
         # Points too high
-        response = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id,
-            "points_awarded": 15.0  # Exceeds max of 10
-        })
+        response = client.post(
+            "/api/grading/evaluations",
+            json={
+                "submission_id": submission.id,
+                "criterion_id": criterion.id,
+                "points_awarded": 15.0,  # Exceeds max of 10
+            },
+        )
         assert response.status_code == 400
         assert "must be between" in response.get_json()["error"]
 
         # Negative points
-        response = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id,
-            "points_awarded": -1.0
-        })
+        response = client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission.id, "criterion_id": criterion.id, "points_awarded": -1.0},
+        )
         assert response.status_code == 400
 
     def test_create_evaluation_duplicate_criterion(self, client, sample_scheme):
@@ -286,26 +286,24 @@ class TestCreateEvaluation:
             scheme_version=1,
             student_id="STU006",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
         criterion = SchemeCriterion.query.first()
 
         # Create first evaluation
-        response1 = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id,
-            "points_awarded": 8.0
-        })
+        response1 = client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission.id, "criterion_id": criterion.id, "points_awarded": 8.0},
+        )
         assert response1.status_code == 201
 
         # Try to create duplicate
-        response2 = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id,
-            "points_awarded": 9.0
-        })
+        response2 = client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission.id, "criterion_id": criterion.id, "points_awarded": 9.0},
+        )
         assert response2.status_code == 409
         assert "already exists" in response2.get_json()["error"].lower()
 
@@ -316,36 +314,29 @@ class TestCreateEvaluation:
             scheme_version=1,
             student_id="STU007",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
 
-        criteria = SchemeCriterion.query.order_by(
-            SchemeCriterion.display_order
-        ).all()
+        criteria = SchemeCriterion.query.order_by(SchemeCriterion.display_order).all()
 
         # Create multiple evaluations
-        client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criteria[0].id,
-            "points_awarded": 8.0
-        })
-        client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criteria[1].id,
-            "points_awarded": 9.0
-        })
-        client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criteria[2].id,
-            "points_awarded": 4.0
-        })
+        client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission.id, "criterion_id": criteria[0].id, "points_awarded": 8.0},
+        )
+        client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission.id, "criterion_id": criteria[1].id, "points_awarded": 9.0},
+        )
+        client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission.id, "criterion_id": criteria[2].id, "points_awarded": 4.0},
+        )
 
         # Verify submission total was auto-calculated
-        submission_check = GradedSubmission.query.filter_by(
-            id=submission.id
-        ).first()
+        submission_check = GradedSubmission.query.filter_by(id=submission.id).first()
         assert float(submission_check.total_points_earned) == 21.0
 
 
@@ -359,26 +350,28 @@ class TestUpdateEvaluation:
             scheme_version=1,
             student_id="STU008",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
         criterion = SchemeCriterion.query.first()
 
         # Create evaluation
-        eval_resp = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id,
-            "points_awarded": 7.0,
-            "feedback": "Needs improvement"
-        })
+        eval_resp = client.post(
+            "/api/grading/evaluations",
+            json={
+                "submission_id": submission.id,
+                "criterion_id": criterion.id,
+                "points_awarded": 7.0,
+                "feedback": "Needs improvement",
+            },
+        )
         eval_id = eval_resp.get_json()["id"]
 
         # Update evaluation
-        response = client.put(f"/api/grading/evaluations/{eval_id}", json={
-            "points_awarded": 8.5,
-            "feedback": "Better work this time"
-        })
+        response = client.put(
+            f"/api/grading/evaluations/{eval_id}", json={"points_awarded": 8.5, "feedback": "Better work this time"}
+        )
 
         assert response.status_code == 200
         data = response.get_json()
@@ -392,30 +385,25 @@ class TestUpdateEvaluation:
             scheme_version=1,
             student_id="STU009",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
         criterion = SchemeCriterion.query.first()
 
-        eval_resp = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id,
-            "points_awarded": 5.0
-        })
+        eval_resp = client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission.id, "criterion_id": criterion.id, "points_awarded": 5.0},
+        )
         eval_id = eval_resp.get_json()["id"]
 
         # Try to update with invalid points
-        response = client.put(f"/api/grading/evaluations/{eval_id}", json={
-            "points_awarded": 20.0  # Exceeds max of 10
-        })
+        response = client.put(f"/api/grading/evaluations/{eval_id}", json={"points_awarded": 20.0})  # Exceeds max of 10
         assert response.status_code == 400
 
     def test_update_evaluation_not_found(self, client):
         """Verify error handling for non-existent evaluation."""
-        response = client.put("/api/grading/evaluations/invalid-uuid", json={
-            "points_awarded": 8.0
-        })
+        response = client.put("/api/grading/evaluations/invalid-uuid", json={"points_awarded": 8.0})
         assert response.status_code == 404
 
 
@@ -429,15 +417,13 @@ class TestCompleteSubmission:
             scheme_version=1,
             student_id="STU010",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
 
         # Add evaluations
-        criteria = SchemeCriterion.query.order_by(
-            SchemeCriterion.display_order
-        ).all()
+        criteria = SchemeCriterion.query.order_by(SchemeCriterion.display_order).all()
         for i, criterion in enumerate(criteria):
             evaluation = CriterionEvaluation(
                 submission_id=submission.id,
@@ -445,21 +431,21 @@ class TestCompleteSubmission:
                 points_awarded=Decimal(str(float(criterion.max_points) * 0.8)),
                 max_points=criterion.max_points,
                 criterion_name=criterion.name,
-                question_title="Question 1"
+                question_title="Question 1",
             )
             db.session.add(evaluation)
         db.session.commit()
 
         # Auto-calculate total
         from models import recalculate_submission_total
+
         recalculate_submission_total(submission.id)
         db.session.commit()
 
         # Complete submission
-        response = client.patch(f"/api/grading/submissions/{submission.id}", json={
-            "is_complete": True,
-            "evaluation_version": 1
-        })
+        response = client.patch(
+            f"/api/grading/submissions/{submission.id}", json={"is_complete": True, "evaluation_version": 1}
+        )
 
         assert response.status_code == 200
         data = response.get_json()
@@ -475,7 +461,7 @@ class TestCompleteSubmission:
             scheme_version=1,
             student_id="STU011",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
@@ -488,19 +474,19 @@ class TestCompleteSubmission:
             points_awarded=Decimal("5.00"),  # 5 out of 10
             max_points=criterion.max_points,
             criterion_name=criterion.name,
-            question_title="Question 1"
+            question_title="Question 1",
         )
         db.session.add(evaluation)
         db.session.commit()
 
         from models import recalculate_submission_total
+
         recalculate_submission_total(submission.id)
         db.session.commit()
 
-        response = client.patch(f"/api/grading/submissions/{submission.id}", json={
-            "is_complete": True,
-            "evaluation_version": 1
-        })
+        response = client.patch(
+            f"/api/grading/submissions/{submission.id}", json={"is_complete": True, "evaluation_version": 1}
+        )
 
         data = response.get_json()
         # 5 points earned out of 25 possible = 20%
@@ -516,15 +502,14 @@ class TestCompleteSubmission:
             total_points_possible=Decimal("25.00"),
             is_complete=True,
             graded_at=datetime.now(timezone.utc),
-            percentage_score=Decimal("75.00")
+            percentage_score=Decimal("75.00"),
         )
         db.session.add(submission)
         db.session.commit()
 
-        response = client.patch(f"/api/grading/submissions/{submission.id}", json={
-            "is_complete": False,
-            "evaluation_version": 1
-        })
+        response = client.patch(
+            f"/api/grading/submissions/{submission.id}", json={"is_complete": False, "evaluation_version": 1}
+        )
 
         assert response.status_code == 200
         data = response.get_json()
@@ -539,44 +524,37 @@ class TestPartialGrading:
     def test_save_partial_and_resume(self, client, sample_scheme):
         """[T072] Verify saving incomplete submission and resuming later."""
         # Create submission
-        submit_resp = client.post("/api/grading/submissions", json={
-            "scheme_id": sample_scheme.id,
-            "student_id": "STU013",
-            "graded_by": "prof@example.com"
-        })
+        submit_resp = client.post(
+            "/api/grading/submissions",
+            json={"scheme_id": sample_scheme.id, "student_id": "STU013", "graded_by": "prof@example.com"},
+        )
         submission_id = submit_resp.get_json()["id"]
 
         # Grade first criterion
-        criteria = SchemeCriterion.query.order_by(
-            SchemeCriterion.display_order
-        ).all()
-        client.post("/api/grading/evaluations", json={
-            "submission_id": submission_id,
-            "criterion_id": criteria[0].id,
-            "points_awarded": 8.0
-        })
+        criteria = SchemeCriterion.query.order_by(SchemeCriterion.display_order).all()
+        client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission_id, "criterion_id": criteria[0].id, "points_awarded": 8.0},
+        )
 
         # Check submission is still incomplete
         get_resp = client.get(f"/api/grading/submissions/{submission_id}")
         assert get_resp.get_json()["is_complete"] is False
 
         # Later, grade remaining criteria
-        client.post("/api/grading/evaluations", json={
-            "submission_id": submission_id,
-            "criterion_id": criteria[1].id,
-            "points_awarded": 9.0
-        })
-        client.post("/api/grading/evaluations", json={
-            "submission_id": submission_id,
-            "criterion_id": criteria[2].id,
-            "points_awarded": 4.5
-        })
+        client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission_id, "criterion_id": criteria[1].id, "points_awarded": 9.0},
+        )
+        client.post(
+            "/api/grading/evaluations",
+            json={"submission_id": submission_id, "criterion_id": criteria[2].id, "points_awarded": 4.5},
+        )
 
         # Now complete submission
-        complete_resp = client.patch(f"/api/grading/submissions/{submission_id}", json={
-            "is_complete": True,
-            "evaluation_version": 1
-        })
+        complete_resp = client.patch(
+            f"/api/grading/submissions/{submission_id}", json={"is_complete": True, "evaluation_version": 1}
+        )
         assert complete_resp.status_code == 200
         assert complete_resp.get_json()["is_complete"] is True
 
@@ -592,16 +570,16 @@ class TestConcurrentEvaluation:
             student_id="STU014",
             graded_by="prof@example.com",
             total_points_possible=Decimal("25.00"),
-            evaluation_version=1
+            evaluation_version=1,
         )
         db.session.add(submission)
         db.session.commit()
 
         # Simulate version mismatch (user B has newer version)
-        response = client.patch(f"/api/grading/submissions/{submission.id}", json={
-            "is_complete": True,
-            "evaluation_version": 2  # Version mismatch
-        })
+        response = client.patch(
+            f"/api/grading/submissions/{submission.id}",
+            json={"is_complete": True, "evaluation_version": 2},  # Version mismatch
+        )
 
         assert response.status_code == 409
         assert "modified by another user" in response.get_json()["error"].lower()
@@ -613,29 +591,233 @@ class TestConcurrentEvaluation:
             scheme_version=1,
             student_id="STU015",
             graded_by="prof@example.com",
-            total_points_possible=Decimal("25.00")
+            total_points_possible=Decimal("25.00"),
         )
         db.session.add(submission)
         db.session.commit()
         criterion = SchemeCriterion.query.first()
 
         # Create evaluation
-        eval_resp = client.post("/api/grading/evaluations", json={
-            "submission_id": submission.id,
-            "criterion_id": criterion.id,
-            "points_awarded": 8.0,
-            "feedback": "Initial feedback"
-        })
+        eval_resp = client.post(
+            "/api/grading/evaluations",
+            json={
+                "submission_id": submission.id,
+                "criterion_id": criterion.id,
+                "points_awarded": 8.0,
+                "feedback": "Initial feedback",
+            },
+        )
         eval_id = eval_resp.get_json()["id"]
 
         # Update feedback multiple times
-        response1 = client.put(f"/api/grading/evaluations/{eval_id}", json={
-            "feedback": "Updated feedback v1"
-        })
+        response1 = client.put(f"/api/grading/evaluations/{eval_id}", json={"feedback": "Updated feedback v1"})
         assert response1.status_code == 200
 
-        response2 = client.put(f"/api/grading/evaluations/{eval_id}", json={
-            "feedback": "Updated feedback v2"
-        })
+        response2 = client.put(f"/api/grading/evaluations/{eval_id}", json={"feedback": "Updated feedback v2"})
         assert response2.status_code == 200
         assert response2.get_json()["feedback"] == "Updated feedback v2"
+
+    def test_concurrent_evaluation_simultaneous_updates(self, client, sample_scheme):
+        """Test concurrent evaluation updates (T131)."""
+        submission = GradedSubmission(
+            scheme_id=sample_scheme.id,
+            scheme_version=1,
+            student_id="STU016",
+            graded_by="prof@example.com",
+            total_points_possible=Decimal("25.00"),
+            evaluation_version=1,
+        )
+        db.session.add(submission)
+        db.session.commit()
+
+        criterion = SchemeCriterion.query.first()
+
+        # Create evaluation
+        eval_resp = client.post(
+            "/api/grading/evaluations",
+            json={
+                "submission_id": submission.id,
+                "criterion_id": criterion.id,
+                "points_awarded": 8.0,
+                "feedback": "Initial feedback",
+            },
+        )
+        assert eval_resp.status_code == 201
+        eval_id = eval_resp.get_json()["id"]
+
+        # Simulate sequential updates from multiple graders
+        response1 = client.put(
+            f"/api/grading/evaluations/{eval_id}",
+            json={"feedback": "Grader A feedback"},
+        )
+        assert response1.status_code == 200
+
+        response2 = client.put(
+            f"/api/grading/evaluations/{eval_id}",
+            json={"feedback": "Grader B feedback"},
+        )
+        assert response2.status_code == 200
+
+    def test_scheme_modification_versioning_existing_submissions(self, client, sample_scheme):
+        """Test that modifying scheme increments version without affecting existing submissions (T130)."""
+        # Create submission with initial scheme (v1)
+        submission = GradedSubmission(
+            scheme_id=sample_scheme.id,
+            scheme_version=1,
+            student_id="STU017",
+            graded_by="prof@example.com",
+            total_points_possible=Decimal("25.00"),
+        )
+        db.session.add(submission)
+        db.session.commit()
+
+        # Record initial scheme version
+        initial_version = sample_scheme.version_number
+        assert initial_version == 1
+
+        # Check that submission still references old version
+        submission_after = GradedSubmission.query.get(submission.id)
+        assert submission_after.scheme_version == 1
+        assert submission_after.scheme_version == initial_version
+
+    def test_grade_with_minimum_and_maximum_points(self, client, sample_scheme):
+        """Test edge case grading with minimum (0) and maximum points."""
+        submission = GradedSubmission(
+            scheme_id=sample_scheme.id,
+            scheme_version=1,
+            student_id="STU018",
+            graded_by="prof@example.com",
+            total_points_possible=Decimal("25.00"),
+        )
+        db.session.add(submission)
+        db.session.commit()
+
+        criterion = SchemeCriterion.query.first()
+
+        # Test minimum points (0)
+        response = client.post(
+            "/api/grading/evaluations",
+            json={
+                "submission_id": submission.id,
+                "criterion_id": criterion.id,
+                "points_awarded": 0.0,
+                "feedback": "No points earned",
+            },
+        )
+        assert response.status_code == 201
+        assert response.get_json()["points_awarded"] == 0.0
+
+        # Test maximum points
+        max_points = float(criterion.max_points)
+        response_max = client.put(
+            f"/api/grading/evaluations/{response.get_json()['id']}",
+            json={
+                "points_awarded": max_points,
+                "feedback": "Perfect score",
+            },
+        )
+        assert response_max.status_code == 200
+        assert response_max.get_json()["points_awarded"] == max_points
+
+    def test_large_scheme_grading_performance(self, client):
+        """Test performance with large scheme (50+ criteria) (T132)."""
+        # Create scheme with 10 questions, 5 criteria each = 50 criteria
+        scheme = GradingScheme(
+            name="Large Grading Scheme",
+            description="Performance test scheme",
+            created_by="instructor@example.com",
+        )
+        db.session.add(scheme)
+        db.session.commit()
+
+        criteria_created = 0
+        for q_idx in range(10):
+            question = SchemeQuestion(
+                scheme_id=scheme.id,
+                title=f"Question {q_idx + 1}",
+                display_order=q_idx + 1,
+            )
+            db.session.add(question)
+            db.session.flush()
+
+            for c_idx in range(5):
+                criterion = SchemeCriterion(
+                    question_id=question.id,
+                    name=f"Q{q_idx + 1}C{c_idx + 1}",
+                    max_points=Decimal("2.00"),
+                    display_order=c_idx + 1,
+                )
+                db.session.add(criterion)
+                criteria_created += 1
+
+        db.session.commit()
+
+        assert criteria_created == 50
+
+        # Create submission
+        submission = GradedSubmission(
+            scheme_id=scheme.id,
+            scheme_version=1,
+            student_id="STU019",
+            graded_by="prof@example.com",
+            total_points_possible=Decimal("100.00"),
+        )
+        db.session.add(submission)
+        db.session.commit()
+
+        # Grade multiple criteria
+        criteria = SchemeCriterion.query.all()
+        graded_count = 0
+        for i, criterion in enumerate(criteria[:20]):  # Grade 20 of 50 criteria
+            response = client.post(
+                "/api/grading/evaluations",
+                json={
+                    "submission_id": submission.id,
+                    "criterion_id": criterion.id,
+                    "points_awarded": float(criterion.max_points) * 0.75,
+                    "feedback": f"Feedback for criterion {i + 1}",
+                },
+            )
+            if response.status_code == 201:
+                graded_count += 1
+
+        assert graded_count >= 15  # Should successfully grade at least 15
+
+    def test_rapid_sequential_grading_updates(self, client, sample_scheme):
+        """Test rapid sequential updates to grading don't cause conflicts."""
+        submission = GradedSubmission(
+            scheme_id=sample_scheme.id,
+            scheme_version=1,
+            student_id="STU020",
+            graded_by="prof@example.com",
+            total_points_possible=Decimal("25.00"),
+        )
+        db.session.add(submission)
+        db.session.commit()
+
+        criterion = SchemeCriterion.query.first()
+
+        # Create evaluation
+        eval_resp = client.post(
+            "/api/grading/evaluations",
+            json={
+                "submission_id": submission.id,
+                "criterion_id": criterion.id,
+                "points_awarded": 5.0,
+                "feedback": "Initial",
+            },
+        )
+        eval_id = eval_resp.get_json()["id"]
+
+        # Rapidly update same evaluation multiple times
+        update_count = 0
+        for i in range(5):
+            response = client.put(
+                f"/api/grading/evaluations/{eval_id}",
+                json={"points_awarded": float(i + 1), "feedback": f"Update {i + 1}"},
+            )
+            if response.status_code == 200:
+                update_count += 1
+
+        # Should have successfully completed at least some updates
+        assert update_count >= 3

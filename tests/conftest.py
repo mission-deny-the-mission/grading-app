@@ -10,8 +10,7 @@ import pytest
 
 # Import the app and models
 from app import app as flask_app
-from models import (GradingJob, JobBatch, MarkingScheme, Submission,
-                    db)
+from models import GradingJob, JobBatch, MarkingScheme, Submission, db
 
 
 @pytest.fixture
@@ -164,9 +163,7 @@ def mock_celery():
 @pytest.fixture
 def sample_text_file():
     """Create a sample text file for testing."""
-    content = (
-        "This is a test document for grading. It contains sample text to evaluate."
-    )
+    content = "This is a test document for grading. It contains sample text to evaluate."
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write(content)
         temp_path = f.name

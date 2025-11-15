@@ -178,9 +178,7 @@ class GradingJob(db.Model):
     # Job metadata
     job_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    status = db.Column(
-        db.String(50), default="pending"
-    )  # pending, processing, completed, failed
+    status = db.Column(db.String(50), default="pending")  # pending, processing, completed, failed
     priority = db.Column(db.Integer, default=5)  # 1-10, higher is more important
 
     # Processing info
@@ -194,36 +192,24 @@ class GradingJob(db.Model):
     model = db.Column(db.String(100))
 
     # Model parameters
-    temperature = db.Column(
-        db.Float, default=0.3
-    )  # Default temperature for all providers
-    max_tokens = db.Column(
-        db.Integer, default=2000
-    )  # Default max tokens for all providers
+    temperature = db.Column(db.Float, default=0.3)  # Default temperature for all providers
+    max_tokens = db.Column(db.Integer, default=2000)  # Default max tokens for all providers
 
     # Multi-model support
     models_to_compare = db.Column(db.JSON)  # List of models to use for comparison
 
     # Marking scheme reference
-    marking_scheme_id = db.Column(
-        db.String(36), db.ForeignKey("marking_schemes.id"), nullable=True
-    )
+    marking_scheme_id = db.Column(db.String(36), db.ForeignKey("marking_schemes.id"), nullable=True)
 
     # Saved configurations references
-    saved_prompt_id = db.Column(
-        db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True
-    )
-    saved_marking_scheme_id = db.Column(
-        db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True
-    )
+    saved_prompt_id = db.Column(db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True)
+    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True)
 
     # Foreign keys
     batch_id = db.Column(db.String(36), db.ForeignKey("job_batches.id"), nullable=True)
 
     # Relationships
-    submissions = db.relationship(
-        "Submission", backref="job", lazy=True, cascade="all, delete-orphan"
-    )
+    submissions = db.relationship("Submission", backref="job", lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self):
         """Convert job to dictionary."""
@@ -231,27 +217,19 @@ class GradingJob(db.Model):
             # Try to access related objects, but handle detached instance errors
             marking_scheme_dict = None
             try:
-                marking_scheme_dict = (
-                    self.marking_scheme.to_dict() if self.marking_scheme else None
-                )
+                marking_scheme_dict = self.marking_scheme.to_dict() if self.marking_scheme else None
             except Exception:
                 pass
 
             saved_prompt_dict = None
             try:
-                saved_prompt_dict = (
-                    self.saved_prompt.to_dict() if self.saved_prompt else None
-                )
+                saved_prompt_dict = self.saved_prompt.to_dict() if self.saved_prompt else None
             except Exception:
                 pass
 
             saved_marking_scheme_dict = None
             try:
-                saved_marking_scheme_dict = (
-                    self.saved_marking_scheme.to_dict()
-                    if self.saved_marking_scheme
-                    else None
-                )
+                saved_marking_scheme_dict = self.saved_marking_scheme.to_dict() if self.saved_marking_scheme else None
             except Exception:
                 pass
 
@@ -307,9 +285,7 @@ class GradingJob(db.Model):
         if self.total_submissions == 0:
             return 0
         return round(
-            (self.processed_submissions + self.failed_submissions)
-            / self.total_submissions
-            * 100,
+            (self.processed_submissions + self.failed_submissions) / self.total_submissions * 100,
             2,
         )
 
@@ -323,27 +299,19 @@ class GradingJob(db.Model):
             Submission = None
 
         if Submission is not None:
-            actual_total = (
-                db.session.query(Submission)
-                .filter(Submission.job_id == self.id)
-                .count()
-            )
+            actual_total = db.session.query(Submission).filter(Submission.job_id == self.id).count()
             processed_count = (
                 db.session.query(Submission)
                 .filter(Submission.job_id == self.id, Submission.status == "completed")
                 .count()
             )
             failed_count = (
-                db.session.query(Submission)
-                .filter(Submission.job_id == self.id, Submission.status == "failed")
-                .count()
+                db.session.query(Submission).filter(Submission.job_id == self.id, Submission.status == "failed").count()
             )
         else:
             # Fallback to relationship if import failed
             actual_total = len(self.submissions)
-            processed_count = sum(
-                1 for s in self.submissions if s.status == "completed"
-            )
+            processed_count = sum(1 for s in self.submissions if s.status == "completed")
             failed_count = sum(1 for s in self.submissions if s.status == "failed")
 
         if self.total_submissions != actual_total:
@@ -354,8 +322,7 @@ class GradingJob(db.Model):
 
         if (
             self.total_submissions > 0
-            and self.processed_submissions + self.failed_submissions
-            >= self.total_submissions
+            and self.processed_submissions + self.failed_submissions >= self.total_submissions
         ):
             if self.failed_submissions == 0:
                 self.status = "completed"
@@ -394,8 +361,7 @@ class GradingJob(db.Model):
         # Ensure status reflects completed submissions
         if (
             self.total_submissions > 0
-            and self.processed_submissions + self.failed_submissions
-            >= self.total_submissions
+            and self.processed_submissions + self.failed_submissions >= self.total_submissions
         ):
             if self.failed_submissions == 0:
                 self.status = "completed"
@@ -425,9 +391,7 @@ class GradeResult(db.Model):
     grade_metadata = db.Column(db.JSON)  # Store usage, tokens, etc.
 
     # Foreign keys
-    submission_id = db.Column(
-        db.String(36), db.ForeignKey("submissions.id"), nullable=False
-    )
+    submission_id = db.Column(db.String(36), db.ForeignKey("submissions.id"), nullable=False)
 
     def to_dict(self):
         """Convert grade result to dictionary."""
@@ -464,9 +428,7 @@ class Submission(db.Model):
     file_type = db.Column(db.String(10))  # docx, pdf
 
     # Processing status
-    status = db.Column(
-        db.String(50), default="pending"
-    )  # pending, processing, completed, failed
+    status = db.Column(db.String(50), default="pending")  # pending, processing, completed, failed
     error_message = db.Column(db.Text)
     retry_count = db.Column(db.Integer, default=0)  # Number of retry attempts
     started_at = db.Column(db.DateTime)
@@ -483,9 +445,7 @@ class Submission(db.Model):
     job_id = db.Column(db.String(36), db.ForeignKey("grading_jobs.id"), nullable=False)
 
     # Relationships
-    grade_results = db.relationship(
-        "GradeResult", backref="submission", lazy=True, cascade="all, delete-orphan"
-    )
+    grade_results = db.relationship("GradeResult", backref="submission", lazy=True, cascade="all, delete-orphan")
 
     def to_dict(self):
         """Convert submission to dictionary."""
@@ -519,9 +479,7 @@ class Submission(db.Model):
                 "retry_count": self.retry_count,
                 "can_retry": can_retry_val,
                 "started_at": self.started_at.isoformat() if self.started_at else None,
-                "completed_at": (
-                    self.completed_at.isoformat() if self.completed_at else None
-                ),
+                "completed_at": (self.completed_at.isoformat() if self.completed_at else None),
             }
         except Exception as e:
             return {
@@ -698,12 +656,8 @@ class JobTemplate(db.Model):
     models_to_compare = db.Column(db.JSON)  # List of models to use for comparison
 
     # References to saved configurations
-    saved_prompt_id = db.Column(
-        db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True
-    )
-    saved_marking_scheme_id = db.Column(
-        db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True
-    )
+    saved_prompt_id = db.Column(db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True)
+    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True)
 
     # Usage tracking
     usage_count = db.Column(db.Integer, default=0)
@@ -715,9 +669,7 @@ class JobTemplate(db.Model):
 
     # Relationships
     saved_prompt = db.relationship("SavedPrompt", backref="job_templates", lazy=True)
-    saved_marking_scheme = db.relationship(
-        "SavedMarkingScheme", backref="job_templates", lazy=True
-    )
+    saved_marking_scheme = db.relationship("SavedMarkingScheme", backref="job_templates", lazy=True)
 
     def to_dict(self):
         """Convert job template to dictionary."""
@@ -798,26 +750,18 @@ class JobBatch(db.Model):
     estimated_completion = db.Column(db.DateTime)
 
     # Template reference
-    template_id = db.Column(
-        db.String(36), db.ForeignKey("batch_templates.id"), nullable=True
-    )
+    template_id = db.Column(db.String(36), db.ForeignKey("batch_templates.id"), nullable=True)
 
     # Ownership and permissions
     created_by = db.Column(db.String(100))
     shared_with = db.Column(db.JSON)  # List of users/groups with access
 
     # Saved configurations references
-    saved_prompt_id = db.Column(
-        db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True
-    )
-    saved_marking_scheme_id = db.Column(
-        db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True
-    )
+    saved_prompt_id = db.Column(db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True)
+    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True)
 
     # Relationships
-    jobs = db.relationship(
-        "GradingJob", backref="batch", lazy=True, foreign_keys="GradingJob.batch_id"
-    )
+    jobs = db.relationship("GradingJob", backref="batch", lazy=True, foreign_keys="GradingJob.batch_id")
     template = db.relationship("BatchTemplate", backref="batches", lazy=True)
 
     def to_dict(self):
@@ -831,17 +775,9 @@ class JobBatch(db.Model):
             pending_jobs = 0
             try:
                 total_jobs = len(self.jobs)
-                completed_jobs = sum(
-                    1 for job in self.jobs if job.status == "completed"
-                )
-                failed_jobs = sum(
-                    1
-                    for job in self.jobs
-                    if job.status in ["failed", "completed_with_errors"]
-                )
-                processing_jobs = sum(
-                    1 for job in self.jobs if job.status == "processing"
-                )
+                completed_jobs = sum(1 for job in self.jobs if job.status == "completed")
+                failed_jobs = sum(1 for job in self.jobs if job.status in ["failed", "completed_with_errors"])
+                processing_jobs = sum(1 for job in self.jobs if job.status == "processing")
                 pending_jobs = sum(1 for job in self.jobs if job.status == "pending")
             except Exception:
                 pass
@@ -894,14 +830,8 @@ class JobBatch(db.Model):
                 "pending_jobs": pending_jobs,
                 "deadline": self.deadline.isoformat() if self.deadline else None,
                 "started_at": self.started_at.isoformat() if self.started_at else None,
-                "completed_at": (
-                    self.completed_at.isoformat() if self.completed_at else None
-                ),
-                "estimated_completion": (
-                    self.estimated_completion.isoformat()
-                    if self.estimated_completion
-                    else None
-                ),
+                "completed_at": (self.completed_at.isoformat() if self.completed_at else None),
+                "estimated_completion": (self.estimated_completion.isoformat() if self.estimated_completion else None),
                 "template_id": self.template_id,
                 "template": template_dict,
                 "created_by": self.created_by,
@@ -927,11 +857,7 @@ class JobBatch(db.Model):
         if not self.jobs:
             return 0
         total = len(self.jobs)
-        completed = sum(
-            1
-            for job in self.jobs
-            if job.status in ["completed", "failed", "completed_with_errors"]
-        )
+        completed = sum(1 for job in self.jobs if job.status in ["completed", "failed", "completed_with_errors"])
         return round((completed / total) * 100, 2) if total > 0 else 0
 
     def update_progress(self):
@@ -941,9 +867,7 @@ class JobBatch(db.Model):
 
         total = len(self.jobs)
         completed = sum(1 for job in self.jobs if job.status == "completed")
-        failed = sum(
-            1 for job in self.jobs if job.status in ["failed", "completed_with_errors"]
-        )
+        failed = sum(1 for job in self.jobs if job.status in ["failed", "completed_with_errors"])
         processing = sum(1 for job in self.jobs if job.status == "processing")
 
         self.total_jobs = total
@@ -981,9 +905,7 @@ class JobBatch(db.Model):
     def can_retry_failed_jobs(self):
         """Check if batch has failed jobs that can be retried."""
         return any(
-            job.can_retry_failed_submissions()
-            for job in self.jobs
-            if job.status in ["failed", "completed_with_errors"]
+            job.can_retry_failed_submissions() for job in self.jobs if job.status in ["failed", "completed_with_errors"]
         )
 
     def start_batch(self):
@@ -1051,10 +973,7 @@ class JobBatch(db.Model):
         retried_count = 0
 
         for job in self.jobs:
-            if (
-                job.status in ["failed", "completed_with_errors"]
-                and job.can_retry_failed_submissions()
-            ):
+            if job.status in ["failed", "completed_with_errors"] and job.can_retry_failed_submissions():
                 count = job.retry_failed_submissions()
                 if count > 0:
                     retried_count += 1
@@ -1109,26 +1028,14 @@ class JobBatch(db.Model):
             "job_name": job_name,
             "description": description or "",
             "provider": kwargs.get("provider") or self.provider or "openrouter",
-            "prompt": kwargs.get("prompt")
-            or self.prompt
-            or "Please grade this document.",
+            "prompt": kwargs.get("prompt") or self.prompt or "Please grade this document.",
             "model": kwargs.get("model") or self.model,
-            "models_to_compare": kwargs.get("models_to_compare")
-            or self.models_to_compare,
-            "temperature": (
-                kwargs.get("temperature")
-                if kwargs.get("temperature") is not None
-                else self.temperature
-            ),
-            "max_tokens": (
-                kwargs.get("max_tokens")
-                if kwargs.get("max_tokens") is not None
-                else self.max_tokens
-            ),
+            "models_to_compare": kwargs.get("models_to_compare") or self.models_to_compare,
+            "temperature": (kwargs.get("temperature") if kwargs.get("temperature") is not None else self.temperature),
+            "max_tokens": (kwargs.get("max_tokens") if kwargs.get("max_tokens") is not None else self.max_tokens),
             "priority": kwargs.get("priority", 5),
             "saved_prompt_id": kwargs.get("saved_prompt_id") or self.saved_prompt_id,
-            "saved_marking_scheme_id": kwargs.get("saved_marking_scheme_id")
-            or self.saved_marking_scheme_id,
+            "saved_marking_scheme_id": kwargs.get("saved_marking_scheme_id") or self.saved_marking_scheme_id,
             "batch_id": self.id,
         }
 
@@ -1158,12 +1065,8 @@ class JobBatch(db.Model):
         try:
             saved_marking_scheme_name = None
             if self.saved_marking_scheme_id:
-                saved_marking_scheme = db.session.get(
-                    SavedMarkingScheme, self.saved_marking_scheme_id
-                )
-                saved_marking_scheme_name = (
-                    saved_marking_scheme.name if saved_marking_scheme else None
-                )
+                saved_marking_scheme = db.session.get(SavedMarkingScheme, self.saved_marking_scheme_id)
+                saved_marking_scheme_name = saved_marking_scheme.name if saved_marking_scheme else None
         except Exception:
             saved_marking_scheme_name = None
 
@@ -1244,7 +1147,7 @@ class Config(db.Model):
     nanogpt_api_key = db.Column(db.Text)
     chutes_api_key = db.Column(db.Text)
     zai_api_key = db.Column(db.Text)
-    zai_pricing_plan = db.Column(db.String(20), default='normal')
+    zai_pricing_plan = db.Column(db.String(20), default="normal")
     lm_studio_url = db.Column(db.String(500))
     ollama_url = db.Column(db.String(500))
 
@@ -1341,9 +1244,7 @@ class ImageSubmission(db.Model):
     )
 
     # Relationship to existing submission
-    submission_id = db.Column(
-        db.String(36), db.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
-    )
+    submission_id = db.Column(db.String(36), db.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
 
     # File storage (UUID-based two-level hashing)
     storage_path = db.Column(db.String(500), nullable=False)
@@ -1588,7 +1489,7 @@ class GradingScheme(db.Model):
     category = db.Column(db.String(100), index=True)
 
     # Calculated fields (denormalized for performance)
-    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.00'))
+    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.00"))
     total_questions = db.Column(db.Integer, nullable=False, default=0)
     total_criteria = db.Column(db.Integer, nullable=False, default=0)
 
@@ -1662,7 +1563,7 @@ class SchemeQuestion(db.Model):
     display_order = db.Column(db.Integer, nullable=False)
 
     # Calculated field
-    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.00'))
+    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.00"))
 
     # Relationships
     criteria = db.relationship(
@@ -1784,7 +1685,7 @@ class GradedSubmission(db.Model):
     evaluation_version = db.Column(db.Integer, default=1)
 
     # Calculated totals (denormalized for performance)
-    total_points_earned = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.00'))
+    total_points_earned = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.00"))
     total_points_possible = db.Column(db.Numeric(10, 2), nullable=False)
     percentage_score = db.Column(db.Numeric(5, 2))
 
@@ -1878,9 +1779,7 @@ class CriterionEvaluation(db.Model):
     __table_args__ = (
         db.Index("idx_evaluation_submission", "submission_id"),
         db.Index("idx_evaluation_criterion", "criterion_id"),
-        db.UniqueConstraint(
-            "submission_id", "criterion_id", name="uq_evaluation_unique"
-        ),
+        db.UniqueConstraint("submission_id", "criterion_id", name="uq_evaluation_unique"),
         db.CheckConstraint("points_awarded >= 0", name="ck_points_awarded_min"),
         db.CheckConstraint("points_awarded <= max_points", name="ck_points_awarded_max"),
     )
@@ -1916,9 +1815,7 @@ def recalculate_submission_total(submission_id):
     if not submission:
         return
 
-    evaluations = CriterionEvaluation.query.filter_by(
-        submission_id=submission_id
-    ).all()
+    evaluations = CriterionEvaluation.query.filter_by(submission_id=submission_id).all()
     new_total = Decimal("0.00")
     for eval_item in evaluations:
         new_total += eval_item.points_awarded

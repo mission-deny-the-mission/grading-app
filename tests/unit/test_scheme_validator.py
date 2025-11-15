@@ -1,9 +1,12 @@
 """Unit tests for grading scheme validation utilities."""
-import pytest
+
 from decimal import Decimal
+
+import pytest
+
 from utils.scheme_validator import (
-    validate_point_range,
     validate_hierarchy,
+    validate_point_range,
     validate_scheme_name,
     validate_submission_points,
 )
@@ -54,6 +57,7 @@ class TestValidateHierarchy:
 
     def test_valid_hierarchy(self):
         """Valid complete hierarchy."""
+
         class MockCriterion:
             def __init__(self, name, max_points, display_order):
                 self.name = name
@@ -92,6 +96,7 @@ class TestValidateHierarchy:
 
     def test_no_questions_invalid(self):
         """Scheme without questions should raise ValueError."""
+
         class MockScheme:
             questions = []
 
@@ -100,6 +105,7 @@ class TestValidateHierarchy:
 
     def test_question_without_criteria_invalid(self):
         """Question without criteria should raise ValueError."""
+
         class MockQuestion:
             title = "Q1"
             criteria = []
@@ -113,6 +119,7 @@ class TestValidateHierarchy:
 
     def test_invalid_question_order(self):
         """Non-sequential display order should raise ValueError."""
+
         class MockCriterion:
             def __init__(self):
                 self.name = "C1"
@@ -136,6 +143,7 @@ class TestValidateHierarchy:
 
     def test_criterion_sum_mismatch(self):
         """Criterion sum not matching question total."""
+
         class MockCriterion:
             def __init__(self, name, max_points, display_order):
                 self.name = name
@@ -162,6 +170,7 @@ class TestValidateHierarchy:
 
     def test_negative_criterion_points(self):
         """Negative criterion points should raise ValueError."""
+
         class MockCriterion:
             def __init__(self):
                 self.name = "C1"
@@ -185,6 +194,7 @@ class TestValidateHierarchy:
 
     def test_criterion_exceeds_max(self):
         """Criterion exceeding 1000 points."""
+
         class MockCriterion:
             def __init__(self):
                 self.name = "C1"
@@ -237,6 +247,7 @@ class TestValidateSubmissionPoints:
 
     def test_valid_submission(self):
         """Valid submission points."""
+
         class MockSubmission:
             def __init__(self):
                 self.total_points_earned = Decimal("85.00")
@@ -254,6 +265,7 @@ class TestValidateSubmissionPoints:
 
     def test_negative_earned_points_invalid(self):
         """Negative earned points."""
+
         class MockSubmission:
             def __init__(self):
                 self.total_points_earned = Decimal("-10.00")
@@ -266,6 +278,7 @@ class TestValidateSubmissionPoints:
 
     def test_earned_exceeds_possible_invalid(self):
         """Earned points exceeding possible."""
+
         class MockSubmission:
             def __init__(self):
                 self.total_points_earned = Decimal("150.00")
@@ -278,6 +291,7 @@ class TestValidateSubmissionPoints:
 
     def test_complete_without_percentage_invalid(self):
         """Complete submission without percentage score."""
+
         class MockSubmission:
             def __init__(self):
                 self.total_points_earned = Decimal("50.00")
@@ -290,6 +304,7 @@ class TestValidateSubmissionPoints:
 
     def test_invalid_percentage_range(self):
         """Percentage score outside 0-100 range."""
+
         class MockSubmission:
             def __init__(self):
                 self.total_points_earned = Decimal("50.00")

@@ -196,9 +196,7 @@ class TestFileUpload:
 
     @patch("tasks.process_job.delay")
     @patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}, clear=False)
-    def test_file_upload_with_marking_scheme(
-        self, mock_process_job, client, sample_text_file
-    ):
+    def test_file_upload_with_marking_scheme(self, mock_process_job, client, sample_text_file):
         """Test uploading a file with a marking scheme."""
         mock_process_job.return_value = MagicMock(id="test-task-id")
 
@@ -415,9 +413,7 @@ class TestBatchManagement:
 
     def test_add_jobs_to_batch(self, client, sample_batch, sample_job):
         """Test adding existing jobs to a batch."""
-        response = client.post(
-            f"/api/batches/{sample_batch.id}/jobs", json={"job_ids": [sample_job.id]}
-        )
+        response = client.post(f"/api/batches/{sample_batch.id}/jobs", json={"job_ids": [sample_job.id]})
 
         assert response.status_code == 200
 
@@ -478,9 +474,7 @@ class TestBatchManagement:
         from models import GradingJob, db
 
         with client.application.app_context():
-            standalone_job = GradingJob(
-                job_name="Standalone Job", provider="openrouter", prompt="Test prompt"
-            )
+            standalone_job = GradingJob(job_name="Standalone Job", provider="openrouter", prompt="Test prompt")
             db.session.add(standalone_job)
             db.session.commit()
             standalone_job_id = standalone_job.id
@@ -518,9 +512,7 @@ class TestBatchManagement:
         from models import GradingJob, db
 
         with client.application.app_context():
-            job = GradingJob(
-                job_name="Job to Remove", provider="openrouter", prompt="Test prompt"
-            )
+            job = GradingJob(job_name="Job to Remove", provider="openrouter", prompt="Test prompt")
             db.session.add(job)
             db.session.commit()
 
@@ -670,9 +662,7 @@ class TestErrorHandling:
 
     def test_invalid_json(self, client):
         """Test handling of invalid JSON."""
-        response = client.post(
-            "/create_job", data="invalid json", content_type="application/json"
-        )
+        response = client.post("/create_job", data="invalid json", content_type="application/json")
 
         assert response.status_code == 400
 
@@ -682,9 +672,7 @@ class TestBatchJobCreationWithFiles:
 
     @pytest.mark.api
     @patch("tasks.process_job.delay")
-    def test_create_job_with_files_success(
-        self, mock_process_job, client, sample_batch, sample_text_file
-    ):
+    def test_create_job_with_files_success(self, mock_process_job, client, sample_batch, sample_text_file):
         """Test successful job creation with file upload in batch."""
         mock_process_job.return_value = MagicMock(id="test-task-id")
 
@@ -735,9 +723,7 @@ class TestBatchJobCreationWithFiles:
         mock_process_job.assert_called_once()
 
     @pytest.mark.api
-    def test_create_job_with_files_missing_job_name(
-        self, client, sample_batch, sample_text_file
-    ):
+    def test_create_job_with_files_missing_job_name(self, client, sample_batch, sample_text_file):
         """Test job creation fails without job name."""
         with open(sample_text_file, "rb") as f:
             response = client.post(
@@ -780,9 +766,7 @@ class TestBatchJobCreationWithFiles:
 
     @pytest.mark.api
     @patch("tasks.process_job.delay")
-    def test_create_job_with_files_inherits_batch_settings(
-        self, mock_process_job, client, app, sample_text_file
-    ):
+    def test_create_job_with_files_inherits_batch_settings(self, mock_process_job, client, app, sample_text_file):
         """Test that job creation inherits batch settings correctly."""
         mock_process_job.return_value = MagicMock(id="test-task-id")
 
@@ -824,9 +808,7 @@ class TestBatchJobCreationWithFiles:
 
     @pytest.mark.api
     @patch("tasks.process_job.delay")
-    def test_create_job_with_files_override_batch_settings(
-        self, mock_process_job, client, app, sample_text_file
-    ):
+    def test_create_job_with_files_override_batch_settings(self, mock_process_job, client, app, sample_text_file):
         """Test that job creation can override batch settings."""
         mock_process_job.return_value = MagicMock(id="test-task-id")
 
@@ -834,9 +816,7 @@ class TestBatchJobCreationWithFiles:
             from models import JobBatch, db
 
             # Create a batch with default settings
-            batch = JobBatch(
-                batch_name="Default Batch", provider="openrouter", temperature=0.3
-            )
+            batch = JobBatch(batch_name="Default Batch", provider="openrouter", temperature=0.3)
             db.session.add(batch)
             db.session.commit()
             batch_id = batch.id
@@ -1018,9 +998,7 @@ class TestBatchMultiModelComparison:
 
     @pytest.mark.api
     @patch("tasks.process_job.delay")
-    def test_create_batch_with_multi_model_comparison(
-        self, mock_process_job, client, app
-    ):
+    def test_create_batch_with_multi_model_comparison(self, mock_process_job, client, app):
         """Test creating a batch with multi-model comparison enabled."""
         mock_process_job.return_value = MagicMock(id="test-task-id")
 
@@ -1051,9 +1029,7 @@ class TestBatchMultiModelComparison:
 
     @pytest.mark.api
     @patch("tasks.process_job.delay")
-    def test_batch_job_inherits_multi_model_settings(
-        self, mock_process_job, client, app, sample_text_file
-    ):
+    def test_batch_job_inherits_multi_model_settings(self, mock_process_job, client, app, sample_text_file):
         """Test that jobs created in multi-model batch inherit the multi-model settings."""
         mock_process_job.return_value = MagicMock(id="test-task-id")
 
@@ -1092,9 +1068,7 @@ class TestBatchMultiModelComparison:
 
     @pytest.mark.api
     @patch("tasks.process_job.delay")
-    def test_batch_job_override_multi_model_settings(
-        self, mock_process_job, client, app, sample_text_file
-    ):
+    def test_batch_job_override_multi_model_settings(self, mock_process_job, client, app, sample_text_file):
         """Test that jobs can override batch multi-model settings."""
         mock_process_job.return_value = MagicMock(id="test-task-id")
 

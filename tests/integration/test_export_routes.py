@@ -2,18 +2,20 @@
 
 Tests for exporting grading data in CSV and JSON formats.
 """
+
 import json
 from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
+
 from models import (
-    db,
-    GradingScheme,
-    SchemeQuestion,
-    SchemeCriterion,
-    GradedSubmission,
     CriterionEvaluation,
+    GradedSubmission,
+    GradingScheme,
+    SchemeCriterion,
+    SchemeQuestion,
+    db,
 )
 
 
@@ -33,12 +35,8 @@ def app_with_grading_data(app):
         db.session.commit()
 
         # Create questions
-        q1 = SchemeQuestion(
-            scheme_id=scheme.id, title="Question 1", display_order=1
-        )
-        q2 = SchemeQuestion(
-            scheme_id=scheme.id, title="Question 2", display_order=2
-        )
+        q1 = SchemeQuestion(scheme_id=scheme.id, title="Question 1", display_order=1)
+        q2 = SchemeQuestion(scheme_id=scheme.id, title="Question 2", display_order=2)
         db.session.add_all([q1, q2])
         db.session.commit()
 
@@ -91,9 +89,9 @@ def app_with_grading_data(app):
 
             # Update submission totals
             submission.total_points_earned = total_earned
-            submission.percentage_score = (
-                (total_earned / submission.total_points_possible) * 100
-            ).quantize(Decimal("0.01"))
+            submission.percentage_score = ((total_earned / submission.total_points_possible) * 100).quantize(
+                Decimal("0.01")
+            )
             db.session.commit()
 
         yield app
@@ -231,9 +229,7 @@ class TestExportJSON:
 class TestExportWithFilters:
     """Test export endpoint with filtering options."""
 
-    def test_export_filter_incomplete_submissions(
-        self, client, app_with_grading_data
-    ):
+    def test_export_filter_incomplete_submissions(self, client, app_with_grading_data):
         """Verify export can filter out incomplete submissions."""
         with app_with_grading_data.app_context():
             scheme = GradingScheme.query.first()
@@ -252,9 +248,7 @@ class TestExportWithFilters:
             db.session.add(incomplete)
             db.session.commit()
 
-        response = client.get(
-            f"/api/export/schemes/{scheme_id}?format=json&include_incomplete=false"
-        )
+        response = client.get(f"/api/export/schemes/{scheme_id}?format=json&include_incomplete=false")
 
         data = json.loads(response.data)
         # Should exclude incomplete submission

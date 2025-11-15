@@ -11,10 +11,21 @@ from unittest.mock import MagicMock, patch
 import cv2
 import numpy as np
 import pytest
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from models import ExtractedContent, ImageQualityMetrics, ImageSubmission, Submission, db
-from utils.image_processing import detect_blur, check_resolution, check_completeness, ScreenshotQualityChecker
+from models import (
+    ExtractedContent,
+    ImageQualityMetrics,
+    ImageSubmission,
+    Submission,
+    db,
+)
+from utils.image_processing import (
+    ScreenshotQualityChecker,
+    check_completeness,
+    check_resolution,
+    detect_blur,
+)
 
 
 class TestImageUploadAndOCR:
@@ -67,7 +78,8 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                filename="test.txt", original_filename="test.txt",
+                filename="test.txt",
+                original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -91,9 +103,7 @@ class TestImageUploadAndOCR:
 
         # Verify ImageSubmission created in database
         with app.app_context():
-            image_submission = ImageSubmission.query.filter_by(
-                submission_id=submission_id
-            ).first()
+            image_submission = ImageSubmission.query.filter_by(submission_id=submission_id).first()
             assert image_submission is not None
             assert image_submission.original_filename == "test_screenshot.png"
             assert image_submission.mime_type == "image/png"
@@ -108,9 +118,7 @@ class TestImageUploadAndOCR:
                 pass
 
     @patch("tasks.extract_text_from_image_azure")
-    def test_ocr_processing_creates_extracted_content(
-        self, mock_azure_ocr, client, app
-    ):
+    def test_ocr_processing_creates_extracted_content(self, mock_azure_ocr, client, app):
         """Test: Wait for OCR completion → verify ExtractedContent exists."""
         # Mock Azure OCR response
         mock_azure_ocr.return_value = {
@@ -142,7 +150,8 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                filename="test.txt", original_filename="test.txt",
+                filename="test.txt",
+                original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -167,9 +176,7 @@ class TestImageUploadAndOCR:
             process_image_ocr(image_id)
 
             # Verify ExtractedContent was created
-            extracted = ExtractedContent.query.filter_by(
-                image_submission_id=image_id
-            ).first()
+            extracted = ExtractedContent.query.filter_by(image_submission_id=image_id).first()
             assert extracted is not None
             assert extracted.extracted_text == "Test Document\nThis is a test image"
             assert float(extracted.confidence_score) == 0.95
@@ -186,9 +193,7 @@ class TestImageUploadAndOCR:
                 pass
 
     @patch("tasks.extract_text_from_image_azure")
-    def test_extracted_text_matches_expected_content(
-        self, mock_azure_ocr, client, app
-    ):
+    def test_extracted_text_matches_expected_content(self, mock_azure_ocr, client, app):
         """Test: Verify extracted text matches expected content."""
         expected_text = "Hello World\nThis is a test"
 
@@ -215,7 +220,8 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                filename="test.txt", original_filename="test.txt",
+                filename="test.txt",
+                original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -260,9 +266,7 @@ class TestImageUploadAndOCR:
             "status": "success",
             "text": "Clear Text Document",
             "confidence": 0.97,  # High confidence for clear image
-            "text_regions": [
-                {"text": "Clear Text Document", "confidence": 0.97, "bounding_box": []}
-            ],
+            "text_regions": [{"text": "Clear Text Document", "confidence": 0.97, "bounding_box": []}],
             "processing_time_ms": 1000,
         }
 
@@ -281,7 +285,8 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                filename="test.txt", original_filename="test.txt",
+                filename="test.txt",
+                original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -303,9 +308,7 @@ class TestImageUploadAndOCR:
             process_image_ocr(image_id)
 
             # Verify confidence score
-            extracted = ExtractedContent.query.filter_by(
-                image_submission_id=image_id
-            ).first()
+            extracted = ExtractedContent.query.filter_by(image_submission_id=image_id).first()
             assert extracted is not None
             confidence = float(extracted.confidence_score)
             assert confidence >= 0.9, f"Confidence {confidence} below 0.9 threshold"
@@ -335,7 +338,8 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                filename="test.txt", original_filename="test.txt",
+                filename="test.txt",
+                original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -419,9 +423,9 @@ class TestBlurDetection:
         # Test blur detection
         result = detect_blur(str(sharp_path))
 
-        assert result['blur_score'] > 100, f"Sharp image blur score {result['blur_score']} should be > 100"
-        assert result['is_blurry'] is False
-        assert result['threshold'] == 100.0
+        assert result["blur_score"] > 100, f"Sharp image blur score {result['blur_score']} should be > 100"
+        assert result["is_blurry"] is False
+        assert result["threshold"] == 100.0
 
     def test_blurry_image_has_low_blur_score(self, tmp_path):
         """Test: Blurry image has blur_score < 100."""
@@ -433,9 +437,9 @@ class TestBlurDetection:
         # Test blur detection
         result = detect_blur(str(blurry_path))
 
-        assert result['blur_score'] < 100, f"Blurry image blur score {result['blur_score']} should be < 100"
-        assert result['is_blurry'] is True
-        assert result['threshold'] == 100.0
+        assert result["blur_score"] < 100, f"Blurry image blur score {result['blur_score']} should be < 100"
+        assert result["is_blurry"] is True
+        assert result["threshold"] == 100.0
 
     def test_blur_detection_returns_correct_structure(self, tmp_path):
         """Test: Blur detection returns correct dictionary structure."""
@@ -446,14 +450,14 @@ class TestBlurDetection:
         result = detect_blur(str(test_path))
 
         # Check all required keys are present
-        assert 'is_blurry' in result
-        assert 'blur_score' in result
-        assert 'threshold' in result
+        assert "is_blurry" in result
+        assert "blur_score" in result
+        assert "threshold" in result
 
         # Check types
-        assert isinstance(result['is_blurry'], bool)
-        assert isinstance(result['blur_score'], (int, float))
-        assert isinstance(result['threshold'], (int, float))
+        assert isinstance(result["is_blurry"], bool)
+        assert isinstance(result["blur_score"], (int, float))
+        assert isinstance(result["threshold"], (int, float))
 
     def test_resolution_check_detects_low_resolution(self, tmp_path):
         """Test: Low-resolution image fails meets_minimum check."""
@@ -464,10 +468,10 @@ class TestBlurDetection:
 
         result = check_resolution(str(small_path), min_width=800, min_height=600)
 
-        assert result['width'] == 640
-        assert result['height'] == 480
-        assert result['meets_minimum'] is False
-        assert result['is_valid'] is False
+        assert result["width"] == 640
+        assert result["height"] == 480
+        assert result["meets_minimum"] is False
+        assert result["is_valid"] is False
 
     def test_resolution_check_accepts_high_resolution(self, tmp_path):
         """Test: High-resolution image passes meets_minimum check."""
@@ -478,10 +482,10 @@ class TestBlurDetection:
 
         result = check_resolution(str(large_path), min_width=800, min_height=600)
 
-        assert result['width'] == 1920
-        assert result['height'] == 1080
-        assert result['meets_minimum'] is True
-        assert result['is_valid'] is True
+        assert result["width"] == 1920
+        assert result["height"] == 1080
+        assert result["meets_minimum"] is True
+        assert result["is_valid"] is True
 
 
 class TestQualityAssessmentFlow:
@@ -507,9 +511,7 @@ class TestQualityAssessmentFlow:
 
     @patch("tasks.assess_image_quality.delay")
     @patch("tasks.extract_text_from_image_azure")
-    def test_quality_assessment_triggered_after_ocr(
-        self, mock_azure_ocr, mock_quality_task, client, app
-    ):
+    def test_quality_assessment_triggered_after_ocr(self, mock_azure_ocr, mock_quality_task, client, app):
         """Test: Quality assessment task is queued after OCR completes."""
         mock_azure_ocr.return_value = {
             "status": "success",
@@ -534,7 +536,8 @@ class TestQualityAssessmentFlow:
 
             submission = Submission(
                 job_id=job.id,
-                filename="test.txt", original_filename="test.txt",
+                filename="test.txt",
+                original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -571,9 +574,7 @@ class TestQualityAssessmentFlow:
                 pass
 
     @patch("tasks.extract_text_from_image_azure")
-    def test_blurry_image_quality_metrics_show_is_blurry_true(
-        self, mock_azure_ocr, client, app
-    ):
+    def test_blurry_image_quality_metrics_show_is_blurry_true(self, mock_azure_ocr, client, app):
         """Test: Upload blurry image → quality metrics show is_blurry=true."""
         mock_azure_ocr.return_value = {
             "status": "success",
@@ -598,7 +599,8 @@ class TestQualityAssessmentFlow:
 
             submission = Submission(
                 job_id=job.id,
-                filename="test.txt", original_filename="test.txt",
+                filename="test.txt",
+                original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -624,13 +626,11 @@ class TestQualityAssessmentFlow:
 
             result = assess_image_quality(image_id)
 
-            assert result['status'] == 'success'
-            assert result['overall_quality'] in ['good', 'poor', 'rejected']
+            assert result["status"] == "success"
+            assert result["overall_quality"] in ["good", "poor", "rejected"]
 
             # Check quality metrics in database
-            quality_metrics = ImageQualityMetrics.query.filter_by(
-                image_submission_id=image_id
-            ).first()
+            quality_metrics = ImageQualityMetrics.query.filter_by(image_submission_id=image_id).first()
 
             assert quality_metrics is not None
             assert quality_metrics.is_blurry is True

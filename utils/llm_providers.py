@@ -25,9 +25,7 @@ try:
 except Exception:
     _redis_available = False
 
-_DEFAULT_PROPRIETARY_CONCURRENCY = int(
-    os.getenv("DEFAULT_PROPRIETARY_CONCURRENCY", "4")
-)
+_DEFAULT_PROPRIETARY_CONCURRENCY = int(os.getenv("DEFAULT_PROPRIETARY_CONCURRENCY", "4"))
 _DEFAULT_LOCAL_CONCURRENCY = int(os.getenv("DEFAULT_LOCAL_CONCURRENCY", "1"))
 _PROPRIETARY_PROVIDERS = {"OpenRouter", "Claude", "Gemini", "OpenAI", "Chutes", "Z.AI", "NanoGPT", "Z.AI Coding Plan"}
 _LOCAL_PROVIDERS = {"LM Studio", "Ollama"}
@@ -181,13 +179,9 @@ class RedisSemaphore:
         while time.time() < deadline:
             try:
                 if self._acquire_script:
-                    res = self._acquire_script(
-                        keys=[self.counter_key], args=[self.limit, self.ttl]
-                    )
+                    res = self._acquire_script(keys=[self.counter_key], args=[self.limit, self.ttl])
                 else:
-                    res = self.client.eval(
-                        self._ACQUIRE_LUA, 1, self.counter_key, self.limit, self.ttl
-                    )
+                    res = self.client.eval(self._ACQUIRE_LUA, 1, self.counter_key, self.limit, self.ttl)
                 if int(res) == 1:
                     return True
             except Exception:
@@ -225,16 +219,12 @@ def provider_semaphore(provider_name):
         if isinstance(sem, RedisSemaphore):
             acquired = sem.acquire(timeout=timeout)
             if not acquired:
-                raise TimeoutError(
-                    f"Timeout acquiring redis semaphore for provider {provider_name}"
-                )
+                raise TimeoutError(f"Timeout acquiring redis semaphore for provider {provider_name}")
             yield
         else:
             acquired = sem.acquire(timeout=timeout)
             if not acquired:
-                raise TimeoutError(
-                    f"Timeout acquiring local semaphore for provider {provider_name}"
-                )
+                raise TimeoutError(f"Timeout acquiring local semaphore for provider {provider_name}")
             yield
     finally:
         if acquired:
@@ -259,9 +249,7 @@ def grade_with_openrouter(
 ):
     """Backward compatibility wrapper for OpenRouter grading."""
     provider = OpenRouterLLMProvider()
-    return provider.grade_document(
-        text, prompt, model, marking_scheme_content, temperature, max_tokens
-    )
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
 
 
 def grade_with_claude(
@@ -274,9 +262,7 @@ def grade_with_claude(
 ):
     """Backward compatibility wrapper for Claude grading."""
     provider = ClaudeLLMProvider()
-    return provider.grade_document(
-        text, prompt, model, marking_scheme_content, temperature, max_tokens
-    )
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
 
 
 def grade_with_lm_studio(
@@ -289,9 +275,7 @@ def grade_with_lm_studio(
 ):
     """Backward compatibility wrapper for LM Studio grading."""
     provider = LMStudioLLMProvider()
-    return provider.grade_document(
-        text, prompt, model, marking_scheme_content, temperature, max_tokens
-    )
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
 
 
 def grade_with_gemini(
@@ -304,9 +288,7 @@ def grade_with_gemini(
 ):
     """Backward compatibility wrapper for Gemini grading."""
     provider = GeminiLLMProvider()
-    return provider.grade_document(
-        text, prompt, model, marking_scheme_content, temperature, max_tokens
-    )
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
 
 
 def grade_with_openai(
@@ -319,9 +301,7 @@ def grade_with_openai(
 ):
     """Backward compatibility wrapper for OpenAI grading."""
     provider = OpenAILLMProvider()
-    return provider.grade_document(
-        text, prompt, model, marking_scheme_content, temperature, max_tokens
-    )
+    return provider.grade_document(text, prompt, model, marking_scheme_content, temperature, max_tokens)
 
 
 class LLMProvider(ABC):
@@ -366,24 +346,22 @@ class OpenRouterLLMProvider(LLMProvider):
                 "Content-Type": "application/json",
             }
 
-            response = requests.get(
-                "https://openrouter.ai/api/v1/models",
-                headers=headers,
-                timeout=30
-            )
+            response = requests.get("https://openrouter.ai/api/v1/models", headers=headers, timeout=30)
 
             if response.status_code == 200:
                 models_data = response.json()
                 models = []
                 for model in models_data.get("data", []):
-                    models.append({
-                        "id": model["id"],
-                        "name": model.get("name", model["id"]),
-                        "description": model.get("description", ""),
-                        "pricing": model.get("pricing", {}),
-                        "context_length": model.get("context_length", 0),
-                        "provider": model.get("provider", "")
-                    })
+                    models.append(
+                        {
+                            "id": model["id"],
+                            "name": model.get("name", model["id"]),
+                            "description": model.get("description", ""),
+                            "pricing": model.get("pricing", {}),
+                            "context_length": model.get("context_length", 0),
+                            "provider": model.get("provider", ""),
+                        }
+                    )
                 return {"success": True, "models": models}
             else:
                 return {"success": False, "error": f"API error: {response.status_code}"}
@@ -406,8 +384,7 @@ class OpenRouterLLMProvider(LLMProvider):
             if not openrouter_key:
                 return {
                     "success": False,
-                    "error": "OpenRouter API authentication failed. "
-                    "Please check your API key configuration.",
+                    "error": "OpenRouter API authentication failed. " "Please check your API key configuration.",
                     "provider": "OpenRouter",
                 }
 
@@ -508,13 +485,15 @@ class ClaudeLLMProvider(LLMProvider):
 
             model_list = []
             for model in models.data:
-                model_list.append({
-                    "id": model.id,
-                    "name": model.display_name or model.id,
-                    "description": "",
-                    "context_length": model.max_tokens,
-                    "provider": "Anthropic"
-                })
+                model_list.append(
+                    {
+                        "id": model.id,
+                        "name": model.display_name or model.id,
+                        "description": "",
+                        "context_length": model.max_tokens,
+                        "provider": "Anthropic",
+                    }
+                )
             return {"success": True, "models": model_list}
 
         except Exception as e:
@@ -606,22 +585,20 @@ class LMStudioLLMProvider(LLMProvider):
         try:
             lm_studio_url = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1")
 
-            response = requests.get(
-                f"{lm_studio_url}/models",
-                headers={"Content-Type": "application/json"},
-                timeout=30
-            )
+            response = requests.get(f"{lm_studio_url}/models", headers={"Content-Type": "application/json"}, timeout=30)
 
             if response.status_code == 200:
                 models_data = response.json()
                 models = []
                 for model in models_data.get("data", []):
-                    models.append({
-                        "id": model["id"],
-                        "name": model.get("name", model["id"]),
-                        "description": model.get("description", ""),
-                        "provider": "LM Studio"
-                    })
+                    models.append(
+                        {
+                            "id": model["id"],
+                            "name": model.get("name", model["id"]),
+                            "description": model.get("description", ""),
+                            "provider": "LM Studio",
+                        }
+                    )
                 return {"success": True, "models": models}
             else:
                 return {"success": False, "error": f"API error: {response.status_code}"}
@@ -721,22 +698,20 @@ class OllamaLLMProvider(LLMProvider):
         try:
             ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
 
-            response = requests.get(
-                f"{ollama_url}/api/tags",
-                headers={"Content-Type": "application/json"},
-                timeout=30
-            )
+            response = requests.get(f"{ollama_url}/api/tags", headers={"Content-Type": "application/json"}, timeout=30)
 
             if response.status_code == 200:
                 models_data = response.json()
                 models = []
                 for model in models_data.get("models", []):
-                    models.append({
-                        "id": model["name"],
-                        "name": model["name"],
-                        "description": f"{model.get('details', {}).get('description', '')} - Size: {model.get('size', 0)}GB",
-                        "provider": "Ollama"
-                    })
+                    models.append(
+                        {
+                            "id": model["name"],
+                            "name": model["name"],
+                            "description": f"{model.get('details', {}).get('description', '')} - Size: {model.get('size', 0)}GB",
+                            "provider": "Ollama",
+                        }
+                    )
                 return {"success": True, "models": models}
             else:
                 return {"success": False, "error": f"API error: {response.status_code}"}
@@ -775,9 +750,7 @@ class OllamaLLMProvider(LLMProvider):
                     "prompt": full_prompt,
                     "stream": False,
                     "temperature": temperature,
-                    "options": {
-                        "num_predict": max_tokens
-                    },  # Ollama uses num_predict for max_tokens
+                    "options": {"num_predict": max_tokens},  # Ollama uses num_predict for max_tokens
                 },
                 headers={"Content-Type": "application/json"},
                 timeout=120,
@@ -815,14 +788,8 @@ class OllamaLLMProvider(LLMProvider):
                     except Exception:
                         grade_text = ""
 
-                prompt_count = (
-                    result.get("prompt_eval_count", 0)
-                    if isinstance(result, dict)
-                    else 0
-                )
-                eval_count = (
-                    result.get("eval_count", 0) if isinstance(result, dict) else 0
-                )
+                prompt_count = result.get("prompt_eval_count", 0) if isinstance(result, dict) else 0
+                eval_count = result.get("eval_count", 0) if isinstance(result, dict) else 0
 
                 return {
                     "success": True,
@@ -889,12 +856,14 @@ class GeminiLLMProvider(LLMProvider):
             models = []
             for model in genai.list_models():
                 if "generateContent" in model.supported_generation_methods:
-                    models.append({
-                        "id": model.name,
-                        "name": model.display_name or model.name,
-                        "description": model.description or "",
-                        "provider": "Google"
-                    })
+                    models.append(
+                        {
+                            "id": model.name,
+                            "name": model.display_name or model.name,
+                            "description": model.description or "",
+                            "provider": "Google",
+                        }
+                    )
             return {"success": True, "models": models}
 
         except Exception as e:
@@ -949,21 +918,11 @@ class GeminiLLMProvider(LLMProvider):
                 "model": model,
                 "provider": "Gemini",
                 "usage": {
-                    "prompt_tokens": (
-                        response.usage_metadata.prompt_token_count
-                        if response.usage_metadata
-                        else None
-                    ),
+                    "prompt_tokens": (response.usage_metadata.prompt_token_count if response.usage_metadata else None),
                     "completion_tokens": (
-                        response.usage_metadata.candidates_token_count
-                        if response.usage_metadata
-                        else None
+                        response.usage_metadata.candidates_token_count if response.usage_metadata else None
                     ),
-                    "total_tokens": (
-                        response.usage_metadata.total_token_count
-                        if response.usage_metadata
-                        else None
-                    ),
+                    "total_tokens": (response.usage_metadata.total_token_count if response.usage_metadata else None),
                 },
             }
         except Exception as e:
@@ -978,11 +937,7 @@ class GeminiLLMProvider(LLMProvider):
                     "error": "Gemini API authentication failed. Please check your API key.",
                     "provider": "Gemini",
                 }
-            elif (
-                "quota" in error_msg.lower()
-                or "rate" in error_msg.lower()
-                or "limit" in error_msg.lower()
-            ):
+            elif "quota" in error_msg.lower() or "rate" in error_msg.lower() or "limit" in error_msg.lower():
                 return {
                     "success": False,
                     "error": "Gemini API rate limit exceeded. Please try again later.",
@@ -1017,12 +972,7 @@ class OpenAILLMProvider(LLMProvider):
 
             model_list = []
             for model in models.data:
-                model_list.append({
-                    "id": model.id,
-                    "name": model.id,
-                    "description": "",
-                    "provider": "OpenAI"
-                })
+                model_list.append({"id": model.id, "name": model.id, "description": "", "provider": "OpenAI"})
             return {"success": True, "models": model_list}
 
         except Exception as e:
@@ -1121,9 +1071,24 @@ class ZAICodingPlanLLMProvider(LLMProvider):
         """Return available models for Z.AI Coding Plan."""
         # Z.AI Coding Plan models (limited selection for coding tools)
         models = [
-            {"id": "glm-4.6", "name": "GLM-4.6", "description": "Latest flagship model for coding (Coding Plan)", "provider": "Z.AI Coding Plan"},
-            {"id": "glm-4.5", "name": "GLM-4.5", "description": "Foundation model for coding (Coding Plan)", "provider": "Z.AI Coding Plan"},
-            {"id": "glm-4.5-air", "name": "GLM-4.5 Air", "description": "Lightweight model for auxiliary tasks (Coding Plan)", "provider": "Z.AI Coding Plan"},
+            {
+                "id": "glm-4.6",
+                "name": "GLM-4.6",
+                "description": "Latest flagship model for coding (Coding Plan)",
+                "provider": "Z.AI Coding Plan",
+            },
+            {
+                "id": "glm-4.5",
+                "name": "GLM-4.5",
+                "description": "Foundation model for coding (Coding Plan)",
+                "provider": "Z.AI Coding Plan",
+            },
+            {
+                "id": "glm-4.5-air",
+                "name": "GLM-4.5 Air",
+                "description": "Lightweight model for auxiliary tasks (Coding Plan)",
+                "provider": "Z.AI Coding Plan",
+            },
         ]
         return {"success": True, "models": models}
 
@@ -1171,16 +1136,13 @@ class ZAICodingPlanLLMProvider(LLMProvider):
                 "messages": [
                     {
                         "role": "user",
-                        "content": f"You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.\n\n{enhanced_prompt}"
+                        "content": f"You are a professional document grader. Provide detailed, constructive feedback based on the provided marking scheme and criteria.\n\n{enhanced_prompt}",
                     }
-                ]
+                ],
             }
 
             response = requests.post(
-                "https://api.z.ai/api/anthropic/v1/messages",
-                headers=headers,
-                json=payload,
-                timeout=60
+                "https://api.z.ai/api/anthropic/v1/messages", headers=headers, json=payload, timeout=60
             )
 
             if response.status_code == 200:
@@ -1195,7 +1157,8 @@ class ZAICodingPlanLLMProvider(LLMProvider):
                     "usage": {
                         "prompt_tokens": data.get("usage", {}).get("input_tokens", 0),
                         "completion_tokens": data.get("usage", {}).get("output_tokens", 0),
-                        "total_tokens": data.get("usage", {}).get("input_tokens", 0) + data.get("usage", {}).get("output_tokens", 0),
+                        "total_tokens": data.get("usage", {}).get("input_tokens", 0)
+                        + data.get("usage", {}).get("output_tokens", 0),
                     },
                 }
             else:
@@ -1242,23 +1205,21 @@ class ChutesLLMProvider(LLMProvider):
                 "Content-Type": "application/json",
             }
 
-            response = requests.get(
-                "https://api.chutes.ai/v1/models",
-                headers=headers,
-                timeout=30
-            )
+            response = requests.get("https://api.chutes.ai/v1/models", headers=headers, timeout=30)
 
             if response.status_code == 200:
                 models_data = response.json()
                 models = []
                 for model in models_data.get("data", []):
-                    models.append({
-                        "id": model["id"],
-                        "name": model.get("name", model["id"]),
-                        "description": model.get("description", ""),
-                        "context_length": model.get("context_length", 0),
-                        "provider": "Chutes"
-                    })
+                    models.append(
+                        {
+                            "id": model["id"],
+                            "name": model.get("name", model["id"]),
+                            "description": model.get("description", ""),
+                            "context_length": model.get("context_length", 0),
+                            "provider": "Chutes",
+                        }
+                    )
                 return {"success": True, "models": models}
             else:
                 return {"success": False, "error": f"API error: {response.status_code}"}
@@ -1309,10 +1270,7 @@ class ChutesLLMProvider(LLMProvider):
             }
 
             response = requests.post(
-                "https://api.chutes.ai/v1/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=60
+                "https://api.chutes.ai/v1/chat/completions", headers=headers, json=payload, timeout=60
             )
 
             if response.status_code == 200:
@@ -1366,13 +1324,48 @@ class ZAILLMProvider(LLMProvider):
         # Note: Z.AI Coding Plan is separate and only works within coding tools like Claude Code
         # This implementation uses the normal Z.AI API which is billed separately
         models = [
-            {"id": "glm-4.6", "name": "GLM-4.6", "description": "Latest flagship model series for agent applications (API)", "provider": "Z.AI"},
-            {"id": "glm-4.5", "name": "GLM-4.5", "description": "Foundation model for intelligent agents (API)", "provider": "Z.AI"},
-            {"id": "glm-4.5-air", "name": "GLM-4.5 Air", "description": "Lightweight version of GLM-4.5 (API)", "provider": "Z.AI"},
-            {"id": "glm-4.5-x", "name": "GLM-4.5 X", "description": "Enhanced version of GLM-4.5 (API)", "provider": "Z.AI"},
-            {"id": "glm-4.5-airx", "name": "GLM-4.5 Air X", "description": "Enhanced lightweight version (API)", "provider": "Z.AI"},
-            {"id": "glm-4.5-flash", "name": "GLM-4.5 Flash", "description": "Fast response model (API)", "provider": "Z.AI"},
-            {"id": "glm-4-32b-0414-128k", "name": "GLM-4-32B-128K", "description": "Highly cost-effective foundation model with 128K context (API)", "provider": "Z.AI"},
+            {
+                "id": "glm-4.6",
+                "name": "GLM-4.6",
+                "description": "Latest flagship model series for agent applications (API)",
+                "provider": "Z.AI",
+            },
+            {
+                "id": "glm-4.5",
+                "name": "GLM-4.5",
+                "description": "Foundation model for intelligent agents (API)",
+                "provider": "Z.AI",
+            },
+            {
+                "id": "glm-4.5-air",
+                "name": "GLM-4.5 Air",
+                "description": "Lightweight version of GLM-4.5 (API)",
+                "provider": "Z.AI",
+            },
+            {
+                "id": "glm-4.5-x",
+                "name": "GLM-4.5 X",
+                "description": "Enhanced version of GLM-4.5 (API)",
+                "provider": "Z.AI",
+            },
+            {
+                "id": "glm-4.5-airx",
+                "name": "GLM-4.5 Air X",
+                "description": "Enhanced lightweight version (API)",
+                "provider": "Z.AI",
+            },
+            {
+                "id": "glm-4.5-flash",
+                "name": "GLM-4.5 Flash",
+                "description": "Fast response model (API)",
+                "provider": "Z.AI",
+            },
+            {
+                "id": "glm-4-32b-0414-128k",
+                "name": "GLM-4-32B-128K",
+                "description": "Highly cost-effective foundation model with 128K context (API)",
+                "provider": "Z.AI",
+            },
         ]
         return {"success": True, "models": models}
 
@@ -1428,10 +1421,7 @@ class ZAILLMProvider(LLMProvider):
             }
 
             response = requests.post(
-                "https://api.z.ai/api/paas/v4/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=60
+                "https://api.z.ai/api/paas/v4/chat/completions", headers=headers, json=payload, timeout=60
             )
 
             if response.status_code == 200:
@@ -1491,23 +1481,21 @@ class NanoGPTLLMProvider(LLMProvider):
                 "Content-Type": "application/json",
             }
 
-            response = requests.get(
-                "https://nano-gpt.com/api/v1/models",
-                headers=headers,
-                timeout=30
-            )
+            response = requests.get("https://nano-gpt.com/api/v1/models", headers=headers, timeout=30)
 
             if response.status_code == 200:
                 models_data = response.json()
                 models = []
                 for model in models_data.get("data", []):
-                    models.append({
-                        "id": model["id"],
-                        "name": model.get("name", model["id"]),
-                        "description": model.get("description", ""),
-                        "context_length": model.get("max_tokens", 0),
-                        "provider": "NanoGPT"
-                    })
+                    models.append(
+                        {
+                            "id": model["id"],
+                            "name": model.get("name", model["id"]),
+                            "description": model.get("description", ""),
+                            "context_length": model.get("max_tokens", 0),
+                            "provider": "NanoGPT",
+                        }
+                    )
                 return {"success": True, "models": models}
             else:
                 return {"success": False, "error": f"API error: {response.status_code}"}
@@ -1558,10 +1546,7 @@ class NanoGPTLLMProvider(LLMProvider):
             }
 
             response = requests.post(
-                "https://nano-gpt.com/api/v1/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=60
+                "https://nano-gpt.com/api/v1/chat/completions", headers=headers, json=payload, timeout=60
             )
 
             if response.status_code == 200:
@@ -1634,6 +1619,7 @@ def get_llm_provider(provider_name):
 
 # OCR Provider Functions
 
+
 def extract_text_from_image_azure(image_path):
     """
     Extract text from image using Azure Computer Vision OCR.
@@ -1652,21 +1638,26 @@ def extract_text_from_image_azure(image_path):
         }
     """
     import time
-    from azure.cognitiveservices.vision.computervision import ComputerVisionClient
-    from azure.cognitiveservices.vision.computervision.models import OperationStatusCodes
+
+    from azure.cognitiveservices.vision.computervision import (
+        ComputerVisionClient,
+    )
+    from azure.cognitiveservices.vision.computervision.models import (
+        OperationStatusCodes,
+    )
     from msrest.authentication import CognitiveServicesCredentials
 
     start_time = time.time()
 
     try:
         # Get Azure credentials from environment
-        endpoint = os.getenv('AZURE_VISION_ENDPOINT')
-        key = os.getenv('AZURE_VISION_KEY')
+        endpoint = os.getenv("AZURE_VISION_ENDPOINT")
+        key = os.getenv("AZURE_VISION_KEY")
 
         if not endpoint or not key:
             return {
-                'status': 'error',
-                'error': 'Azure Vision credentials not configured. Set AZURE_VISION_ENDPOINT and AZURE_VISION_KEY'
+                "status": "error",
+                "error": "Azure Vision credentials not configured. Set AZURE_VISION_ENDPOINT and AZURE_VISION_KEY",
             }
 
         # Create client
@@ -1674,7 +1665,7 @@ def extract_text_from_image_azure(image_path):
         client = ComputerVisionClient(endpoint, credentials)
 
         # Read image file
-        with open(image_path, 'rb') as image_stream:
+        with open(image_path, "rb") as image_stream:
             # Call Read API
             read_operation = client.read_in_stream(image_stream, raw=True)
 
@@ -1703,7 +1694,7 @@ def extract_text_from_image_azure(image_path):
                         # Calculate line confidence (average of word confidences)
                         if line.words:
                             line_confidence = sum(
-                                word.confidence for word in line.words if hasattr(word, 'confidence')
+                                word.confidence for word in line.words if hasattr(word, "confidence")
                             ) / len(line.words)
                         else:
                             line_confidence = 1.0
@@ -1721,11 +1712,13 @@ def extract_text_from_image_azure(image_path):
                         else:
                             x = y = w = h = 0
 
-                        text_regions.append({
-                            'text': line.text,
-                            'confidence': line_confidence,
-                            'bounding_box': [int(x), int(y), int(w), int(h)]
-                        })
+                        text_regions.append(
+                            {
+                                "text": line.text,
+                                "confidence": line_confidence,
+                                "bounding_box": [int(x), int(y), int(w), int(h)],
+                            }
+                        )
 
                 # Calculate overall confidence
                 overall_confidence = total_confidence / confidence_count if confidence_count > 0 else 0.0
@@ -1733,37 +1726,25 @@ def extract_text_from_image_azure(image_path):
                 processing_time_ms = int((time.time() - start_time) * 1000)
 
                 return {
-                    'status': 'success',
-                    'text': '\n'.join(full_text_lines),
-                    'confidence': round(overall_confidence, 4),
-                    'text_regions': text_regions,
-                    'processing_time_ms': processing_time_ms,
-                    'line_count': len(full_text_lines),
-                    'text_length': len('\n'.join(full_text_lines))
+                    "status": "success",
+                    "text": "\n".join(full_text_lines),
+                    "confidence": round(overall_confidence, 4),
+                    "text_regions": text_regions,
+                    "processing_time_ms": processing_time_ms,
+                    "line_count": len(full_text_lines),
+                    "text_length": len("\n".join(full_text_lines)),
                 }
 
             elif result.status == OperationStatusCodes.failed:
-                return {
-                    'status': 'error',
-                    'error': 'Azure Read API operation failed'
-                }
+                return {"status": "error", "error": "Azure Read API operation failed"}
 
             # Wait before next poll
             time.sleep(wait_seconds)
 
         # Timeout
-        return {
-            'status': 'error',
-            'error': f'Azure Read API timeout after {max_attempts * wait_seconds}s'
-        }
+        return {"status": "error", "error": f"Azure Read API timeout after {max_attempts * wait_seconds}s"}
 
     except FileNotFoundError:
-        return {
-            'status': 'error',
-            'error': f'Image file not found: {image_path}'
-        }
+        return {"status": "error", "error": f"Image file not found: {image_path}"}
     except Exception as e:
-        return {
-            'status': 'error',
-            'error': f'Azure Vision OCR error: {str(e)}'
-        }
+        return {"status": "error", "error": f"Azure Vision OCR error: {str(e)}"}

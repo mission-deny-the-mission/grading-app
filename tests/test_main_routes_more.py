@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 class TestConfigEndpoints:
     """Test configuration endpoints."""
+
     def test_load_config_endpoint(self, client):
         """Test loading configuration endpoint."""
         resp = client.get("/load_config")
@@ -28,9 +29,8 @@ class TestConfigEndpoints:
             "default_prompt": "New default prompt",
         }
         # Avoid actually touching user .env
-        with patch(
-            "routes.main.os.path.exists", return_value=False
-        ), patch("routes.main.open", create=True
+        with patch("routes.main.os.path.exists", return_value=False), patch(
+            "routes.main.open", create=True
         ) as mock_open:
             mock_open.return_value.__enter__.return_value = MagicMock()
             resp = client.post("/save_config", data=payload)
@@ -41,6 +41,7 @@ class TestConfigEndpoints:
 
 class TestAPIKeyTests:
     """Test API key validation endpoints."""
+
     def test_test_api_key_missing_key(self, client):
         """Test API key validation with missing key."""
         resp = client.post("/test_api_key", json={"type": "openrouter"})
@@ -50,9 +51,7 @@ class TestAPIKeyTests:
 
     def test_test_api_key_invalid_type(self, client):
         """Test API key validation with invalid type."""
-        resp = client.post(
-            "/test_api_key", json={"type": "invalid", "key": "x"}
-        )
+        resp = client.post("/test_api_key", json={"type": "invalid", "key": "x"})
         assert resp.status_code == 200
         data = json.loads(resp.data)
         assert data["success"] is False
@@ -60,12 +59,11 @@ class TestAPIKeyTests:
 
 class TestExternalServiceTests:
     """Test external service connection endpoints."""
+
     def test_test_lm_studio_connection_error(self, client):
         """Test LM Studio connection error handling."""
         with patch("requests.post", side_effect=Exception("boom")):
-            resp = client.post(
-                "/test_lm_studio", json={"url": "http://localhost:9"}
-            )
+            resp = client.post("/test_lm_studio", json={"url": "http://localhost:9"})
         assert resp.status_code == 200
         data = json.loads(resp.data)
         assert data["success"] is False
@@ -73,9 +71,7 @@ class TestExternalServiceTests:
     def test_test_ollama_connection_error(self, client):
         """Test Ollama connection error handling."""
         with patch("requests.post", side_effect=Exception("boom")):
-            resp = client.post(
-                "/test_ollama", json={"url": "http://localhost:9"}
-            )
+            resp = client.post("/test_ollama", json={"url": "http://localhost:9"})
         assert resp.status_code == 200
         data = json.loads(resp.data)
         assert data["success"] is False

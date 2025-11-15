@@ -2,11 +2,17 @@
 Unit tests for database models.
 """
 
-
 import pytest
 
-from models import (GradingJob, JobBatch, MarkingScheme, SavedMarkingScheme,
-                    SavedPrompt, Submission, db)
+from models import (
+    GradingJob,
+    JobBatch,
+    MarkingScheme,
+    SavedMarkingScheme,
+    SavedPrompt,
+    Submission,
+    db,
+)
 
 
 class TestGradingJob:
@@ -173,9 +179,7 @@ class TestGradingJob:
             assert sample_job.can_retry_failed_submissions() is True
 
             retried_count = sample_job.retry_failed_submissions()
-            assert (
-                retried_count == 2
-            )  # Both submissions can be retried (retry_count < 3)
+            assert retried_count == 2  # Both submissions can be retried (retry_count < 3)
 
             # Check that submission1 was reset
             db.session.refresh(submission1)
@@ -351,9 +355,7 @@ class TestJobBatch:
             assert sample_batch.total_jobs == 3
             assert sample_batch.completed_jobs == 1
             assert sample_batch.failed_jobs == 1
-            assert (
-                sample_batch.get_progress() == 66.67
-            )  # 2/3 * 100 (completed + failed)
+            assert sample_batch.get_progress() == 66.67  # 2/3 * 100 (completed + failed)
 
     def test_add_job_to_batch(self, app, sample_batch):
         """Test adding a job to a batch."""
@@ -458,9 +460,7 @@ class TestJobBatch:
             db.session.commit()
 
             # Create job using batch method
-            job = batch.create_job_with_batch_settings(
-                job_name="New Job", description="Job created in batch"
-            )
+            job = batch.create_job_with_batch_settings(job_name="New Job", description="Job created in batch")
 
             # Check that job was created with batch settings
             assert job.job_name == "New Job"
@@ -509,42 +509,30 @@ class TestJobBatch:
         """Test that jobs cannot be added to a processing batch."""
         with app.app_context():
             # Create batch with processing status
-            batch = JobBatch(
-                batch_name="Processing Batch", status="processing"
-            )
+            batch = JobBatch(batch_name="Processing Batch", status="processing")
             db.session.add(batch)
             db.session.commit()
 
             # Create a job
-            job = GradingJob(
-                job_name="Test Job", provider="openrouter", prompt="Test prompt"
-            )
+            job = GradingJob(job_name="Test Job", provider="openrouter", prompt="Test prompt")
             db.session.add(job)
             db.session.commit()
 
             # Try to add job to processing batch
-            with pytest.raises(
-                ValueError, match="Cannot add jobs to batch with status 'processing'"
-            ):
+            with pytest.raises(ValueError, match="Cannot add jobs to batch with status 'processing'"):
                 batch.add_job(job)
 
     def test_cannot_create_job_in_processing_batch(self, app):
         """Test that jobs cannot be created in a processing batch."""
         with app.app_context():
             # Create batch with processing status
-            batch = JobBatch(
-                batch_name="Processing Batch", status="processing"
-            )
+            batch = JobBatch(batch_name="Processing Batch", status="processing")
             db.session.add(batch)
             db.session.commit()
 
             # Try to create job in processing batch
-            with pytest.raises(
-                ValueError, match="Cannot create jobs in batch with status 'processing'"
-            ):
-                batch.create_job_with_batch_settings(
-                    job_name="Test Job", description="This should fail"
-                )
+            with pytest.raises(ValueError, match="Cannot create jobs in batch with status 'processing'"):
+                batch.create_job_with_batch_settings(job_name="Test Job", description="This should fail")
 
     def test_batch_settings_summary(self, app):
         """Test getting batch settings summary."""

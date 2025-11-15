@@ -1,4 +1,5 @@
 """Utilities for calculating grading scheme totals and percentages."""
+
 from decimal import Decimal
 
 
@@ -16,8 +17,7 @@ def calculate_scheme_total(scheme):
         return Decimal("0.00")
 
     total = sum(
-        Decimal(str(q.total_possible_points)) if q.total_possible_points else Decimal("0.00")
-        for q in scheme.questions
+        Decimal(str(q.total_possible_points)) if q.total_possible_points else Decimal("0.00") for q in scheme.questions
     )
     return total.quantize(Decimal("0.01"))
 
@@ -35,10 +35,7 @@ def calculate_question_total(question):
     if not question.criteria:
         return Decimal("0.00")
 
-    total = sum(
-        Decimal(str(c.max_points)) if c.max_points else Decimal("0.00")
-        for c in question.criteria
-    )
+    total = sum(Decimal(str(c.max_points)) if c.max_points else Decimal("0.00") for c in question.criteria)
     return total.quantize(Decimal("0.01"))
 
 
@@ -55,10 +52,7 @@ def calculate_submission_total(submission):
     if not submission.evaluations:
         return Decimal("0.00")
 
-    total = sum(
-        Decimal(str(e.points_awarded)) if e.points_awarded else Decimal("0.00")
-        for e in submission.evaluations
-    )
+    total = sum(Decimal(str(e.points_awarded)) if e.points_awarded else Decimal("0.00") for e in submission.evaluations)
     return total.quantize(Decimal("0.01"))
 
 
@@ -116,26 +110,13 @@ def calculate_aggregate_stats(submissions):
         }
 
     # Calculate submission-level averages
-    percentages = [
-        Decimal(str(s.percentage_score))
-        for s in complete
-        if s.percentage_score
-    ]
-    avg_percentage = (
-        sum(percentages) / len(percentages) if percentages
-        else None
-    )
+    percentages = [Decimal(str(s.percentage_score)) for s in complete if s.percentage_score]
+    avg_percentage = sum(percentages) / len(percentages) if percentages else None
     if avg_percentage:
         avg_percentage = avg_percentage.quantize(Decimal("0.01"))
 
-    points = [
-        Decimal(str(s.total_points_earned))
-        for s in complete
-    ]
-    avg_points = (
-        sum(points) / len(points) if points
-        else None
-    )
+    points = [Decimal(str(s.total_points_earned)) for s in complete]
+    avg_points = sum(points) / len(points) if points else None
     if avg_points:
         avg_points = avg_points.quantize(Decimal("0.01"))
 
@@ -158,13 +139,11 @@ def calculate_aggregate_stats(submissions):
                 question_data[question_id].append(Decimal(str(eval.points_awarded)))
 
     criteria_averages = {
-        cid: float((sum(pts) / len(pts)).quantize(Decimal("0.01")))
-        for cid, pts in criteria_data.items()
+        cid: float((sum(pts) / len(pts)).quantize(Decimal("0.01"))) for cid, pts in criteria_data.items()
     }
 
     question_averages = {
-        qid: float((sum(pts) / len(pts)).quantize(Decimal("0.01")))
-        for qid, pts in question_data.items()
+        qid: float((sum(pts) / len(pts)).quantize(Decimal("0.01"))) for qid, pts in question_data.items()
     }
 
     return {

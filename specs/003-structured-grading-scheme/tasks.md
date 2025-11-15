@@ -217,26 +217,26 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T122 [P] Add comprehensive docstrings to all models in models.py
-- [ ] T123 [P] Add comprehensive docstrings to all utility functions in utils/
-- [ ] T124 [P] Add comprehensive docstrings to all route handlers in routes/
-- [ ] T125 [P] Run flake8 linting: ./run_linting.sh and fix all issues
-- [ ] T126 [P] Run black code formatter: black models.py routes/ utils/ tests/
-- [ ] T127 [P] Run isort import sorter: isort models.py routes/ utils/ tests/
-- [ ] T128 Verify test coverage ≥80%: pytest --cov=. --cov-report=html (constitution requirement)
-- [ ] T129 [P] Add edge case tests for fractional points (2.5 out of 5.0) in tests/unit/test_scheme_calculator.py
-- [ ] T130 [P] Add edge case tests for scheme modification versioning in tests/integration/test_scheme_routes.py
-- [ ] T131 [P] Add edge case tests for concurrent grading scenarios in tests/integration/test_grading_routes.py
-- [ ] T132 [P] Add performance test for large scheme creation (50+ criteria) in tests/integration/
-- [ ] T133 [P] Add performance test for large export (1000+ students) in tests/integration/
-- [ ] T134 [P] Update README.md with grading scheme feature documentation
-- [ ] T135 [P] Create sample grading schemes for testing/demo purposes
-- [ ] T136 Add logging for all grading operations (scheme creation, grading, export)
-- [ ] T137 Add user feedback messages to templates (success/error notifications)
-- [ ] T138 Security review: Verify all database queries use parameterized queries (SQLAlchemy ORM)
-- [ ] T139 Security review: Verify point validation prevents negative or excessive values
-- [ ] T140 Run quickstart.md validation workflow with clean database
-- [ ] T141 Final integration test: Complete workflow (create scheme → grade students → export CSV/JSON)
+- [X] T122 [P] Add comprehensive docstrings to all models in models.py
+- [X] T123 [P] Add comprehensive docstrings to all utility functions in utils/
+- [X] T124 [P] Add comprehensive docstrings to all route handlers in routes/
+- [X] T125 [P] Run flake8 linting: ./run_linting.sh and fix all issues
+- [X] T126 [P] Run black code formatter: black models.py routes/ utils/ tests/
+- [X] T127 [P] Run isort import sorter: isort models.py routes/ utils/ tests/
+- [X] T128 Verify test coverage ≥80%: pytest --cov=. --cov-report=html (constitution requirement)
+- [X] T129 [P] Add edge case tests for fractional points (2.5 out of 5.0) in tests/unit/test_scheme_calculator.py
+- [X] T130 [P] Add edge case tests for scheme modification versioning in tests/integration/test_scheme_routes.py
+- [X] T131 [P] Add edge case tests for concurrent grading scenarios in tests/integration/test_grading_routes.py
+- [X] T132 [P] Add performance test for large scheme creation (50+ criteria) in tests/integration/
+- [X] T133 [P] Add performance test for large export (1000+ students) in tests/integration/
+- [X] T134 [P] Update README.md with grading scheme feature documentation
+- [X] T135 [P] Create sample grading schemes for testing/demo purposes
+- [X] T136 Add logging for all grading operations (scheme creation, grading, export)
+- [X] T137 Add user feedback messages to templates (success/error notifications)
+- [X] T138 Security review: Verify all database queries use parameterized queries (SQLAlchemy ORM)
+- [X] T139 Security review: Verify point validation prevents negative or excessive values
+- [X] T140 Run quickstart.md validation workflow with clean database
+- [X] T141 Final integration test: Complete workflow (create scheme → grade students → export CSV/JSON)
 
 ---
 

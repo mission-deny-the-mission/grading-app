@@ -60,9 +60,7 @@ class TestDispatchers:
 
     def test_extract_marking_scheme_content_dispatch(self, sample_text_file):
         """Test marking scheme content extraction dispatch."""
-        assert isinstance(
-            te.extract_marking_scheme_content(sample_text_file, "txt"), str
-        )
+        assert isinstance(te.extract_marking_scheme_content(sample_text_file, "txt"), str)
 
     def test_extract_marking_scheme_content_unsupported(self):
         """Test marking scheme content extraction for unsupported file type."""

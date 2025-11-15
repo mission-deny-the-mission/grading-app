@@ -72,9 +72,7 @@ class TestNewProviders:
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
                 provider = get_llm_provider("Z.AI Coding Plan")
-                result = provider.grade_document(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = provider.grade_document("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -92,7 +90,7 @@ class TestNewProviders:
                     "id": "microsoft/DialoGPT-medium",
                     "name": "DialoGPT Medium",
                     "description": "A conversational AI model",
-                    "context_length": 2048
+                    "context_length": 2048,
                 }
             ]
         }
@@ -139,9 +137,7 @@ class TestNewProviders:
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
                 provider = get_llm_provider("Chutes")
-                result = provider.grade_document(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = provider.grade_document("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -194,9 +190,7 @@ class TestNewProviders:
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
                 provider = get_llm_provider("Z.AI")
-                result = provider.grade_document(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = provider.grade_document("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -213,9 +207,7 @@ class TestNewProviders:
         with patch.dict(os.environ, {"Z_AI_CODING_PLAN_API_KEY": "invalid-key"}, clear=True):
             with app.app_context():
                 provider = get_llm_provider("Z.AI Coding Plan")
-                result = provider.grade_document(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = provider.grade_document("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -233,7 +225,7 @@ class TestNewProviders:
                     "id": "chatgpt-4o-latest",
                     "name": "GPT-4O Latest",
                     "description": "Latest GPT-4O model",
-                    "max_tokens": 128000
+                    "max_tokens": 128000,
                 }
             ]
         }
@@ -282,9 +274,7 @@ class TestNewProviders:
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
                 provider = get_llm_provider("NanoGPT")
-                result = provider.grade_document(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = provider.grade_document("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result

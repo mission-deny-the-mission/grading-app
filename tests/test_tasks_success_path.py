@@ -14,9 +14,7 @@ def test_process_submission_sync_success(app, tmp_path):
     """Test successful submission processing with LM Studio provider."""
     # Create a job and a submission
     with app.app_context():
-        job = GradingJob(
-            job_name="Job Success", provider="LM Studio", prompt="Please grade."
-        )
+        job = GradingJob(job_name="Job Success", provider="LM Studio", prompt="Please grade.")
         db.session.add(job)
         db.session.commit()
 

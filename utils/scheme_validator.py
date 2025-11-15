@@ -1,4 +1,5 @@
 """Validation utilities for grading schemes and criteria."""
+
 from decimal import Decimal, InvalidOperation
 
 
@@ -26,9 +27,7 @@ def validate_point_range(points, max_points):
         raise ValueError(f"Points ({pts}) cannot be negative")
 
     if pts > max_pts:
-        raise ValueError(
-            f"Points ({pts}) cannot exceed maximum ({max_pts})"
-        )
+        raise ValueError(f"Points ({pts}) cannot exceed maximum ({max_pts})")
 
     return (True, None)
 
@@ -56,16 +55,12 @@ def validate_hierarchy(scheme):
         raise ValueError("Scheme cannot be None")
 
     if not scheme.questions:
-        raise ValueError(
-            "Scheme must have at least one question"
-        )
+        raise ValueError("Scheme must have at least one question")
 
     # Check questions
     for i, question in enumerate(scheme.questions):
         if not question.criteria:
-            raise ValueError(
-                f"Question '{question.title}' must have at least one criterion"
-            )
+            raise ValueError(f"Question '{question.title}' must have at least one criterion")
 
         # Check display order is 1-based and unique
         if question.display_order != i + 1:
@@ -74,11 +69,10 @@ def validate_hierarchy(scheme):
             )
 
         # Check criterion totals match question total
-        criterion_sum = sum(
-            Decimal(str(c.max_points)) if c.max_points else Decimal("0")
-            for c in question.criteria
+        criterion_sum = sum(Decimal(str(c.max_points)) if c.max_points else Decimal("0") for c in question.criteria)
+        question_total = (
+            Decimal(str(question.total_possible_points)) if question.total_possible_points else Decimal("0")
         )
-        question_total = Decimal(str(question.total_possible_points)) if question.total_possible_points else Decimal("0")
 
         if criterion_sum != question_total:
             raise ValueError(
@@ -88,19 +82,13 @@ def validate_hierarchy(scheme):
         # Check criteria
         for j, criterion in enumerate(question.criteria):
             if not criterion.name or not criterion.name.strip():
-                raise ValueError(
-                    f"Criterion {j + 1} in question '{question.title}' must have a name"
-                )
+                raise ValueError(f"Criterion {j + 1} in question '{question.title}' must have a name")
 
             if criterion.max_points <= 0:
-                raise ValueError(
-                    f"Criterion '{criterion.name}' must have max_points > 0"
-                )
+                raise ValueError(f"Criterion '{criterion.name}' must have max_points > 0")
 
             if criterion.max_points > 1000:
-                raise ValueError(
-                    f"Criterion '{criterion.name}' exceeds maximum points (1000)"
-                )
+                raise ValueError(f"Criterion '{criterion.name}' exceeds maximum points (1000)")
 
             # Check display order
             if criterion.display_order != j + 1:
@@ -110,15 +98,12 @@ def validate_hierarchy(scheme):
 
     # Check scheme total matches question sums
     question_sum = sum(
-        Decimal(str(q.total_possible_points)) if q.total_possible_points else Decimal("0")
-        for q in scheme.questions
+        Decimal(str(q.total_possible_points)) if q.total_possible_points else Decimal("0") for q in scheme.questions
     )
     scheme_total = Decimal(str(scheme.total_possible_points)) if scheme.total_possible_points else Decimal("0")
 
     if question_sum != scheme_total:
-        raise ValueError(
-            f"Scheme question sum ({question_sum}) does not match total ({scheme_total})"
-        )
+        raise ValueError(f"Scheme question sum ({question_sum}) does not match total ({scheme_total})")
 
     return (True, None)
 
@@ -168,21 +153,15 @@ def validate_submission_points(submission):
         raise ValueError("Total points earned cannot be negative")
 
     if earned > possible:
-        raise ValueError(
-            f"Points earned ({earned}) cannot exceed possible ({possible})"
-        )
+        raise ValueError(f"Points earned ({earned}) cannot exceed possible ({possible})")
 
     # If complete, percentage must be calculated
     if submission.is_complete and possible > 0:
         if submission.percentage_score is None:
-            raise ValueError(
-                "Complete submission must have percentage_score calculated"
-            )
+            raise ValueError("Complete submission must have percentage_score calculated")
 
         percentage = Decimal(str(submission.percentage_score))
         if percentage < 0 or percentage > 100:
-            raise ValueError(
-                f"Percentage score must be between 0 and 100 (got {percentage})"
-            )
+            raise ValueError(f"Percentage score must be between 0 and 100 (got {percentage})")
 
     return (True, None)

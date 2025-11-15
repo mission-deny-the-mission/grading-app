@@ -3,6 +3,7 @@
 Provides CSV and JSON formatting for grading results with support for
 hierarchical structure preservation and metadata inclusion.
 """
+
 import csv
 import json
 from datetime import datetime, timezone
@@ -118,15 +119,9 @@ def format_json(submissions):
             "student_name": submission.get("student_name", ""),
             "scheme_id": submission.get("scheme_id", ""),
             "scheme_version": submission.get("scheme_version", ""),
-            "total_points_earned": _decimal_to_float(
-                submission.get("total_points_earned", 0)
-            ),
-            "total_points_possible": _decimal_to_float(
-                submission.get("total_points_possible", 0)
-            ),
-            "percentage_score": _decimal_to_float(
-                submission.get("percentage_score")
-            ),
+            "total_points_earned": _decimal_to_float(submission.get("total_points_earned", 0)),
+            "total_points_possible": _decimal_to_float(submission.get("total_points_possible", 0)),
+            "percentage_score": _decimal_to_float(submission.get("percentage_score")),
             "is_complete": submission.get("is_complete", False),
             "graded_by": submission.get("graded_by", ""),
             "graded_at": _format_datetime(submission.get("graded_at", "")),
@@ -140,9 +135,7 @@ def format_json(submissions):
             eval_data = {
                 "criterion_name": evaluation.get("criterion_name", ""),
                 "question_title": evaluation.get("question_title", ""),
-                "points_awarded": _decimal_to_float(
-                    evaluation.get("points_awarded", 0)
-                ),
+                "points_awarded": _decimal_to_float(evaluation.get("points_awarded", 0)),
                 "max_points": _decimal_to_float(evaluation.get("max_points", 0)),
                 "feedback": evaluation.get("feedback"),
             }
@@ -155,11 +148,7 @@ def format_json(submissions):
         "metadata": {
             "export_date": datetime.now(timezone.utc).isoformat(),
             "total_submissions": len(submissions_data),
-            "scheme_name": (
-                submissions[0].get("scheme_name", "")
-                if submissions
-                else ""
-            ),
+            "scheme_name": (submissions[0].get("scheme_name", "") if submissions else ""),
         },
         "submissions": submissions_data,
     }

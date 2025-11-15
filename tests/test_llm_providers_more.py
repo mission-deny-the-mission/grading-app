@@ -90,9 +90,7 @@ class TestLMStudioProvider:
         with patch("utils.llm_providers.requests.post", return_value=fake_resp):
             provider = lp.LMStudioLLMProvider()
             res = provider.grade_document("t", "p")
-            assert (
-                res["success"] is False and "endpoint not found" in res["error"].lower()
-            )
+            assert res["success"] is False and "endpoint not found" in res["error"].lower()
 
     def test_lm_studio_timeout_error(self):
         """Test LM Studio provider handles timeout errors"""
@@ -149,9 +147,9 @@ class TestGeminiProvider:
 
     def test_exception_paths(self):
         """Test Gemini provider handles various exception paths."""
-        with patch.dict(os.environ, {"GEMINI_API_KEY": "x"}), patch(
-            "utils.llm_providers.genai.configure"
-        ), patch("utils.llm_providers.genai.GenerativeModel") as mock_model:
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "x"}), patch("utils.llm_providers.genai.configure"), patch(
+            "utils.llm_providers.genai.GenerativeModel"
+        ) as mock_model:
             instance = MagicMock()
             instance.generate_content.side_effect = Exception("quota exceeded")
             mock_model.return_value = instance
@@ -170,9 +168,7 @@ class TestOpenAIProvider:
 
     def test_generic_exception(self):
         """Test OpenAI provider handles generic exceptions."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "x"}), patch(
-            "utils.llm_providers.OpenAI"
-        ) as mock_openai:
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "x"}), patch("utils.llm_providers.OpenAI") as mock_openai:
             client = MagicMock()
             client.chat.completions.create.side_effect = Exception("API blew up")
             mock_openai.return_value = client

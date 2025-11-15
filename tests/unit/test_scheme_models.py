@@ -1,15 +1,18 @@
 """Unit tests for grading scheme models (User Story 1 & 2)."""
-import pytest
-from decimal import Decimal
+
 from datetime import datetime, timezone
+from decimal import Decimal
+
+import pytest
+
 from app import app
 from models import (
-    db,
-    GradingScheme,
-    SchemeQuestion,
-    SchemeCriterion,
-    GradedSubmission,
     CriterionEvaluation,
+    GradedSubmission,
+    GradingScheme,
+    SchemeCriterion,
+    SchemeQuestion,
+    db,
 )
 
 
@@ -104,12 +107,8 @@ class TestSchemeQuestion:
         db.session.add(scheme)
         db.session.commit()
 
-        q1 = SchemeQuestion(
-            scheme_id=scheme.id, title="Q1", display_order=1
-        )
-        q2 = SchemeQuestion(
-            scheme_id=scheme.id, title="Q2", display_order=1  # Duplicate order
-        )
+        q1 = SchemeQuestion(scheme_id=scheme.id, title="Q1", display_order=1)
+        q2 = SchemeQuestion(scheme_id=scheme.id, title="Q2", display_order=1)  # Duplicate order
 
         # This should violate unique constraint when saved to database
         # For now, just verify the model creation works
@@ -349,9 +348,7 @@ class TestPercentageCalculation:
         # Verify Decimal precision needed
         from utils.scheme_calculator import calculate_percentage_score
 
-        percentage = calculate_percentage_score(
-            Decimal("85.00"), Decimal("100.00")
-        )
+        percentage = calculate_percentage_score(Decimal("85.00"), Decimal("100.00"))
         assert percentage == Decimal("85.00")
         assert percentage.as_tuple().exponent == -2  # 2 decimal places
 
@@ -362,6 +359,7 @@ class TestPercentageCalculation:
 # to_dict() functionality is validated through integration tests (test_grading_routes.py)
 # which verify JSON serialization via the actual API responses
 
+
 class TestDecimalPrecision:
     """Test Decimal precision throughout the system."""
 
@@ -371,20 +369,13 @@ class TestDecimalPrecision:
         db.session.add(scheme)
         db.session.commit()
 
-        question = SchemeQuestion(
-            scheme_id=scheme.id,
-            title="Q1",
-            display_order=1
-        )
+        question = SchemeQuestion(scheme_id=scheme.id, title="Q1", display_order=1)
         db.session.add(question)
         db.session.commit()
 
         # Criterion with 5 points
         criterion = SchemeCriterion(
-            question_id=question.id,
-            name="Test Criterion",
-            max_points=Decimal("5.00"),
-            display_order=1
+            question_id=question.id, name="Test Criterion", max_points=Decimal("5.00"), display_order=1
         )
         db.session.add(criterion)
         db.session.commit()
@@ -394,7 +385,7 @@ class TestDecimalPrecision:
             scheme_version=1,
             student_id="STU102",
             graded_by="prof",
-            total_points_possible=Decimal("5.00")
+            total_points_possible=Decimal("5.00"),
         )
         db.session.add(submission)
         db.session.commit()
@@ -406,7 +397,7 @@ class TestDecimalPrecision:
             points_awarded=Decimal("2.50"),
             max_points=Decimal("5.00"),
             criterion_name="Test Criterion",
-            question_title="Q1"
+            question_title="Q1",
         )
         db.session.add(evaluation)
         db.session.commit()
@@ -416,10 +407,8 @@ class TestDecimalPrecision:
 
         # Calculate percentage: 2.5 / 5.0 = 0.5 = 50.00%
         from utils.scheme_calculator import calculate_percentage_score
-        percentage = calculate_percentage_score(
-            Decimal("2.50"),
-            Decimal("5.00")
-        )
+
+        percentage = calculate_percentage_score(Decimal("2.50"), Decimal("5.00"))
         assert percentage == Decimal("50.00")
 
     def test_high_precision_arithmetic(self, app_context):
@@ -427,15 +416,9 @@ class TestDecimalPrecision:
         from utils.scheme_calculator import calculate_percentage_score
 
         # Test case: 1/3 = 0.333... should round to 33.33%
-        percentage = calculate_percentage_score(
-            Decimal("1.00"),
-            Decimal("3.00")
-        )
+        percentage = calculate_percentage_score(Decimal("1.00"), Decimal("3.00"))
         assert percentage == Decimal("33.33")
 
         # Test case: 2/3 = 0.666... should round to 66.67%
-        percentage = calculate_percentage_score(
-            Decimal("2.00"),
-            Decimal("3.00")
-        )
+        percentage = calculate_percentage_score(Decimal("2.00"), Decimal("3.00"))
         assert percentage == Decimal("66.67")
