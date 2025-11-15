@@ -85,9 +85,7 @@ class TestModelValidation:
             if not options:
                 continue
 
-            expected_mappings = self.EXPECTED_MODEL_MAPPINGS["config_dropdowns"].get(
-                provider, {}
-            )
+            expected_mappings = self.EXPECTED_MODEL_MAPPINGS["config_dropdowns"].get(provider, {})
 
             for display_text, backend_value in options:
                 if display_text == "Use System Default" or backend_value == "":
@@ -99,8 +97,7 @@ class TestModelValidation:
                 if display_text in expected_mappings:
                     expected_backend = expected_mappings[display_text]
                     assert backend_value == expected_backend, (
-                        f"{provider}: '{display_text}' expected "
-                        f"'{expected_backend}' but got '{backend_value}'"
+                        f"{provider}: '{display_text}' expected " f"'{expected_backend}' but got '{backend_value}'"
                     )
 
     @pytest.mark.integration
@@ -126,8 +123,7 @@ class TestModelValidation:
             if display_text in expected_mappings:
                 expected_backend = expected_mappings[display_text]
                 assert backend_value == expected_backend, (
-                    f"Main interface: '{display_text}' expected "
-                    f"'{expected_backend}' but got '{backend_value}'"
+                    f"Main interface: '{display_text}' expected " f"'{expected_backend}' but got '{backend_value}'"
                 )
 
     @pytest.mark.integration
@@ -153,8 +149,7 @@ class TestModelValidation:
             if display_text in expected_mappings:
                 expected_backend = expected_mappings[display_text]
                 assert backend_value == expected_backend, (
-                    f"Bulk upload: '{display_text}' expected "
-                    f"'{expected_backend}' but got '{backend_value}'"
+                    f"Bulk upload: '{display_text}' expected " f"'{expected_backend}' but got '{backend_value}'"
                 )
 
     @pytest.mark.api
@@ -175,17 +170,11 @@ class TestModelValidation:
         ]
 
         for provider in required_providers:
-            assert (
-                provider in models_data
-            ), f"Provider '{provider}' missing from models API"
+            assert provider in models_data, f"Provider '{provider}' missing from models API"
 
             provider_data = models_data[provider]
-            assert (
-                "popular" in provider_data
-            ), f"Provider '{provider}' missing popular models"
-            assert (
-                "default" in provider_data
-            ), f"Provider '{provider}' missing default model"
+            assert "popular" in provider_data, f"Provider '{provider}' missing popular models"
+            assert "default" in provider_data, f"Provider '{provider}' missing default model"
 
     @pytest.mark.api
     @pytest.mark.database
@@ -214,8 +203,7 @@ class TestModelValidation:
         for key, expected_value in test_configs.items():
             actual_value = loaded_config.get(key)
             assert actual_value == expected_value, (
-                f"Config consistency: {key} expected '{expected_value}' "
-                f"but got '{actual_value}'"
+                f"Config consistency: {key} expected '{expected_value}' " f"but got '{actual_value}'"
             )
 
     def _extract_dropdown_options(self, html, dropdown_id):
@@ -230,11 +218,7 @@ class TestModelValidation:
         option_pattern = r'<option[^>]*value="([^"]*)"[^>]*>([^<]+)</option>'
         options = re.findall(option_pattern, dropdown_html)
 
-        return [
-            (display.strip(), value.strip())
-            for display, value in options
-            if value.strip()
-        ]
+        return [(display.strip(), value.strip()) for display, value in options if value.strip()]
 
     @pytest.mark.api
     def test_model_provider_endpoints(self, client):
@@ -322,7 +306,6 @@ class TestModelValidation:
             if "popular" in provider_data:
                 backend_models.update(provider_data["popular"])
 
-
         # Create a mapping from display names to expected backend IDs
         # based on the expected model mappings
         display_to_backend = {}
@@ -332,15 +315,10 @@ class TestModelValidation:
         # Check consistency for models that have expected mappings
         inconsistent_count = 0
         for display_name, backend_value in frontend_options:
-            if (
-                backend_value not in ["default", "custom"]
-                and display_name in display_to_backend
-            ):
+            if backend_value not in ["default", "custom"] and display_name in display_to_backend:
                 expected_backend = display_to_backend[display_name]
                 if backend_value != expected_backend:
                     inconsistent_count += 1
 
         # Allow for some inconsistencies due to dynamic model lists
-        assert (
-            inconsistent_count <= 3
-        ), f"Too many inconsistent model mappings: {inconsistent_count}"
+        assert inconsistent_count <= 3, f"Too many inconsistent model mappings: {inconsistent_count}"

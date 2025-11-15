@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Clone Scheme - Grading Schemes{% endblock %}
+
+{% block content %}
+<div class="main-container" style="max-width: 600px;">
+    <!-- Header -->
+    <div>
+        <a href="{{ url_for('schemes_ui.list_schemes') }}" class="text-muted text-decoration-none small mb-3 d-inline-block">
+            <i class="fas fa-arrow-left me-2"></i>Back to Schemes
+        </a>
+        <h1 class="mb-2">Clone Scheme</h1>
+        <p class="text-muted">Create a copy of "{{ original_scheme.name }}"</p>
+    </div>
+
+    <!-- Clone Form -->
+    <form id="cloneForm" class="mt-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-4">
+                    <label for="newSchemeName" class="form-label">New Scheme Name *</label>
+                    <input type="text" class="form-control" id="newSchemeName"
+                           placeholder="e.g., Essay Rubric - Fall 2025 (Copy)"
+                           value="{{ original_scheme.name }} (Copy)" required>
+                    <small class="text-muted">Must be unique. Default includes "(Copy)" suffix</small>
+                </div>
+
+                <div class="mb-4">
+                    <label for="newSchemeDescription" class="form-label">Description (Optional)</label>
+                    <textarea class="form-control" id="newSchemeDescription" rows="3"
+                              placeholder="You can modify the description for the copied scheme...">{{ original_scheme.description if original_scheme.description else '' }}</textarea>
+                </div>
+
+                <div class="mb-4 p-3 bg-light rounded">
+                    <h6 class="mb-3">Original Scheme Preview:</h6>
+                    <div class="small">
+                        <div class="mb-2">
+                            <strong>Name:</strong> {{ original_scheme.name }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Questions:</strong> {{ original_scheme.questions|length }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Total Points:</strong> {{ original_scheme.total_possible_points }}
+                        </div>
+                        <div>
+                            <strong>Total Criteria:</strong> {{ original_scheme.total_criteria }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    All questions and criteria will be copied to the new scheme. You can edit them after cloning.
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-copy me-2"></i>Clone Scheme
+            </button>
+            <a href="{{ url_for('schemes_ui.view_scheme', scheme_id=original_scheme.id) }}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times me-2"></i>Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="spinner-border text-primary d-none" role="status" style="position: fixed; top: 50%; left: 50%; z-index: 9999;">
+    <span class="visually-hidden">Cloning...</span>
+</div>
+
+<script>
+document.getElementById('cloneForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const schemeId = '{{ original_scheme.id }}';
+    const newName = document.getElementById('newSchemeName').value;
+    const newDescription = document.getElementById('newSchemeDescription').value;
+
+    if (!newName.trim()) {
+        ui.error('Scheme name is required');
+        ui.showFieldError(document.getElementById('newSchemeName'), 'Please enter a name for the cloned scheme');
+        return;
+    }
+
+    ui.showLoading('Cloning scheme...');
+
+    try {
+        const response = await fetch(`/api/schemes/${schemeId}/clone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: newName,
+                description: newDescription
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to clone scheme');
+        }
+
+        const result = await response.json();
+        ui.success('Scheme cloned successfully!');
+
+        // Delay redirect to show success message
+        setTimeout(() => {
+            window.location.href = `/schemes/${result.id}`;
+        }, 1000);
+
+    } catch (error) {
+        console.error('Error cloning scheme:', error);
+        ui.error(`Failed to clone scheme: ${error.message}`);
+    } finally {
+        ui.hideLoading();
+    }
+});
+</script>
+{% endblock %}

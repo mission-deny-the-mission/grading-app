@@ -87,52 +87,28 @@ def save_config():
             )
 
         # Update all fields from form
-        config.openrouter_api_key = (
-            request.form.get("openrouter_api_key", "").strip() or None
-        )
+        config.openrouter_api_key = request.form.get("openrouter_api_key", "").strip() or None
         config.claude_api_key = request.form.get("claude_api_key", "").strip() or None
         config.gemini_api_key = request.form.get("gemini_api_key", "").strip() or None
         config.openai_api_key = request.form.get("openai_api_key", "").strip() or None
         config.nanogpt_api_key = request.form.get("nanogpt_api_key", "").strip() or None
         config.chutes_api_key = request.form.get("chutes_api_key", "").strip() or None
         config.zai_api_key = request.form.get("zai_api_key", "").strip() or None
-        config.lm_studio_url = request.form.get(
-            "lm_studio_url", "http://localhost:1234/v1"
-        ).strip()
-        config.ollama_url = request.form.get(
-            "ollama_url", "http://localhost:11434"
-        ).strip()
+        config.lm_studio_url = request.form.get("lm_studio_url", "http://localhost:1234/v1").strip()
+        config.ollama_url = request.form.get("ollama_url", "http://localhost:11434").strip()
         config.default_prompt = request.form.get("default_prompt", "").strip() or None
         config.zai_pricing_plan = request.form.get("zai_pricing_plan", "normal").strip() or "normal"
 
         # Update default model configurations
-        config.openrouter_default_model = (
-            request.form.get("openrouter_default_model", "").strip() or None
-        )
-        config.claude_default_model = (
-            request.form.get("claude_default_model", "").strip() or None
-        )
-        config.gemini_default_model = (
-            request.form.get("gemini_default_model", "").strip() or None
-        )
-        config.openai_default_model = (
-            request.form.get("openai_default_model", "").strip() or None
-        )
-        config.nanogpt_default_model = (
-            request.form.get("nanogpt_default_model", "").strip() or None
-        )
-        config.chutes_default_model = (
-            request.form.get("chutes_default_model", "").strip() or None
-        )
-        config.zai_default_model = (
-            request.form.get("zai_default_model", "").strip() or None
-        )
-        config.lm_studio_default_model = (
-            request.form.get("lm_studio_default_model", "").strip() or None
-        )
-        config.ollama_default_model = (
-            request.form.get("ollama_default_model", "").strip() or None
-        )
+        config.openrouter_default_model = request.form.get("openrouter_default_model", "").strip() or None
+        config.claude_default_model = request.form.get("claude_default_model", "").strip() or None
+        config.gemini_default_model = request.form.get("gemini_default_model", "").strip() or None
+        config.openai_default_model = request.form.get("openai_default_model", "").strip() or None
+        config.nanogpt_default_model = request.form.get("nanogpt_default_model", "").strip() or None
+        config.chutes_default_model = request.form.get("chutes_default_model", "").strip() or None
+        config.zai_default_model = request.form.get("zai_default_model", "").strip() or None
+        config.lm_studio_default_model = request.form.get("lm_studio_default_model", "").strip() or None
+        config.ollama_default_model = request.form.get("ollama_default_model", "").strip() or None
 
         # Save to database
         db.session.commit()
@@ -143,9 +119,7 @@ def save_config():
         return jsonify({"success": True, "message": "Configuration saved successfully"})
     except Exception as e:
         db.session.rollback()
-        return jsonify(
-            {"success": False, "message": f"Failed to save configuration: {str(e)}"}
-        )
+        return jsonify({"success": False, "message": f"Failed to save configuration: {str(e)}"})
 
 
 @main_bp.route("/load_config", methods=["GET"])
@@ -157,8 +131,7 @@ def load_config():
 
         # Use database values with environment variable fallbacks
         config_data = {
-            "openrouter_api_key": config.openrouter_api_key
-            or os.getenv("OPENROUTER_API_KEY", ""),
+            "openrouter_api_key": config.openrouter_api_key or os.getenv("OPENROUTER_API_KEY", ""),
             "claude_api_key": config.claude_api_key or os.getenv("CLAUDE_API_KEY", ""),
             "gemini_api_key": config.gemini_api_key or os.getenv("GEMINI_API_KEY", ""),
             "openai_api_key": config.openai_api_key or os.getenv("OPENAI_API_KEY", ""),
@@ -166,10 +139,8 @@ def load_config():
             "chutes_api_key": config.chutes_api_key or os.getenv("CHUTES_API_KEY", ""),
             "zai_api_key": config.zai_api_key or os.getenv("ZAI_API_KEY", ""),
             "zai_pricing_plan": config.zai_pricing_plan or "normal",
-            "lm_studio_url": config.lm_studio_url
-            or os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
-            "ollama_url": config.ollama_url
-            or os.getenv("OLLAMA_URL", "http://localhost:11434"),
+            "lm_studio_url": config.lm_studio_url or os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
+            "ollama_url": config.ollama_url or os.getenv("OLLAMA_URL", "http://localhost:11434"),
             "default_prompt": config.default_prompt
             or "Please grade this document and provide detailed feedback on:\n1. Content quality and relevance\n2. Structure and organization\n3. Writing style and clarity\n4. Grammar and mechanics\n5. Overall assessment with specific suggestions for improvement\n\nPlease provide a comprehensive evaluation with specific examples from the text.",
             # Default model configurations
@@ -195,9 +166,7 @@ def load_config():
             "chutes_api_key": os.getenv("CHUTES_API_KEY", ""),
             "zai_api_key": os.getenv("ZAI_API_KEY", ""),
             "lm_studio_url": os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
-            "ollama_url": os.getenv(
-                "OLLAMA_URL", "http://localhost:11434"
-            ),
+            "ollama_url": os.getenv("OLLAMA_URL", "http://localhost:11434"),
             "default_prompt": (
                 "Please grade this document and provide detailed feedback on:\n"
                 "1. Content quality and relevance\n"
@@ -421,9 +390,7 @@ def test_api_key():
                 )
 
                 if response.status_code == 200:
-                    return jsonify(
-                        {"success": True, "message": "OpenRouter API key is valid"}
-                    )
+                    return jsonify({"success": True, "message": "OpenRouter API key is valid"})
                 else:
                     try:
                         error_body = response.json()
@@ -433,9 +400,7 @@ def test_api_key():
                         {"success": False, "error": f"OpenRouter API error: {response.status_code} - {error_body}"}
                     )
             except Exception as e:
-                return jsonify(
-                    {"success": False, "error": f"Invalid OpenRouter API key: {str(e)}"}
-                )
+                return jsonify({"success": False, "error": f"Invalid OpenRouter API key: {str(e)}"})
 
         elif api_type == "claude":
             # Test Claude API key
@@ -448,9 +413,7 @@ def test_api_key():
                 )
                 return jsonify({"success": True, "message": "Claude API key is valid"})
             except Exception as e:
-                return jsonify(
-                    {"success": False, "error": f"Invalid Claude API key: {str(e)}"}
-                )
+                return jsonify({"success": False, "error": f"Invalid Claude API key: {str(e)}"})
 
         elif api_type == "gemini":
             # Test Gemini API key
@@ -461,15 +424,11 @@ def test_api_key():
                 model = genai.GenerativeModel("gemini-1.5-flash")
                 response = model.generate_content(
                     "Hello",
-                    generation_config=genai.types.GenerationConfig(
-                        max_output_tokens=10
-                    ),
+                    generation_config=genai.types.GenerationConfig(max_output_tokens=10),
                 )
                 return jsonify({"success": True, "message": "Gemini API key is valid"})
             except Exception as e:
-                return jsonify(
-                    {"success": False, "error": f"Invalid Gemini API key: {str(e)}"}
-                )
+                return jsonify({"success": False, "error": f"Invalid Gemini API key: {str(e)}"})
 
         elif api_type == "openai":
             # Test OpenAI API key
@@ -482,9 +441,7 @@ def test_api_key():
                 )
                 return jsonify({"success": True, "message": "OpenAI API key is valid"})
             except Exception as e:
-                return jsonify(
-                    {"success": False, "error": f"Invalid OpenAI API key: {str(e)}"}
-                )
+                return jsonify({"success": False, "error": f"Invalid OpenAI API key: {str(e)}"})
 
         elif api_type == "nanogpt":
             # Test NanoGPT API key
@@ -597,9 +554,7 @@ def test_lm_studio():
         )
 
         if response.status_code == 200:
-            return jsonify(
-                {"success": True, "message": "LM Studio connection successful"}
-            )
+            return jsonify({"success": True, "message": "LM Studio connection successful"})
         else:
             return jsonify(
                 {
@@ -641,29 +596,33 @@ def test_ollama():
         )
 
         if models_response.status_code != 200:
-            return jsonify({
-                "success": False,
-                "error": f"Ollama models endpoint not accessible: {models_response.status_code} - {models_response.text}"
-            })
+            return jsonify(
+                {
+                    "success": False,
+                    "error": f"Ollama models endpoint not accessible: {models_response.status_code} - {models_response.text}",
+                }
+            )
 
         models_data = models_response.json()
         if not models_data.get("models"):
-            return jsonify({
-                "success": False,
-                "error": "No models found on Ollama server. Please install at least one model."
-            })
+            return jsonify(
+                {"success": False, "error": "No models found on Ollama server. Please install at least one model."}
+            )
 
         # Find a model that supports generation (not embedding models)
         generative_models = [
-            model for model in models_data["models"]
+            model
+            for model in models_data["models"]
             if not any(keyword in model["name"].lower() for keyword in ["embed", "minilm", "bert"])
         ]
 
         if not generative_models:
-            return jsonify({
-                "success": False,
-                "error": "No generative models found on Ollama server. Please install a generative model like llama2, mistral, or qwen."
-            })
+            return jsonify(
+                {
+                    "success": False,
+                    "error": "No generative models found on Ollama server. Please install a generative model like llama2, mistral, or qwen.",
+                }
+            )
 
         # Use the first generative model for testing
         test_model = generative_models[0]["name"]
@@ -734,22 +693,16 @@ def bulk_upload():
     )
 
     # Get saved prompts and marking schemes for dropdowns
-    saved_prompts = [
-        prompt.to_dict()
-        for prompt in SavedPrompt.query.order_by(SavedPrompt.name).all()
-    ]
+    saved_prompts = [prompt.to_dict() for prompt in SavedPrompt.query.order_by(SavedPrompt.name).all()]
     saved_marking_schemes = [
-        scheme.to_dict()
-        for scheme in SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()
+        scheme.to_dict() for scheme in SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()
     ]
 
     # Get job templates for dropdown
-    from models import JobTemplate
+    from models import JobTemplate, GradingScheme
 
-    job_templates = [
-        template.to_dict()
-        for template in JobTemplate.query.order_by(JobTemplate.name).all()
-    ]
+    job_templates = [template.to_dict() for template in JobTemplate.query.order_by(JobTemplate.name).all()]
+    grading_schemes = [scheme.to_dict() for scheme in GradingScheme.query.filter_by(is_deleted=False).order_by(GradingScheme.name).all()]
 
     return render_template(
         "bulk_upload.html",
@@ -757,6 +710,7 @@ def bulk_upload():
         saved_prompts=saved_prompts,
         saved_marking_schemes=saved_marking_schemes,
         job_templates=job_templates,
+        grading_schemes=grading_schemes,
     )
 
 
@@ -764,9 +718,7 @@ def bulk_upload():
 def saved_configurations():
     """Page for managing saved prompts and marking schemes."""
     saved_prompts = SavedPrompt.query.order_by(SavedPrompt.updated_at.desc()).all()
-    saved_marking_schemes = SavedMarkingScheme.query.order_by(
-        SavedMarkingScheme.updated_at.desc()
-    ).all()
+    saved_marking_schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.updated_at.desc()).all()
 
     return render_template(
         "saved_configurations.html",
@@ -791,6 +743,4 @@ def submission_images(submission_id):
         .all()
     )
 
-    return render_template(
-        "image_submissions.html", submission=submission, images=images
-    )
+    return render_template("image_submissions.html", submission=submission, images=images)

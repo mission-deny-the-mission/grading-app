@@ -17,6 +17,12 @@ from routes.batches import batches_bp
 from routes.main import main_bp
 from routes.templates import templates_bp
 from routes.upload import upload_bp
+# Import grading scheme blueprints
+from routes.schemes import schemes_bp
+from routes.grading import grading_bp
+from routes.export import export_bp
+from routes.schemes_ui import schemes_ui_bp
+from routes.grading_ui import grading_ui_bp
 
 load_dotenv()
 
@@ -48,6 +54,12 @@ app.register_blueprint(upload_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(batches_bp)
 app.register_blueprint(templates_bp)
+# Register grading scheme blueprints
+app.register_blueprint(schemes_bp)
+app.register_blueprint(grading_bp)
+app.register_blueprint(export_bp)
+app.register_blueprint(schemes_ui_bp)
+app.register_blueprint(grading_ui_bp)
 
 # Configure upload folder
 UPLOAD_FOLDER = "uploads"

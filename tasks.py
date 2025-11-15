@@ -907,12 +907,13 @@ def assess_image_quality(self, image_submission_id):
 
             # Completeness metrics
             completeness_data = assessment_result['completeness_assessment']
-            quality_metrics.edge_density_top = completeness_data['edge_density']['top']
-            quality_metrics.edge_density_bottom = completeness_data['edge_density']['bottom']
-            quality_metrics.edge_density_left = completeness_data['edge_density']['left']
-            quality_metrics.edge_density_right = completeness_data['edge_density']['right']
-            quality_metrics.avg_edge_density = completeness_data['avg_edge_density']
-            quality_metrics.max_edge_density = completeness_data['max_edge_density']
+            # Convert numpy types to Python floats for database storage
+            quality_metrics.edge_density_top = float(completeness_data['edge_density']['top'])
+            quality_metrics.edge_density_bottom = float(completeness_data['edge_density']['bottom'])
+            quality_metrics.edge_density_left = float(completeness_data['edge_density']['left'])
+            quality_metrics.edge_density_right = float(completeness_data['edge_density']['right'])
+            quality_metrics.avg_edge_density = float(completeness_data['avg_edge_density'])
+            quality_metrics.max_edge_density = float(completeness_data['max_edge_density'])
             quality_metrics.likely_cropped = completeness_data['likely_cropped']
 
             # Issues and processing time

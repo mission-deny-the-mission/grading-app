@@ -21,9 +21,7 @@ class TestApiModels:
 class TestApiJobsExports:
     """Test API job export functionality."""
 
-    def test_export_job_results_zip(
-        self, client, app, sample_job, sample_submission, tmp_path
-    ):
+    def test_export_job_results_zip(self, client, app, sample_job, sample_submission, tmp_path):
         """Test exporting job results as ZIP file."""
         # mark submission as completed with a grade to include in ZIP
         with app.app_context():
@@ -59,9 +57,7 @@ class TestApiJobActions:
         assert data["success"] is False
 
     @patch("tasks.process_job.delay")
-    def test_retry_submission_success_path(
-        self, mock_delay, client, app, sample_job, sample_submission, tmp_path
-    ):
+    def test_retry_submission_success_path(self, mock_delay, client, app, sample_job, sample_submission, tmp_path):
         """Test successful submission retry with real file."""
         mock_delay.return_value = MagicMock(id="task123")
         # create a real file so tasks code finds it

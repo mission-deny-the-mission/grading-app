@@ -95,9 +95,7 @@ class TestSavedConfigsDetailUpdate:
         assert data["success"] is True and data["scheme"]["id"] == sid
 
         # Update
-        resp = client.put(
-            f"/api/saved-marking-schemes/{sid}", json={"name": "Scheme B"}
-        )
+        resp = client.put(f"/api/saved-marking-schemes/{sid}", json={"name": "Scheme B"})
         assert resp.status_code == 200
         data = json.loads(resp.data)
         assert data["success"] is True and data["scheme"]["name"] == "Scheme B"
@@ -118,14 +116,10 @@ class TestBatchOps:
             bid = batch.id
 
         # Duplicate
-        resp = client.post(
-            f"/api/batches/{bid}/duplicate", json={"new_name": "Original Batch (Copy)"}
-        )
+        resp = client.post(f"/api/batches/{bid}/duplicate", json={"new_name": "Original Batch (Copy)"})
         assert resp.status_code == 200
         data = json.loads(resp.data)
-        assert data["success"] is True and data["new_batch"]["batch_name"].endswith(
-            "(Copy)"
-        )
+        assert data["success"] is True and data["new_batch"]["batch_name"].endswith("(Copy)")
 
         # Archive
         resp = client.post(f"/api/batches/{bid}/archive")
@@ -142,9 +136,7 @@ class TestBatchOps:
             db.session.add(batch)
             db.session.commit()
             # Add one job
-            job = GradingJob(
-                job_name="Job X", provider="openrouter", prompt="p", batch_id=batch.id
-            )
+            job = GradingJob(job_name="Job X", provider="openrouter", prompt="p", batch_id=batch.id)
             db.session.add(job)
             db.session.commit()
             # Add a completed submission with grade so export has content
@@ -192,22 +184,16 @@ class TestBatchOps:
             _db.session.commit()
             bid = batch.id
 
-        resp = client.get(
-            f"/api/batches/{bid}/available-jobs?page=1&per_page=5&search=Stand"
-        )
+        resp = client.get(f"/api/batches/{bid}/available-jobs?page=1&per_page=5&search=Stand")
         assert resp.status_code == 200
         data = json.loads(resp.data)
-        assert data["success"] is True and any(
-            j["id"] == jid for j in data["available_jobs"]
-        )
+        assert data["success"] is True and any(j["id"] == jid for j in data["available_jobs"])
 
 
 class TestUploadSuccessPaths:
     """Test upload success paths with various configurations."""
 
-    def test_upload_lm_studio_success_with_marking_scheme_and_models(
-        self, client, tmp_path
-    ):
+    def test_upload_lm_studio_success_with_marking_scheme_and_models(self, client, tmp_path):
         """Test successful upload with LM Studio, marking scheme, and multiple models."""
         # Prepare files
         file_content = b"Hello text contents."

@@ -19,10 +19,7 @@ class TestTemplatesRoutes:
         response = client.get("/templates")
         assert response.status_code == 200
         # Should render the templates.html page
-        assert (
-            b"templates.html" in response.data
-            or b"Template Management" in response.data
-        )
+        assert b"templates.html" in response.data or b"Template Management" in response.data
 
     def test_templates_page_with_filters(self, client):
         """Test templates page with various filter parameters."""
@@ -142,9 +139,7 @@ class TestTemplatesRoutes:
             # Test search filtering
             assert _template_matches_filter(batch_template, "all", None, "essay")
             assert _template_matches_filter(batch_template, "all", None, "grading")
-            assert not _template_matches_filter(
-                batch_template, "all", None, "nonexistent"
-            )
+            assert not _template_matches_filter(batch_template, "all", None, "nonexistent")
             assert _template_matches_filter(job_template, "all", None, "report")
             assert _template_matches_filter(job_template, "all", None, "template")
 
@@ -213,9 +208,7 @@ class TestTemplateAPIEndpoints:
         if response.status_code == 200:
             data = json.loads(response.data)
             assert data["success"] is True
-            templates_with_category = [
-                t for t in data["templates"] if t.get("category")
-            ]
+            templates_with_category = [t for t in data["templates"] if t.get("category")]
             assert all(t["category"] == "essay" for t in templates_with_category)
 
         # Test filtering by search
@@ -396,21 +389,11 @@ class TestTemplateAPIEndpoints:
         with app.app_context():
             # Create test templates with different categories
             templates = [
-                BatchTemplate(
-                    name="Template 1", category="essay", created_by="test_user"
-                ),
-                BatchTemplate(
-                    name="Template 2", category="report", created_by="test_user"
-                ),
-                BatchTemplate(
-                    name="Template 3", category="essay", created_by="test_user"
-                ),
-                JobTemplate(
-                    name="Template 4", category="assignment", created_by="test_user"
-                ),
-                JobTemplate(
-                    name="Template 5", category=None, created_by="test_user"
-                ),  # Uncategorized
+                BatchTemplate(name="Template 1", category="essay", created_by="test_user"),
+                BatchTemplate(name="Template 2", category="report", created_by="test_user"),
+                BatchTemplate(name="Template 3", category="essay", created_by="test_user"),
+                JobTemplate(name="Template 4", category="assignment", created_by="test_user"),
+                JobTemplate(name="Template 5", category=None, created_by="test_user"),  # Uncategorized
             ]
             db.session.add_all(templates)
             db.session.commit()
@@ -528,18 +511,14 @@ class TestTemplateEdgeCases:
 
     def test_create_template_with_invalid_json(self, client):
         """Test template creation with invalid JSON."""
-        response = client.post(
-            "/create-template", data="invalid json", content_type="application/json"
-        )
+        response = client.post("/create-template", data="invalid json", content_type="application/json")
         assert response.status_code == 400
 
     def test_update_template_with_invalid_data(self, client, app):
         """Test updating template with invalid data."""
         with app.app_context():
             # Create a test template with current user's IP
-            template = BatchTemplate(
-                name="Edge Case Test", category="essay", created_by="test_user"
-            )
+            template = BatchTemplate(name="Edge Case Test", category="essay", created_by="test_user")
             db.session.add(template)
             db.session.commit()
             template_id = template.id

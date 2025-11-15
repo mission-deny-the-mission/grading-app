@@ -102,6 +102,25 @@ content %}
                         </div>
                     </div>
 
+                    <!-- Grading Scheme Selection -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-check-square me-2"></i>Grading Scheme (Optional)
+                        </label>
+                        <select class="form-select" id="schemeSelect" name="scheme_id">
+                            <option value="">No scheme - LLM-based grading only</option>
+                            {% for scheme in grading_schemes %}
+                            <option value="{{ scheme.id }}">
+                                {{ scheme.name }} ({{ scheme.total_questions }} questions, {{ scheme.total_possible_points }} pts)
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Select a grading scheme to apply structured evaluation to submissions
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="provider" class="form-label fw-bold">

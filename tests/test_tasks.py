@@ -8,11 +8,18 @@ from unittest.mock import MagicMock, patch
 import openai
 import pytest
 
-from tasks import (process_job_sync, process_submission_sync,
-                   retry_batch_failed_jobs)
-from utils.llm_providers import (get_llm_provider, grade_with_claude,
-                                 grade_with_gemini, grade_with_lm_studio,
-                                 grade_with_openai)
+from tasks import (
+    process_job_sync,
+    process_submission_sync,
+    retry_batch_failed_jobs,
+)
+from utils.llm_providers import (
+    get_llm_provider,
+    grade_with_claude,
+    grade_with_gemini,
+    grade_with_lm_studio,
+    grade_with_openai,
+)
 
 
 class TestGradingFunctions:
@@ -48,9 +55,7 @@ class TestGradingFunctions:
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
                 provider = get_llm_provider("OpenRouter")
-                result = provider.grade_document(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = provider.grade_document("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -62,9 +67,7 @@ class TestGradingFunctions:
         # Setup mock instance
         mock_client = MagicMock()
         mock_anthropic_class.return_value = mock_client
-        mock_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text="Great essay! Grade: B+")]
-        )
+        mock_client.messages.create.return_value = MagicMock(content=[MagicMock(text="Great essay! Grade: B+")])
 
         with patch.dict(os.environ, {"CLAUDE_API_KEY": "test-claude-key"}, clear=True):
             with app.app_context():
@@ -89,9 +92,7 @@ class TestGradingFunctions:
 
         with patch.dict(os.environ, {"CLAUDE_API_KEY": "test-claude-key"}, clear=True):
             with app.app_context():
-                result = grade_with_claude(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = grade_with_claude("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -101,9 +102,7 @@ class TestGradingFunctions:
         """Test Claude grading without API key."""
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
-                result = grade_with_claude(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = grade_with_claude("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -114,9 +113,7 @@ class TestGradingFunctions:
         """Test successful grading with LM Studio."""
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Good work! Grade: B"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Good work! Grade: B"}}]}
         mock_requests.return_value = mock_response
 
         with app.app_context():
@@ -137,9 +134,7 @@ class TestGradingFunctions:
         mock_requests.side_effect = Exception("Connection Error")
 
         with app.app_context():
-            result = grade_with_lm_studio(
-                "This is a test document.", "Please grade this document."
-            )
+            result = grade_with_lm_studio("This is a test document.", "Please grade this document.")
 
             assert result["success"] is False
             assert "error" in result
@@ -147,13 +142,9 @@ class TestGradingFunctions:
 
     def test_grade_with_lm_studio_no_url(self, app):
         """Test LM Studio grading without URL."""
-        with patch.dict(
-            os.environ, {"LM_STUDIO_URL": "http://localhost:9999/v1"}, clear=True
-        ):
+        with patch.dict(os.environ, {"LM_STUDIO_URL": "http://localhost:9999/v1"}, clear=True):
             with app.app_context():
-                result = grade_with_lm_studio(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = grade_with_lm_studio("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -202,9 +193,7 @@ class TestGradingFunctions:
 
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-gemini-key"}, clear=True):
             with app.app_context():
-                result = grade_with_gemini(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = grade_with_gemini("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -214,9 +203,7 @@ class TestGradingFunctions:
         """Test Gemini grading without API key."""
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
-                result = grade_with_gemini(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = grade_with_gemini("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -277,9 +264,7 @@ class TestGradingFunctions:
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "invalid-key"}, clear=True):
             with app.app_context():
-                result = grade_with_openai(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = grade_with_openai("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -289,9 +274,7 @@ class TestGradingFunctions:
         """Test OpenAI grading without API key."""
         with patch.dict(os.environ, {}, clear=True):
             with app.app_context():
-                result = grade_with_openai(
-                    "This is a test document.", "Please grade this document."
-                )
+                result = grade_with_openai("This is a test document.", "Please grade this document.")
 
                 assert result["success"] is False
                 assert "error" in result
@@ -320,9 +303,7 @@ class TestProcessSubmission:
     """Test cases for process_submission task."""
 
     @patch("tasks.get_llm_provider")
-    def test_process_submission_success(
-        self, mock_get_provider, app, sample_job, sample_submission
-    ):
+    def test_process_submission_success(self, mock_get_provider, app, sample_job, sample_submission):
         """Test successful submission processing."""
         # Mock the provider instance
         mock_provider = MagicMock()
@@ -341,9 +322,7 @@ class TestProcessSubmission:
 
             # sample_job and sample_submission are already persisted; don't re-add
             # Create a test file
-            test_file_path = os.path.join(
-                app.config["UPLOAD_FOLDER"], sample_submission.filename
-            )
+            test_file_path = os.path.join(app.config["UPLOAD_FOLDER"], sample_submission.filename)
             with open(test_file_path, "w") as f:
                 f.write("This is a test document.")
 
@@ -359,9 +338,7 @@ class TestProcessSubmission:
             assert persisted.error_message is None
 
     @patch("tasks.get_llm_provider")
-    def test_process_submission_failure(
-        self, mock_get_provider, app, sample_job, sample_submission
-    ):
+    def test_process_submission_failure(self, mock_get_provider, app, sample_job, sample_submission):
         """Test failed submission processing."""
         # Mock the provider instance
         mock_provider = MagicMock()
@@ -374,9 +351,7 @@ class TestProcessSubmission:
 
         with app.app_context():
             # Create a test file
-            test_file_path = os.path.join(
-                app.config["UPLOAD_FOLDER"], sample_submission.filename
-            )
+            test_file_path = os.path.join(app.config["UPLOAD_FOLDER"], sample_submission.filename)
             with open(test_file_path, "w") as f:
                 f.write("This is a test document.")
 
@@ -391,9 +366,7 @@ class TestProcessSubmission:
             assert persisted.status == "failed"
             assert persisted.error_message == "All models failed to grade the document"
 
-    def test_process_submission_file_not_found(
-        self, app, sample_job, sample_submission
-    ):
+    def test_process_submission_file_not_found(self, app, sample_job, sample_submission):
         """Test submission processing with missing file."""
         with app.app_context():
             result = process_submission_sync(sample_submission.id)
@@ -675,9 +648,7 @@ class TestErrorHandling:
         with app.app_context():
             # Objects are already persisted by fixtures
             # Create a file that can't be read
-            test_file_path = os.path.join(
-                app.config["UPLOAD_FOLDER"], sample_submission.filename
-            )
+            test_file_path = os.path.join(app.config["UPLOAD_FOLDER"], sample_submission.filename)
             with open(test_file_path, "w") as f:
                 f.write("Test content")
 
@@ -702,9 +673,7 @@ class TestErrorHandling:
             with app.app_context():
                 # Objects are already persisted by fixtures
                 # Create a test file
-                test_file_path = os.path.join(
-                    app.config["UPLOAD_FOLDER"], sample_submission.filename
-                )
+                test_file_path = os.path.join(app.config["UPLOAD_FOLDER"], sample_submission.filename)
                 with open(test_file_path, "w") as f:
                     f.write("Test content")
 
@@ -828,9 +797,7 @@ class TestFileProcessingAndCleanup:
 
             # Create a test file that will be processed
             test_content = "This is test content for grading."
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
                 f.write(test_content)
                 temp_file = f.name
 
@@ -891,9 +858,7 @@ class TestFileProcessingAndCleanup:
 
             # Create a test file
             test_content = "This is test content that will fail to grade."
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
                 f.write(test_content)
                 temp_file = f.name
 
@@ -1007,9 +972,7 @@ class TestFileProcessingAndCleanup:
             for i in range(3):
                 # Create test file
                 test_content = f"This is test content for file {i + 1}."
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".txt", delete=False
-                ) as f:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
                     f.write(test_content)
                     temp_file = f.name
 
@@ -1075,9 +1038,7 @@ class TestFileProcessingAndCleanup:
 
             # Create a large test file (10MB - well under 100MB limit)
             large_content = "x" * (10 * 1024 * 1024)  # 10MB
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
                 f.write(large_content)
                 temp_file = f.name
 

@@ -7,8 +7,14 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, render_template, request
 
-from models import (BatchTemplate, GradingJob, JobBatch, SavedMarkingScheme,
-                    SavedPrompt, db)
+from models import (
+    BatchTemplate,
+    GradingJob,
+    JobBatch,
+    SavedMarkingScheme,
+    SavedPrompt,
+    db,
+)
 
 batches_bp = Blueprint("batches", __name__)
 
@@ -36,10 +42,7 @@ def batches():
         query = query.filter(JobBatch.tags.contains([tag_filter]))
 
     if search_query:
-        query = query.filter(
-            JobBatch.batch_name.contains(search_query)
-            | JobBatch.description.contains(search_query)
-        )
+        query = query.filter(JobBatch.batch_name.contains(search_query) | JobBatch.description.contains(search_query))
 
     # Order by priority and creation date
     batches = query.order_by(JobBatch.priority.desc(), JobBatch.created_at.desc()).all()
@@ -53,17 +56,11 @@ def batches():
             all_tags.update(batch.tags)
 
     # Get batch templates for creation
-    templates = (
-        BatchTemplate.query.filter_by(is_public=True)
-        .order_by(BatchTemplate.usage_count.desc())
-        .all()
-    )
+    templates = BatchTemplate.query.filter_by(is_public=True).order_by(BatchTemplate.usage_count.desc()).all()
 
     # Get saved prompts and marking schemes for batch creation
     saved_prompts = SavedPrompt.query.order_by(SavedPrompt.name).all()
-    saved_marking_schemes = SavedMarkingScheme.query.order_by(
-        SavedMarkingScheme.name
-    ).all()
+    saved_marking_schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()
 
     return render_template(
         "batches.html",
@@ -91,12 +88,7 @@ def batch_detail(batch_id):
     batch = JobBatch.query.get_or_404(batch_id)
 
     # Get available jobs that can be added to this batch
-    available_jobs = (
-        GradingJob.query.filter_by(batch_id=None)
-        .order_by(GradingJob.created_at.desc())
-        .limit(50)
-        .all()
-    )
+    available_jobs = GradingJob.query.filter_by(batch_id=None).order_by(GradingJob.created_at.desc()).limit(50).all()
 
     return render_template(
         "batch_detail.html",
@@ -125,14 +117,11 @@ def create_batch():
             tags=data.get("tags", []),
             batch_settings=data.get("batch_settings", {}),
             auto_assign_jobs=data.get("auto_assign_jobs", False),
-            deadline=(
-                datetime.fromisoformat(data["deadline"])
-                if data.get("deadline")
-                else None
-            ),
+            deadline=(datetime.fromisoformat(data["deadline"]) if data.get("deadline") else None),
             template_id=data.get("template_id"),
             saved_prompt_id=data.get("saved_prompt_id"),
             saved_marking_scheme_id=data.get("saved_marking_scheme_id"),
+            scheme_id=data.get("scheme_id"),
             created_by=data.get("created_by", "anonymous"),
         )
 
@@ -147,15 +136,9 @@ def create_batch():
                     batch.provider = default_settings["provider"]
                 if not batch.model and default_settings.get("model"):
                     batch.model = default_settings["model"]
-                if (
-                    batch.temperature is None
-                    and default_settings.get("temperature") is not None
-                ):
+                if batch.temperature is None and default_settings.get("temperature") is not None:
                     batch.temperature = default_settings["temperature"]
-                if (
-                    batch.max_tokens is None
-                    and default_settings.get("max_tokens") is not None
-                ):
+                if batch.max_tokens is None and default_settings.get("max_tokens") is not None:
                     batch.max_tokens = default_settings["max_tokens"]
 
         # Increment usage counts for saved configurations
@@ -165,9 +148,7 @@ def create_batch():
                 saved_prompt.increment_usage()
 
         if data.get("saved_marking_scheme_id"):
-            saved_scheme = db.session.get(
-                SavedMarkingScheme, data["saved_marking_scheme_id"]
-            )
+            saved_scheme = db.session.get(SavedMarkingScheme, data["saved_marking_scheme_id"])
             if saved_scheme:
                 saved_scheme.increment_usage()
 
@@ -208,6 +189,7 @@ def create_job():
             marking_scheme_id=data.get("marking_scheme_id"),
             saved_prompt_id=data.get("saved_prompt_id"),
             saved_marking_scheme_id=data.get("saved_marking_scheme_id"),
+            scheme_id=data.get("scheme_id"),
             batch_id=data.get("batch_id"),
         )
 
@@ -218,9 +200,7 @@ def create_job():
                 saved_prompt.increment_usage()
 
         if data.get("saved_marking_scheme_id"):
-            saved_scheme = db.session.get(
-                SavedMarkingScheme, data["saved_marking_scheme_id"]
-            )
+            saved_scheme = db.session.get(SavedMarkingScheme, data["saved_marking_scheme_id"])
             if saved_scheme:
                 saved_scheme.increment_usage()
 

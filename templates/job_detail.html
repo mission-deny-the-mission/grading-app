@@ -176,6 +176,62 @@
                     </div>
                 </div>
                 {% endif %}
+
+                <!-- Grading Scheme Card (if job has a scheme) -->
+                {% if job.scheme_id %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-square me-2"></i>Grading Scheme
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <strong>Scheme Name:</strong>
+                                    <span class="text-primary">{{ job.scheme.name if job.scheme else 'Scheme not found' }}</span>
+                                </div>
+                                {% if job.scheme and job.scheme.description %}
+                                <div class="mb-3">
+                                    <strong>Description:</strong> {{ job.scheme.description }}
+                                </div>
+                                {% endif %}
+                                {% if job.scheme %}
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <strong>Questions:</strong> {{ job.scheme.total_questions }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <strong>Criteria:</strong> {{ job.scheme.total_criteria }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <strong>Max Points:</strong> {{ job.scheme.total_possible_points }}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                {% if job.scheme %}
+                                <a href="/schemes/{{ job.scheme.id }}" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                                    <i class="fas fa-eye me-1"></i>View Scheme
+                                </a>
+                                <button class="btn btn-sm btn-outline-success w-100"
+                                        onclick="applySchemeToSubmissions('{{ job.id }}', '{{ job.scheme.id }}')">
+                                    <i class="fas fa-check me-1"></i>Apply to Submissions
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -588,6 +644,52 @@ function downloadSavedMarkingScheme() {
     a.click();
     window.URL.revokeObjectURL(url);
     {% endif %}
+}
+
+function applySchemeToSubmissions(jobId, schemeId) {
+    if (!confirm(`Apply scheme to all submissions in this job?`)) {
+        return;
+    }
+
+    // Fetch all submissions for the job
+    fetch(`/api/jobs/${jobId}/submissions`)
+        .then(r => r.json())
+        .then(data => {
+            const submissions = data.submissions || [];
+            if (submissions.length === 0) {
+                alert("No submissions found for this job");
+                return;
+            }
+
+            // For each submission, create a GradedSubmission
+            Promise.all(submissions.map(sub =>
+                fetch(`/api/grading/submissions`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        scheme_id: schemeId,
+                        student_id: sub.original_filename || `submission_${sub.id}`,
+                        submission_reference: sub.id,
+                        graded_by: 'system'
+                    })
+                })
+                .then(r => r.json())
+                .catch(e => console.error('Failed to create graded submission:', e))
+            ))
+            .then(results => {
+                const successful = results.filter(r => r && r.id).length;
+                alert(`Applied scheme to ${successful} submissions`);
+                location.reload();
+            })
+            .catch(e => {
+                alert(`Error applying scheme: ${e.message}`);
+                console.error(e);
+            });
+        })
+        .catch(e => {
+            alert(`Error fetching submissions: ${e.message}`);
+            console.error(e);
+        });
 }
 
 // Auto-refresh every 30 seconds if job is still processing

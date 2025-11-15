@@ -75,6 +75,7 @@
             export REDIS_PORT=6379
             export LM_STUDIO_URL=''${LM_STUDIO_URL:-http://localhost:1234/v1}
             export PYTHONPATH=$(pwd)
+            export PATH="$(pwd)/bin:$PATH"
 
             # Create .env file if it doesn't exist
             if [ ! -f .env ]; then
@@ -132,27 +133,47 @@ echo "Services stopped."
 EOF
             chmod +x stop-services.sh
 
-            # Set up shell aliases
-            alias celery-worker="celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance"
-            alias celery-beat="celery -A tasks beat --loglevel=info"
-            alias flask-app="python app.py"
-            alias start-all="python app.py & celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance & celery -A tasks beat --loglevel=info"
+            # Set up shell functions (more reliable than aliases in Nix)
+            flask-app() {
+              python app.py "$@"
+            }
 
-            echo "Development environment ready!"
+            celery-worker() {
+              celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance "$@"
+            }
+
+            celery-beat() {
+              celery -A tasks beat --loglevel=info "$@"
+            }
+
+            start-all() {
+              echo "Starting all services..."
+              python app.py &
+              celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance &
+              celery -A tasks beat --loglevel=info
+              wait
+            }
+
+            # Export functions for use in subshells
+            export -f flask-app celery-worker celery-beat start-all
+
+            echo "✓ Development environment ready!"
             echo ""
             echo "Services running:"
             echo "  - PostgreSQL: localhost:5433"
             echo "  - Redis: localhost:6379"
             echo ""
-            echo "Available aliases:"
-            echo "  - flask-app: Start the Flask application"
-            echo "  - celery-worker: Start Celery worker"
-            echo "  - celery-beat: Start Celery beat scheduler"
-            echo "  - start-all: Start all three services (Flask, Celery worker, Celery beat)"
+            echo "Available commands:"
+            echo "  - flask-app       Start Flask development server"
+            echo "  - celery-worker   Start Celery worker"
+            echo "  - celery-beat     Start Celery beat scheduler"
+            echo "  - start-all       Start all three services in parallel"
+            echo "  - stop-services.sh Stop PostgreSQL and Redis"
             echo ""
-            echo "To stop services: ./stop-services.sh"
-            echo ""
-            echo "Note: Services will be stopped when you exit the shell"
+            echo "Quick start:"
+            echo "  flask-app        # in one terminal"
+            echo "  celery-worker    # in another terminal"
+            echo "  celery-beat      # in a third terminal"
           '';
 
           # Cleanup services when shell exits

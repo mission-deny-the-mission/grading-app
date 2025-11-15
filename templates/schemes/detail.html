@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}{{ scheme.name }} - Grading Schemes{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <a href="{{ url_for('schemes_ui.list_schemes') }}" class="text-muted text-decoration-none small mb-3 d-inline-block">
+                <i class="fas fa-arrow-left me-2"></i>Back to Schemes
+            </a>
+            <h1 class="mb-2">{{ scheme.name }}</h1>
+            <p class="text-muted mb-0">
+                {% if scheme.description %}
+                    {{ scheme.description }}
+                {% else %}
+                    <em>No description</em>
+                {% endif %}
+            </p>
+        </div>
+        <div class="btn-group">
+            <a href="{{ url_for('schemes_ui.edit_scheme', scheme_id=scheme.id) }}" class="btn btn-primary">
+                <i class="fas fa-edit me-2"></i>Edit
+            </a>
+            <a href="{{ url_for('schemes_ui.clone_scheme_form', scheme_id=scheme.id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-copy me-2"></i>Clone
+            </a>
+            <a href="{{ url_for('schemes_ui.view_statistics', scheme_id=scheme.id) }}" class="btn btn-outline-info">
+                <i class="fas fa-chart-bar me-2"></i>Statistics
+            </a>
+        </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="display-6 text-primary">{{ scheme.total_possible_points }}</div>
+                    <small class="text-muted">Total Points</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="display-6 text-info">{{ scheme.questions|length }}</div>
+                    <small class="text-muted">Questions</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="display-6 text-success">{{ scheme.total_criteria }}</div>
+                    <small class="text-muted">Criteria</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="display-6 text-warning">{{ scheme.version_number }}</div>
+                    <small class="text-muted">Version</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Questions and Criteria -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="fas fa-list-check me-2 text-primary"></i>Questions & Criteria
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if scheme.questions %}
+                {% for question in scheme.questions %}
+                <div class="mb-4">
+                    <!-- Question Header -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="mb-1">
+                                <span class="badge bg-secondary me-2">{{ loop.index }}</span>
+                                {{ question.title }}
+                            </h6>
+                            {% if question.description %}
+                            <p class="text-muted small mb-0">{{ question.description }}</p>
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-info">{{ question.total_possible_points }} pts</span>
+                    </div>
+
+                    <!-- Criteria Table -->
+                    {% if question.criteria %}
+                    <div class="table-responsive ms-4">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 30%;">Criterion</th>
+                                    <th style="width: 50%;">Description</th>
+                                    <th style="width: 20%;" class="text-end">Max Points</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for criterion in question.criteria %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ criterion.name }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted small">
+                                            {% if criterion.description %}
+                                                {{ criterion.description }}
+                                            {% else %}
+                                                <em>No description</em>
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-success">{{ criterion.max_points }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning ms-4 mb-0">
+                        <small>No criteria defined for this question</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if not loop.last %}
+                <hr>
+                {% endif %}
+                {% endfor %}
+            {% else %}
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle me-2"></i>No questions defined yet
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Metadata -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card bg-light border-0">
+                <div class="card-body">
+                    <h6 class="card-title">Created</h6>
+                    <p class="mb-0">
+                        {{ scheme.created_at.strftime('%B %d, %Y at %I:%M %p') if scheme.created_at else 'Unknown' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-light border-0">
+                <div class="card-body">
+                    <h6 class="card-title">Last Modified</h6>
+                    <p class="mb-0">
+                        {{ scheme.updated_at.strftime('%B %d, %Y at %I:%M %p') if scheme.updated_at else 'Unknown' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .table-responsive {
+        border-left: 3px solid #e9ecef;
+        padding-left: 1rem;
+    }
+</style>
+{% endblock %}
