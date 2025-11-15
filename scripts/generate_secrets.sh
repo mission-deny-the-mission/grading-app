@@ -17,6 +17,15 @@ NC='\033[0m' # No Color
 MIN_SECRET_KEY_LENGTH=32
 MIN_ENCRYPTION_KEY_LENGTH=44  # Base64-encoded 32-byte Fernet key
 
+# Detect OS for sed compatibility
+# macOS requires -i with extension (e.g., -i.bak)
+# GNU sed (Linux) requires -i with optional extension after space (e.g., -i or -i .bak)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    SED_INPLACE=(-i.bak)
+else
+    SED_INPLACE=(-i)
+fi
+
 echo -e "${BLUE}================================${NC}"
 echo -e "${BLUE}  Grading App - Secrets Generator${NC}"
 echo -e "${BLUE}================================${NC}"
@@ -118,7 +127,7 @@ save_to_env() {
 
         # Check if secrets already exist in .env
         if grep -q "^SECRET_KEY=" "$env_file" 2>/dev/null; then
-            sed -i.bak "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" "$env_file"
+            sed "${SED_INPLACE[@]}" "s|^SECRET_KEY=.*|SECRET_KEY=$SECRET_KEY|" "$env_file"
             echo -e "${GREEN}✓ Updated SECRET_KEY in $env_file${NC}"
         else
             echo "SECRET_KEY=$SECRET_KEY" >> "$env_file"
@@ -126,11 +135,16 @@ save_to_env() {
         fi
 
         if grep -q "^DB_ENCRYPTION_KEY=" "$env_file" 2>/dev/null; then
-            sed -i.bak "s|^DB_ENCRYPTION_KEY=.*|DB_ENCRYPTION_KEY=$DB_ENCRYPTION_KEY|" "$env_file"
+            sed "${SED_INPLACE[@]}" "s|^DB_ENCRYPTION_KEY=.*|DB_ENCRYPTION_KEY=$DB_ENCRYPTION_KEY|" "$env_file"
             echo -e "${GREEN}✓ Updated DB_ENCRYPTION_KEY in $env_file${NC}"
         else
             echo "DB_ENCRYPTION_KEY=$DB_ENCRYPTION_KEY" >> "$env_file"
             echo -e "${GREEN}✓ Added DB_ENCRYPTION_KEY to $env_file${NC}"
+        fi
+
+        # Clean up backup files created by sed on macOS
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            rm -f "${env_file}.bak"
         fi
 
         # Set restrictive permissions
