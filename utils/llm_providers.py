@@ -45,6 +45,86 @@ API_KEY_PATTERNS = {
 }
 
 
+# ============================================================================
+# API KEY SANITIZATION (SECURITY)
+# ============================================================================
+
+def sanitize_api_key(key):
+    """
+    Sanitize an API key for safe logging.
+
+    Returns a masked version of the API key that shows only the prefix and suffix
+    for identification purposes while hiding the actual key value.
+
+    Args:
+        key (str): API key to sanitize
+
+    Returns:
+        str: Sanitized key in format "prefix...suffix" (e.g., "sk-or...abcd")
+    """
+    if not key or len(key) < 8:
+        return "***REDACTED***"
+
+    # Show first 6 chars and last 4 chars
+    prefix = key[:6]
+    suffix = key[-4:] if len(key) >= 10 else ""
+
+    if suffix:
+        return f"{prefix}...{suffix}"
+    return f"{prefix}..."
+
+
+def sanitize_error_message(error_msg):
+    """
+    Remove API keys from error messages before logging.
+
+    Uses regex patterns to detect and replace API keys with sanitized versions.
+    This prevents accidental logging of sensitive credentials.
+
+    Args:
+        error_msg (str): Error message that may contain API keys
+
+    Returns:
+        str: Error message with API keys replaced with "***REDACTED***"
+    """
+    if not error_msg:
+        return error_msg
+
+    # Patterns to detect API keys that might be in error messages
+    sanitization_patterns = [
+        # OpenRouter: sk-or-v1-...
+        (r'sk-or-v1-[A-Za-z0-9]{64}', '***REDACTED_OPENROUTER***'),
+        # Claude: sk-ant-api03-...
+        (r'sk-ant-api03-[A-Za-z0-9_-]{95}', '***REDACTED_CLAUDE***'),
+        # OpenAI: sk-...
+        (r'sk-[A-Za-z0-9]{48}(?=["\']?\s|$|[,\n])', '***REDACTED_OPENAI***'),
+        # Gemini: 39 char alphanumeric
+        (r'[A-Za-z0-9_-]{39}(?=["\']?\s|$|[,\n])', '***REDACTED_GEMINI***'),
+        # Z.AI: 32+ char alphanumeric
+        (r'(?:z_ai_)?[A-Za-z0-9]{32,}(?=["\']?\s|$|[,\n])', '***REDACTED_ZAI***'),
+        # Chutes: chutes_...
+        (r'chutes_[A-Za-z0-9]{32}', '***REDACTED_CHUTES***'),
+        # Generic: any string that looks like a base64-encoded secret (contains = padding)
+        (r'[A-Za-z0-9+/]{40,}={0,2}(?=["\']?\s|$|[,\n])', '***REDACTED_SECRET***'),
+        # Headers that might contain authorization
+        (r'(Authorization["\']?\s*[:=]\s*["\']?)([^"\']+)(["\']?)', r'\1***REDACTED***\3'),
+        (r'(api[_-]?key["\']?\s*[:=]\s*["\']?)([^"\']+)(["\']?)', r'\1***REDACTED***\3', 're.IGNORECASE'),
+    ]
+
+    sanitized = error_msg
+    for pattern_item in sanitization_patterns:
+        if len(pattern_item) == 2:
+            pattern, replacement = pattern_item
+            flags = 0
+        else:
+            pattern, replacement, flags = pattern_item
+            flags = re.IGNORECASE if 're.IGNORECASE' in str(flags) else 0
+
+        sanitized = re.sub(pattern, replacement, sanitized, flags=flags)
+
+    return sanitized
+
+
 class LLMProviderError(Exception):
     """
     Standardized exception for LLM provider errors.

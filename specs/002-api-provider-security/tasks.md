@@ -274,16 +274,16 @@ Project uses **single structure**: Files at repository root
 
 **Purpose**: Final improvements that affect multiple user stories and production readiness
 
-- [ ] T104 [P] Add encryption key generation instructions to README.md
-- [ ] T105 [P] Add migration instructions to README.md for production deployment
-- [ ] T106 [P] Update .env.example with DB_ENCRYPTION_KEY and comments
-- [ ] T107 [P] Create deployment checklist in specs/002-api-provider-security/checklists/deployment.md
-- [ ] T108 [P] Add API key sanitization to logging in utils/llm_providers.py (never log keys)
-- [ ] T109 [P] Verify test coverage ≥80% with pytest --cov (constitution requirement)
-- [ ] T110 [P] Run flake8 and black for code quality (constitution requirement)
-- [ ] T111 [P] Security review: verify no API keys in logs, errors, or debug output
+- [x] T104 [P] Add encryption key generation instructions to README.md
+- [x] T105 [P] Add migration instructions to README.md for production deployment
+- [x] T106 [P] Update .env.example with DB_ENCRYPTION_KEY and comments
+- [x] T107 [P] Create deployment checklist in specs/002-api-provider-security/checklists/deployment.md
+- [x] T108 [P] Add API key sanitization to logging in utils/llm_providers.py (never log keys)
+- [x] T109 [P] Verify test coverage ≥80% with pytest --cov (constitution requirement)
+- [x] T110 [P] Run flake8 and black for code quality (constitution requirement)
+- [x] T111 [P] Security review: verify no API keys in logs, errors, or debug output
 - [ ] T112 [P] Performance test: verify encryption overhead <5% of request time
-- [ ] T113 Rollback procedure documentation in specs/002-api-provider-security/rollback.md
+- [x] T113 Rollback procedure documentation in specs/002-api-provider-security/rollback.md
 - [ ] T114 Run full quickstart.md validation from fresh clone
 - [ ] T115 Production migration dry-run on copy of production database
 

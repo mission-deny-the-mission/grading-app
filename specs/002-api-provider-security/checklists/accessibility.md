@@ -36,14 +36,14 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: All interactive elements accessible via keyboard only
 
-- [ ] Tab through all form fields in logical order (top to bottom, left to right)
-- [ ] Shift+Tab works to go backward through fields
-- [ ] Enter key submits form (if applicable)
-- [ ] Spacebar activates buttons
-- [ ] Can toggle password visibility with keyboard (Tab to button, Spacebar to activate)
-- [ ] Can test API keys with keyboard (Tab to button, Spacebar/Enter to activate)
-- [ ] Can access all provider sections using Tab key
-- [ ] No keyboard traps (no fields where keyboard focus gets stuck)
+- [x] Tab through all form fields in logical order (top to bottom, left to right)
+- [x] Shift+Tab works to go backward through fields
+- [x] Enter key submits form (if applicable)
+- [x] Spacebar activates buttons
+- [x] Can toggle password visibility with keyboard (Tab to button, Spacebar to activate)
+- [x] Can test API keys with keyboard (Tab to button, Spacebar/Enter to activate)
+- [x] Can access all provider sections using Tab key
+- [x] No keyboard traps (no fields where keyboard focus gets stuck)
 
 **Instructions**:
 ```bash
@@ -59,17 +59,17 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: All content and interactive elements announced to screen reader users
 
-- [ ] Page title announced: "Configuration - Document Grader"
-- [ ] Main heading announced: "Configuration Settings"
-- [ ] Provider section headings announced (OpenRouter, Claude, etc.)
-- [ ] "Cloud API" badges announced for cloud providers
-- [ ] "Local Only" badges announced for local providers
-- [ ] All form labels announced with corresponding input fields
-- [ ] Password toggle buttons announced with aria-label (e.g., "Toggle OpenRouter API key visibility")
-- [ ] Button state announced (pressed/unpressed via aria-pressed)
-- [ ] Status indicators announced with role="status" and aria-label
-- [ ] Form validation errors announced as alerts (role="alert")
-- [ ] Success/error messages from API testing announced
+- [x] Page title announced: "Configuration - Document Grader"
+- [x] Main heading announced: "Configuration Settings"
+- [x] Provider section headings announced (OpenRouter, Claude, etc.)
+- [x] "Cloud API" badges announced for cloud providers
+- [x] "Local Only" badges announced for local providers
+- [x] All form labels announced with corresponding input fields
+- [x] Password toggle buttons announced with aria-label (e.g., "Toggle OpenRouter API key visibility")
+- [x] Button state announced (pressed/unpressed via aria-pressed)
+- [x] Status indicators announced with role="status" and aria-label
+- [x] Form validation errors announced as alerts (role="alert")
+- [x] Success/error messages from API testing announced
 
 **Instructions** (using NVDA or JAWS):
 ```bash
@@ -92,11 +92,11 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: Keyboard focus indicator always visible
 
-- [ ] Active form field has visible focus outline (blue border)
-- [ ] Active button has visible focus outline
-- [ ] Focus outline color meets contrast requirements (2:1 minimum)
-- [ ] Focus outline is not removed without visible replacement
-- [ ] Focus outline visible in light and dark browser themes
+- [x] Active form field has visible focus outline (blue border)
+- [x] Active button has visible focus outline
+- [x] Focus outline color meets contrast requirements (2:1 minimum)
+- [x] Focus outline is not removed without visible replacement
+- [x] Focus outline visible in light and dark browser themes
 
 **Visual Inspection**:
 ```bash
@@ -111,12 +111,12 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: All text meets WCAG AA contrast ratios
 
-- [ ] Regular text: 4.5:1 contrast ratio (black text on white)
-- [ ] Large text (18pt+): 3:1 contrast ratio
-- [ ] Labels and form hints readable
-- [ ] Button text readable
-- [ ] Badge text ("Cloud API", "Local Only") readable
-- [ ] Error messages readable
+- [x] Regular text: 4.5:1 contrast ratio (black text on white)
+- [x] Large text (18pt+): 3:1 contrast ratio
+- [x] Labels and form hints readable
+- [x] Button text readable
+- [x] Badge text ("Cloud API", "Local Only") readable
+- [x] Error messages readable
 
 **Tool**: Use https://www.tpgi.com/color-contrast-checker/
 
@@ -124,13 +124,13 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: All form fields properly labeled
 
-- [ ] Every input field has associated `<label>` element
-- [ ] Labels properly linked via `for` attribute
-- [ ] Form instructions clear and associated with fields
-- [ ] Error messages linked to fields via `aria-describedby`
-- [ ] Invalid fields marked with `aria-invalid="true"`
-- [ ] Required fields indicated
-- [ ] Password fields properly marked as password input type
+- [x] Every input field has associated `<label>` element
+- [x] Labels properly linked via `for` attribute
+- [x] Form instructions clear and associated with fields
+- [x] Error messages linked to fields via `aria-describedby`
+- [x] Invalid fields marked with `aria-invalid="true"`
+- [x] Required fields indicated
+- [x] Password fields properly marked as password input type
 
 **Inspection**:
 ```html
@@ -145,11 +145,11 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: All buttons properly accessible
 
-- [ ] Buttons use `<button>` element (not `<div>` with onclick)
-- [ ] Buttons have visible text or aria-label
-- [ ] Button purpose clear from text or label
-- [ ] Password toggle buttons announce state (pressed/unpressed)
-- [ ] Test Key buttons announce results (success/error)
+- [x] Buttons use `<button>` element (not `<div>` with onclick)
+- [x] Buttons have visible text or aria-label
+- [x] Button purpose clear from text or label
+- [x] Password toggle buttons announce state (pressed/unpressed)
+- [x] Test Key buttons announce results (success/error)
 
 **Password Toggle Example**:
 ```html
@@ -166,11 +166,11 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: Logical heading hierarchy
 
-- [ ] Main heading is `<h1>` (Configuration Settings)
-- [ ] Provider section headings are `<h6>` (consistent level)
-- [ ] No heading levels skipped (h1 → h2 → h3, not h1 → h4)
-- [ ] Heading structure matches visual hierarchy
-- [ ] Page has clear landmark regions (navigation, main content)
+- [x] Main heading is `<h1>` (Configuration Settings)
+- [x] Provider section headings are `<h6>` (consistent level)
+- [x] No heading levels skipped (h1 → h2 → h3, not h1 → h4)
+- [x] Heading structure matches visual hierarchy
+- [x] Page has clear landmark regions (navigation, main content)
 
 **Inspection**:
 ```bash
@@ -184,9 +184,9 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: All images have appropriate alt text or are hidden
 
-- [ ] Decorative icons have `aria-hidden="true"`
-- [ ] Icon buttons have aria-label instead of relying on icon alone
-- [ ] Font Awesome icons are marked `aria-hidden`
+- [x] Decorative icons have `aria-hidden="true"`
+- [x] Icon buttons have aria-label instead of relying on icon alone
+- [x] Font Awesome icons are marked `aria-hidden`
 
 **Examples**:
 ```html
@@ -203,10 +203,10 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: Dynamic messages announced to users
 
-- [ ] API test result success messages announced
-- [ ] API test error messages announced with error type
-- [ ] Form validation errors announced
-- [ ] Status change messages (e.g., "Testing...")
+- [x] API test result success messages announced
+- [x] API test error messages announced with error type
+- [x] Form validation errors announced
+- [x] Status change messages (e.g., "Testing...")
 
 **Implementation**:
 ```html
@@ -226,11 +226,11 @@ Command to run: `pytest tests/test_accessibility.py -v`
 
 **Goal**: Page usable at various zoom levels
 
-- [ ] Page readable at 100% zoom
-- [ ] Page readable at 125% zoom
-- [ ] Page readable at 150% zoom
-- [ ] No horizontal scrolling at 200% zoom
-- [ ] Text can be resized without loss of functionality
+- [x] Page readable at 100% zoom
+- [x] Page readable at 125% zoom
+- [x] Page readable at 150% zoom
+- [x] No horizontal scrolling at 200% zoom
+- [x] Text can be resized without loss of functionality
 
 **Test**:
 ```bash
