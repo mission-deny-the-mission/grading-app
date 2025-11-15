@@ -19,9 +19,7 @@ class TestBatchEditDelete:
             bid = batch.id
 
         # Update
-        resp = client.put(
-            f"/api/batches/{bid}", json={"batch_name": "UpdatedName", "priority": 7}
-        )
+        resp = client.put(f"/api/batches/{bid}", json={"batch_name": "UpdatedName", "priority": 7})
         assert resp.status_code == 200
         data = json.loads(resp.data)
         assert data["success"] is True and data["batch"]["batch_name"] == "UpdatedName"

@@ -22,7 +22,17 @@ class TestCriticalModelValidation:
         models_data = response.get_json()
 
         # Check that we have providers with the expected structure
-        required_providers = ["openrouter", "claude", "gemini", "openai", "lm_studio", "ollama", "nanogpt", "chutes", "zai"]
+        required_providers = [
+            "openrouter",
+            "claude",
+            "gemini",
+            "openai",
+            "lm_studio",
+            "ollama",
+            "nanogpt",
+            "chutes",
+            "zai",
+        ]
 
         valid_models = 0
         issues_found = 0
@@ -121,9 +131,7 @@ class TestCriticalModelValidation:
                 if pattern.match(example):
                     success_count += 1
 
-        assert (
-            success_count == total_tests
-        ), f"Pattern validation failed: {success_count}/{total_tests}"
+        assert success_count == total_tests, f"Pattern validation failed: {success_count}/{total_tests}"
 
     def _extract_model_options_from_html(self, html, context):
         """Extract model options from HTML in various contexts."""
@@ -144,9 +152,7 @@ class TestCriticalModelValidation:
                 pattern = rf'<select[^>]*id="{select_id}"[^>]*>(.*?)</select>'
                 match = re.search(pattern, html, re.DOTALL)
                 if match:
-                    option_pattern = (
-                        r'<option[^>]*value="([^"]*)"[^>]*>([^<]+)</option>'
-                    )
+                    option_pattern = r'<option[^>]*value="([^"]*)"[^>]*>([^<]+)</option>'
                     options = re.findall(option_pattern, match.group(1))
                     for value, display in options:
                         if value and value not in ["", "custom"]:
@@ -155,11 +161,7 @@ class TestCriticalModelValidation:
                                     "context": f"config_{select_id}",
                                     "display_name": display.strip(),
                                     "backend_value": value.strip(),
-                                    "provider": (
-                                        select_id.split("_")[0]
-                                        if "_" in select_id
-                                        else select_id
-                                    ),
+                                    "provider": (select_id.split("_")[0] if "_" in select_id else select_id),
                                 }
                             )
 
@@ -226,13 +228,9 @@ class TestCriticalModelValidation:
             # The config page uses different dropdown IDs than main/bulk pages
             if page_name == "configuration page":
                 # Config page uses provider-specific dropdowns, not modelSelect
-                assert (
-                    "openrouter_default_model" in html
-                ), f"Config dropdowns missing from {page_name}"
+                assert "openrouter_default_model" in html, f"Config dropdowns missing from {page_name}"
             else:
-                assert (
-                    'id="modelSelect"' in html
-                ), f"Model select dropdown missing from {page_name}"
+                assert 'id="modelSelect"' in html, f"Model select dropdown missing from {page_name}"
 
     @pytest.mark.api
     def test_model_api_endpoints_accessible(self, client):
@@ -248,9 +246,7 @@ class TestCriticalModelValidation:
 
         for endpoint in endpoints_to_test:
             response = client.get(endpoint)
-            assert (
-                response.status_code == 200
-            ), f"Model API endpoint {endpoint} not accessible"
+            assert response.status_code == 200, f"Model API endpoint {endpoint} not accessible"
 
     @pytest.mark.integration
     def test_model_consistency_across_providers(self, client):
@@ -262,17 +258,11 @@ class TestCriticalModelValidation:
 
         # Check that all providers have required structure
         for provider, provider_data in models_data.items():
-            assert (
-                "popular" in provider_data
-            ), f"Provider '{provider}' missing popular models"
-            assert (
-                "default" in provider_data
-            ), f"Provider '{provider}' missing default model"
+            assert "popular" in provider_data, f"Provider '{provider}' missing popular models"
+            assert "default" in provider_data, f"Provider '{provider}' missing default model"
 
             # Check that popular models list is not empty
-            assert (
-                len(provider_data["popular"]) > 0
-            ), f"Provider '{provider}' has empty popular models list"
+            assert len(provider_data["popular"]) > 0, f"Provider '{provider}' has empty popular models list"
 
             # Check that default model exists (may not be in popular list)
             default_model = provider_data["default"]

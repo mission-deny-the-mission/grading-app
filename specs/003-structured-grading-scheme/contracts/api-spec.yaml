@@ -1,0 +1,807 @@
+openapi: 3.0.3
+info:
+  title: Grading Scheme API
+  description: API endpoints for creating, managing, and applying structured grading schemes
+  version: 1.0.0
+  contact:
+    name: Grading App Development Team
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://grading-app.example.com
+    description: Production server
+
+tags:
+  - name: Schemes
+    description: CRUD operations for grading schemes
+  - name: Grading
+    description: Apply schemes to submissions and manage evaluations
+  - name: Export
+    description: Export grading results in various formats
+
+paths:
+  /api/schemes:
+    get:
+      tags: [Schemes]
+      summary: List all grading schemes
+      description: Retrieve paginated list of grading schemes with optional filtering
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category (e.g., "essay", "lab_report")
+        - name: include_deleted
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include soft-deleted schemes
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Items per page
+      responses:
+        '200':
+          description: Successful response with list of schemes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schemes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GradingScheme'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Schemes]
+      summary: Create a new grading scheme
+      description: Create a new grading scheme with questions and criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSchemeRequest'
+      responses:
+        '201':
+          description: Scheme created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingScheme'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/schemes/{scheme_id}:
+    get:
+      tags: [Schemes]
+      summary: Get scheme details
+      description: Retrieve complete scheme with questions and criteria
+      parameters:
+        - name: scheme_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingSchemeDetailed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Schemes]
+      summary: Update grading scheme
+      description: Update scheme metadata and structure (creates new version)
+      parameters:
+        - name: scheme_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSchemeRequest'
+      responses:
+        '200':
+          description: Scheme updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradingScheme'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Schemes]
+      summary: Delete grading scheme
+      description: Soft delete scheme (marks is_deleted=True)
+      parameters:
+        - name: scheme_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Scheme deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/schemes/{scheme_id}/questions:
+    post:
+      tags: [Schemes]
+      summary: Add question to scheme
+      description: Add a new question/category to existing scheme
+      parameters:
+        - name: scheme_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuestionRequest'
+      responses:
+        '201':
+          description: Question created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemeQuestion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/questions/{question_id}/criteria:
+    post:
+      tags: [Schemes]
+      summary: Add criterion to question
+      description: Add a new grading criterion to existing question
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCriterionRequest'
+      responses:
+        '201':
+          description: Criterion created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemeCriterion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/grading/submissions:
+    post:
+      tags: [Grading]
+      summary: Create graded submission
+      description: Start grading a student submission with a specific scheme
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubmissionRequest'
+      responses:
+        '201':
+          description: Submission created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradedSubmission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/grading/submissions/{submission_id}:
+    get:
+      tags: [Grading]
+      summary: Get graded submission
+      description: Retrieve submission with all criterion evaluations
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradedSubmissionDetailed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Grading]
+      summary: Update submission status
+      description: Mark submission as complete or reopen for editing
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                is_complete:
+                  type: boolean
+                evaluation_version:
+                  type: integer
+                  description: For optimistic locking
+      responses:
+        '200':
+          description: Submission updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GradedSubmission'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/grading/evaluations:
+    post:
+      tags: [Grading]
+      summary: Create or update criterion evaluation
+      description: Save points and feedback for a specific criterion on a submission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEvaluationRequest'
+      responses:
+        '201':
+          description: Evaluation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriterionEvaluation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/grading/evaluations/{evaluation_id}:
+    put:
+      tags: [Grading]
+      summary: Update criterion evaluation
+      description: Modify points or feedback for existing evaluation
+      parameters:
+        - name: evaluation_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEvaluationRequest'
+      responses:
+        '200':
+          description: Evaluation updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriterionEvaluation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/export/schemes/{scheme_id}:
+    get:
+      tags: [Export]
+      summary: Export grading results
+      description: Export all graded submissions for a scheme in CSV or JSON format
+      parameters:
+        - name: scheme_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [csv, json]
+        - name: include_incomplete
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include submissions where is_complete=False
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter submissions graded after this date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter submissions graded before this date
+      responses:
+        '200':
+          description: Export file generated successfully
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJSON'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  schemas:
+    GradingScheme:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        version_number:
+          type: integer
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        category:
+          type: string
+          maxLength: 100
+          nullable: true
+        total_possible_points:
+          type: number
+          format: decimal
+        total_questions:
+          type: integer
+        total_criteria:
+          type: integer
+        is_deleted:
+          type: boolean
+      required:
+        - id
+        - name
+        - total_possible_points
+
+    GradingSchemeDetailed:
+      allOf:
+        - $ref: '#/components/schemas/GradingScheme'
+        - type: object
+          properties:
+            questions:
+              type: array
+              items:
+                $ref: '#/components/schemas/SchemeQuestionDetailed'
+
+    SchemeQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        scheme_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+        display_order:
+          type: integer
+        total_possible_points:
+          type: number
+          format: decimal
+      required:
+        - id
+        - title
+        - display_order
+
+    SchemeQuestionDetailed:
+      allOf:
+        - $ref: '#/components/schemas/SchemeQuestion'
+        - type: object
+          properties:
+            criteria:
+              type: array
+              items:
+                $ref: '#/components/schemas/SchemeCriterion'
+
+    SchemeCriterion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        question_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        max_points:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 1000
+        display_order:
+          type: integer
+      required:
+        - id
+        - name
+        - max_points
+        - display_order
+
+    GradedSubmission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        scheme_id:
+          type: string
+          format: uuid
+        scheme_version:
+          type: integer
+        student_id:
+          type: string
+        student_name:
+          type: string
+          nullable: true
+        graded_by:
+          type: string
+        graded_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_complete:
+          type: boolean
+        evaluation_version:
+          type: integer
+        total_points_earned:
+          type: number
+          format: decimal
+        total_points_possible:
+          type: number
+          format: decimal
+        percentage_score:
+          type: number
+          format: decimal
+          nullable: true
+
+    GradedSubmissionDetailed:
+      allOf:
+        - $ref: '#/components/schemas/GradedSubmission'
+        - type: object
+          properties:
+            evaluations:
+              type: array
+              items:
+                $ref: '#/components/schemas/CriterionEvaluation'
+
+    CriterionEvaluation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        submission_id:
+          type: string
+          format: uuid
+        criterion_id:
+          type: string
+          format: uuid
+        points_awarded:
+          type: number
+          format: decimal
+        feedback:
+          type: string
+          nullable: true
+        max_points:
+          type: number
+          format: decimal
+        criterion_name:
+          type: string
+        question_title:
+          type: string
+
+    CreateSchemeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        category:
+          type: string
+          maxLength: 100
+        questions:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+              criteria:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+                    max_points:
+                      type: number
+                      format: decimal
+                  required:
+                    - name
+                    - max_points
+            required:
+              - title
+      required:
+        - name
+
+    UpdateSchemeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        category:
+          type: string
+
+    CreateQuestionRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 500
+        description:
+          type: string
+        display_order:
+          type: integer
+      required:
+        - title
+        - display_order
+
+    CreateCriterionRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        max_points:
+          type: number
+          format: decimal
+          minimum: 0.01
+          maximum: 1000
+        display_order:
+          type: integer
+      required:
+        - name
+        - max_points
+        - display_order
+
+    CreateSubmissionRequest:
+      type: object
+      properties:
+        scheme_id:
+          type: string
+          format: uuid
+        student_id:
+          type: string
+        student_name:
+          type: string
+        submission_reference:
+          type: string
+      required:
+        - scheme_id
+        - student_id
+
+    CreateEvaluationRequest:
+      type: object
+      properties:
+        submission_id:
+          type: string
+          format: uuid
+        criterion_id:
+          type: string
+          format: uuid
+        points_awarded:
+          type: number
+          format: decimal
+        feedback:
+          type: string
+      required:
+        - submission_id
+        - criterion_id
+        - points_awarded
+
+    UpdateEvaluationRequest:
+      type: object
+      properties:
+        points_awarded:
+          type: number
+          format: decimal
+        feedback:
+          type: string
+
+    ExportJSON:
+      type: object
+      properties:
+        export_metadata:
+          type: object
+          properties:
+            generated_at:
+              type: string
+              format: date-time
+            scheme_name:
+              type: string
+            scheme_version:
+              type: integer
+            total_students:
+              type: integer
+        submissions:
+          type: array
+          items:
+            type: object
+            properties:
+              student_id:
+                type: string
+              student_name:
+                type: string
+              graded_by:
+                type: string
+              graded_at:
+                type: string
+                format: date-time
+              total_points_earned:
+                type: number
+              total_points_possible:
+                type: number
+              questions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    points_earned:
+                      type: number
+                    points_possible:
+                      type: number
+                    criteria:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          points_awarded:
+                            type: number
+                          max_points:
+                            type: number
+                          feedback:
+                            type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    Conflict:
+      description: Conflict (e.g., concurrent modification, cannot delete)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              current_version:
+                type: integer

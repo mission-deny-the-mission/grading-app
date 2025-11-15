@@ -102,9 +102,7 @@ class TestValidateFileUpload:
 class TestImageValidation:
     """Test image-specific file validation functionality."""
 
-    def create_mock_image_file(
-        self, filename="test.png", mime_type="image/png", file_size=1024 * 100
-    ):
+    def create_mock_image_file(self, filename="test.png", mime_type="image/png", file_size=1024 * 100):
         """Create a mock file object for testing."""
         import io
 

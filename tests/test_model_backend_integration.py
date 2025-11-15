@@ -46,10 +46,7 @@ class TestModelBackendIntegration:
                 if actual_model == expected_model:
                     success_count += 1
                 else:
-                    pytest.fail(
-                        f"{provider}: expected '{expected_model}' "
-                        f"but got '{actual_model}'"
-                    )
+                    pytest.fail(f"{provider}: expected '{expected_model}' " f"but got '{actual_model}'")
 
             assert success_count == len(test_cases)
 
@@ -117,10 +114,7 @@ class TestModelBackendIntegration:
             else:
                 expected_str = "valid" if should_be_valid else "invalid"
                 actual_str = "valid" if is_valid else "invalid"
-                pytest.fail(
-                    f"'{model_name}' for {provider}: "
-                    f"expected {expected_str} but was {actual_str}"
-                )
+                pytest.fail(f"'{model_name}' for {provider}: " f"expected {expected_str} but was {actual_str}")
 
         assert success_count == len(format_tests)
 
@@ -202,8 +196,7 @@ class TestModelBackendIntegration:
         for model_name, provider, expected_valid in edge_cases:
             is_valid = self._validate_model_format(model_name, provider)
             assert is_valid == expected_valid, (
-                f"'{model_name}' for {provider}: "
-                f"expected {expected_valid}, got {is_valid}"
+                f"'{model_name}' for {provider}: " f"expected {expected_valid}, got {is_valid}"
             )
 
     @pytest.mark.unit
@@ -220,8 +213,7 @@ class TestModelBackendIntegration:
             expected_fallback = "anthropic/claude-3-5-sonnet-20241022"
 
             assert fallback_model == expected_fallback, (
-                f"Fallback model: expected '{expected_fallback}', "
-                f"got '{fallback_model}'"
+                f"Fallback model: expected '{expected_fallback}', " f"got '{fallback_model}'"
             )
 
     @pytest.mark.unit
@@ -242,17 +234,11 @@ class TestModelBackendIntegration:
         ]
 
         for provider in required_providers:
-            assert (
-                provider in DEFAULT_MODELS
-            ), f"Provider '{provider}' missing from DEFAULT_MODELS"
+            assert provider in DEFAULT_MODELS, f"Provider '{provider}' missing from DEFAULT_MODELS"
 
             provider_config = DEFAULT_MODELS[provider]
-            assert (
-                "default" in provider_config
-            ), f"Provider '{provider}' missing default model"
-            assert (
-                "popular" in provider_config
-            ), f"Provider '{provider}' missing popular models list"
+            assert "default" in provider_config, f"Provider '{provider}' missing default model"
+            assert "popular" in provider_config, f"Provider '{provider}' missing popular models list"
             assert isinstance(
                 provider_config["popular"], list
             ), f"Provider '{provider}' popular models should be a list"

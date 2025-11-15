@@ -1,0 +1,545 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'edit' %}Edit{% else %}Create{% endif %} Scheme - Grading{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <!-- Header -->
+    <div>
+        <a href="{{ url_for('schemes_ui.list_schemes') }}" class="text-muted text-decoration-none small mb-3 d-inline-block">
+            <i class="fas fa-arrow-left me-2"></i>Back to Schemes
+        </a>
+        <h1 class="mb-2">
+            {% if mode == 'edit' %}
+                Edit Scheme: {{ scheme.name }}
+            {% else %}
+                Create New Grading Scheme
+            {% endif %}
+        </h1>
+        <p class="text-muted">Build your rubric by defining questions and evaluation criteria</p>
+    </div>
+
+    <!-- Form -->
+    <form id="schemeForm" class="mt-4">
+        <!-- Scheme Details Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt me-2 text-primary"></i>Scheme Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label for="schemeName" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="schemeName" placeholder="e.g., Essay Rubric Fall 2025"
+                               value="{{ scheme.name if scheme else '' }}" required>
+                        <small class="text-muted">Must be unique</small>
+                    </div>
+                    <div class="col-12">
+                        <label for="schemeDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="schemeDescription" rows="3"
+                                  placeholder="Optional description of this grading scheme...">{{ scheme.description if scheme else '' }}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="schemeCategory" class="form-label">Category</label>
+                        <input type="text" class="form-control" id="schemeCategory" placeholder="e.g., Essays, Projects"
+                               value="{{ scheme.category if scheme else '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Total Points</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-star"></i></span>
+                            <input type="number" class="form-control" id="totalPoints" readonly value="0">
+                        </div>
+                        <small class="text-muted">Automatically calculated</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle me-2 text-primary"></i>Questions/Categories
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-primary" id="addQuestionBtn">
+                        <i class="fas fa-plus me-2"></i>Add Question
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" id="questionsContainer">
+                <!-- Questions will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex gap-2 mb-4">
+            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                <i class="fas fa-save me-2"></i>
+                {% if mode == 'edit' %}Update Scheme{% else %}Create Scheme{% endif %}
+            </button>
+            <a href="{{ url_for('schemes_ui.list_schemes') }}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times me-2"></i>Cancel
+            </a>
+            {% if mode == 'edit' and scheme %}
+            <button type="button" class="btn btn-outline-danger btn-lg ms-auto" id="deleteSchemeBtn">
+                <i class="fas fa-trash me-2"></i>Delete Scheme
+            </button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="spinner-border text-primary d-none" role="status" style="position: fixed; top: 50%; left: 50%; z-index: 9999;">
+    <span class="visually-hidden">Loading...</span>
+</div>
+
+<script>
+class SchemeBuilder {
+    constructor() {
+        this.questionCount = 0;
+        this.mode = '{{ mode }}';
+        this.schemeId = '{{ scheme.id if scheme else '' }}';
+        this.form = document.getElementById('schemeForm');
+        this.questionsContainer = document.getElementById('questionsContainer');
+        this.addQuestionBtn = document.getElementById('addQuestionBtn');
+        this.submitBtn = document.getElementById('submitBtn');
+        this.deleteSchemeBtn = document.getElementById('deleteSchemeBtn');
+
+        this.init();
+    }
+
+    init() {
+        this.addQuestionBtn.addEventListener('click', () => this.addQuestion());
+        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        if (this.deleteSchemeBtn) {
+            this.deleteSchemeBtn.addEventListener('click', () => this.handleDelete());
+        }
+
+        // Load existing scheme if editing
+        if (this.mode === 'edit' && this.schemeId) {
+            this.loadScheme();
+        } else {
+            // Add empty question for new schemes
+            this.addQuestion();
+        }
+    }
+
+    async loadScheme() {
+        ui.showLoading('Loading scheme...');
+        try {
+            const response = await fetch(`/api/schemes/${this.schemeId}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to load scheme');
+            }
+
+            const scheme = await response.json();
+
+            // Clear container
+            this.questionsContainer.innerHTML = '';
+            this.questionCount = 0;
+
+            // Load questions
+            if (scheme.questions && scheme.questions.length > 0) {
+                scheme.questions.forEach(question => {
+                    this.addQuestion(question);
+                });
+            } else {
+                this.addQuestion();
+            }
+
+            this.updateTotalPoints();
+        } catch (error) {
+            console.error('Error loading scheme:', error);
+            ui.error('Failed to load scheme details: ' + error.message);
+        } finally {
+            ui.hideLoading();
+        }
+    }
+
+    addQuestion(question = null) {
+        const questionId = this.questionCount++;
+        const questionData = question || {};
+
+        const questionHTML = `
+            <div class="card mb-3 question-card" data-question-id="${questionId}">
+                <div class="card-header bg-white border-bottom">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h6 class="mb-0">
+                                <span class="question-number" style="color: #667eea; font-weight: bold;">Question \${questionId + 1}</span>
+                            </h6>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-question">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Question Title *</label>
+                            <input type="text" class="form-control question-title" placeholder="e.g., Introduction"
+                                   value="${questionData.title || ''}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Question Points</label>
+                            <input type="number" class="form-control question-points" readonly
+                                   value="${questionData.total_possible_points || 0}">
+                            <small class="text-muted">Auto-calculated</small>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control question-description" rows="2"
+                                      placeholder="Optional description...">${questionData.description || ''}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Criteria Section -->
+                    <div class="ms-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <label class="form-label mb-0">Evaluation Criteria</label>
+                            <button type="button" class="btn btn-sm btn-outline-success add-criterion">
+                                <i class="fas fa-plus me-1"></i>Add Criterion
+                            </button>
+                        </div>
+                        <div class="criteria-list">
+                            ${this.renderCriteria(questionData.criteria || [], questionId)}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.questionsContainer.insertAdjacentHTML('beforeend', questionHTML);
+
+        // Attach event listeners to new question card
+        const questionCard = this.questionsContainer.querySelector(`.question-card[data-question-id="${questionId}"]`);
+        questionCard.querySelector('.delete-question').addEventListener('click', () => {
+            if (document.querySelectorAll('.question-card').length > 1) {
+                questionCard.remove();
+                this.updateQuestionNumbers();
+                this.updateTotalPoints();
+                ui.info('Question removed');
+            } else {
+                ui.warning('At least one question is required');
+            }
+        });
+
+        questionCard.querySelector('.add-criterion').addEventListener('click', () => {
+            this.addCriterion(questionCard, null);
+        });
+
+        questionCard.querySelectorAll('input[type="number"].criterion-points, input[type="text"].criterion-name').forEach(input => {
+            input.addEventListener('change', () => this.updateTotalPoints());
+        });
+
+        // Add existing criteria
+        if (questionData.criteria && questionData.criteria.length > 0) {
+            questionData.criteria.forEach((criterion, index) => {
+                // Criteria already rendered in renderCriteria, just attach listeners
+                const criterionInputs = questionCard.querySelectorAll(`input[data-criterion-index="${index}"]`);
+                criterionInputs.forEach(input => {
+                    input.addEventListener('change', () => this.updateTotalPoints());
+                });
+            });
+        }
+    }
+
+    renderCriteria(criteria, questionId) {
+        if (criteria.length === 0) {
+            return '<div class="alert alert-info small">No criteria yet. Add your first evaluation criterion.</div>';
+        }
+
+        return criteria.map((criterion, index) => `
+            <div class="card card-sm mb-2 criterion-item" data-criterion-index="${index}">
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <input type="text" class="form-control form-control-sm criterion-name"
+                                   placeholder="e.g., Grammar" value="${criterion.name || ''}"
+                                   data-criterion-index="${index}" required>
+                            <small class="text-muted">Criterion name</small>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="number" class="form-control form-control-sm criterion-points"
+                                   placeholder="Points" value="${criterion.max_points || 0}" min="1"
+                                   data-criterion-index="${index}" required>
+                            <small class="text-muted">Max points</small>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-criterion">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <input type="text" class="form-control form-control-sm criterion-description"
+                               placeholder="Description (optional)" value="${criterion.description || ''}">
+                        <small class="text-muted">What does meeting this criterion look like?</small>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    addCriterion(questionCard, criterion = null) {
+        const criteriaList = questionCard.querySelector('.criteria-list');
+        const criterionHTML = `
+            <div class="card card-sm mb-2 criterion-item">
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <input type="text" class="form-control form-control-sm criterion-name"
+                                   placeholder="e.g., Grammar" value="${criterion?.name || ''}" required>
+                            <small class="text-muted">Criterion name</small>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="number" class="form-control form-control-sm criterion-points"
+                                   placeholder="Points" value="${criterion?.max_points || 0}" min="1" required>
+                            <small class="text-muted">Max points</small>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-criterion">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <input type="text" class="form-control form-control-sm criterion-description"
+                               placeholder="Description (optional)" value="${criterion?.description || ''}">
+                        <small class="text-muted">What does meeting this criterion look like?</small>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        criteriaList.insertAdjacentHTML('beforeend', criterionHTML);
+
+        // Attach delete handler to new criterion
+        const newCriterion = criteriaList.querySelector('.criterion-item:last-child');
+        newCriterion.querySelector('.delete-criterion').addEventListener('click', () => {
+            newCriterion.remove();
+            if (criteriaList.querySelectorAll('.criterion-item').length === 0) {
+                criteriaList.innerHTML = '<div class="alert alert-info small">No criteria yet. Add your first evaluation criterion.</div>';
+            }
+            this.updateTotalPoints();
+        });
+
+        newCriterion.querySelectorAll('input[type="number"], input[type="text"]').forEach(input => {
+            input.addEventListener('change', () => this.updateTotalPoints());
+        });
+
+        // Clear empty state message
+        if (criteriaList.querySelector('.alert')) {
+            criteriaList.querySelector('.alert').remove();
+        }
+
+        this.updateTotalPoints();
+    }
+
+    updateTotalPoints() {
+        let total = 0;
+        document.querySelectorAll('.question-card').forEach((card, index) => {
+            let questionTotal = 0;
+            card.querySelectorAll('.criterion-points').forEach(input => {
+                const points = parseFloat(input.value) || 0;
+                questionTotal += points;
+            });
+            card.querySelector('.question-points').value = questionTotal;
+            total += questionTotal;
+        });
+        document.getElementById('totalPoints').value = total;
+    }
+
+    updateQuestionNumbers() {
+        document.querySelectorAll('.question-card').forEach((card, index) => {
+            card.querySelector('.question-number').textContent = `Question ${index + 1}`;
+        });
+    }
+
+    async handleSubmit(e) {
+        e.preventDefault();
+        this.showLoading(true);
+
+        try {
+            const schemeData = {
+                name: document.getElementById('schemeName').value,
+                description: document.getElementById('schemeDescription').value,
+                category: document.getElementById('schemeCategory').value,
+                questions: []
+            };
+
+            // Collect questions and criteria
+            document.querySelectorAll('.question-card').forEach(questionCard => {
+                const question = {
+                    title: questionCard.querySelector('.question-title').value,
+                    description: questionCard.querySelector('.question-description').value,
+                    criteria: []
+                };
+
+                questionCard.querySelectorAll('.criterion-item').forEach(criterionCard => {
+                    const criterion = {
+                        name: criterionCard.querySelector('.criterion-name').value,
+                        description: criterionCard.querySelector('.criterion-description').value,
+                        max_points: parseFloat(criterionCard.querySelector('.criterion-points').value) || 0
+                    };
+                    question.criteria.push(criterion);
+                });
+
+                schemeData.questions.push(question);
+            });
+
+            // Validate
+            if (!schemeData.name.trim()) {
+                ui.error('Scheme name is required');
+                ui.showFieldError(document.getElementById('schemeName'), 'Please enter a scheme name');
+                return;
+            }
+
+            if (schemeData.questions.some(q => !q.title.trim())) {
+                ui.error('All questions must have a title');
+                return;
+            }
+
+            if (schemeData.questions.some(q => q.criteria.some(c => !c.name.trim() || c.max_points <= 0))) {
+                ui.error('All criteria must have a name and positive points');
+                return;
+            }
+
+            // Show loading
+            ui.showLoading(this.mode === 'edit' ? 'Updating scheme...' : 'Creating scheme...');
+
+            // Submit to API
+            const method = this.mode === 'edit' ? 'PUT' : 'POST';
+            const url = this.mode === 'edit'
+                ? `/api/schemes/${this.schemeId}`
+                : '/api/schemes';
+
+            let response;
+            if (this.mode === 'edit') {
+                // For edit, only send updatable fields
+                response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: schemeData.name,
+                        description: schemeData.description
+                    })
+                });
+            } else {
+                response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(schemeData)
+                });
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to save scheme');
+            }
+
+            const result = await response.json();
+            ui.success(`Scheme ${this.mode === 'edit' ? 'updated' : 'created'} successfully!`);
+
+            // Delay redirect to show success message
+            setTimeout(() => {
+                window.location.href = `/schemes/${result.id}`;
+            }, 1000);
+
+        } catch (error) {
+            console.error('Error saving scheme:', error);
+            ui.error(`Failed to save scheme: ${error.message}`);
+        } finally {
+            ui.hideLoading();
+        }
+    }
+
+    async handleDelete() {
+        const schemeName = document.getElementById('schemeName').value;
+        const confirmed = await ui.confirm(
+            `Are you sure you want to delete "${schemeName}"? This action cannot be undone.`,
+            'Delete Scheme',
+            'Delete',
+            'danger'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        ui.showLoading('Deleting scheme...');
+
+        try {
+            const response = await fetch(`/api/schemes/${this.schemeId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to delete scheme');
+            }
+
+            ui.success('Scheme deleted successfully');
+
+            // Delay redirect to show success message
+            setTimeout(() => {
+                window.location.href = '/schemes';
+            }, 1000);
+
+        } catch (error) {
+            console.error('Error deleting scheme:', error);
+            ui.error(`Failed to delete scheme: ${error.message}`);
+        } finally {
+            ui.hideLoading();
+        }
+    }
+
+    showLoading(show) {
+        const spinner = document.getElementById('loadingSpinner');
+        if (show) {
+            spinner.classList.remove('d-none');
+        } else {
+            spinner.classList.add('d-none');
+        }
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    new SchemeBuilder();
+});
+</script>
+
+<style>
+    .card-sm {
+        border: 1px solid #e9ecef;
+    }
+
+    .card-sm .card-body {
+        padding: 0.75rem;
+    }
+
+    .criterion-item {
+        background-color: #f8f9fa;
+    }
+
+    .criterion-item .card-body input {
+        font-size: 0.9rem;
+    }
+
+    .question-card:hover {
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}

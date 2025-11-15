@@ -15,9 +15,7 @@ def test_remove_job_from_wrong_batch(client, app):
         db.session.add(batch_a)
         db.session.add(batch_b)
         db.session.commit()
-        job = GradingJob(
-            job_name="J", provider="openrouter", prompt="p", batch_id=batch_a.id
-        )
+        job = GradingJob(job_name="J", provider="openrouter", prompt="p", batch_id=batch_a.id)
         db.session.add(job)
         db.session.commit()
         jid = job.id
@@ -39,22 +37,16 @@ def test_add_jobs_to_batch_skips(client, app):
         db.session.commit()
         bid = batch.id
         # Already assigned job
-        assigned = GradingJob(
-            job_name="Assigned", provider="openrouter", prompt="p", batch_id=bid
-        )
+        assigned = GradingJob(job_name="Assigned", provider="openrouter", prompt="p", batch_id=bid)
         db.session.add(assigned)
         db.session.commit()
         assigned_id = assigned.id
 
-    resp = client.post(
-        f"/api/batches/{bid}/jobs", json={"job_ids": [assigned_id, "missing-id"]}
-    )
+    resp = client.post(f"/api/batches/{bid}/jobs", json={"job_ids": [assigned_id, "missing-id"]})
     assert resp.status_code == 200
     data = json.loads(resp.data)
     assert data["success"] is True
-    assert any(
-        s.get("reason", "").startswith("Already assigned") for s in data["skipped_jobs"]
-    )
+    assert any(s.get("reason", "").startswith("Already assigned") for s in data["skipped_jobs"])
     assert any(s.get("reason") == "Job not found" for s in data["skipped_jobs"])
 
 

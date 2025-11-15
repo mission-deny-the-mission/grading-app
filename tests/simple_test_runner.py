@@ -37,7 +37,7 @@ class TestRunner:
 
     def extract_script_content(self, html_content):
         """Extract JavaScript content from HTML."""
-        script_match = re.search(r'<script>(.*?)</script>', html_content, re.DOTALL)
+        script_match = re.search(r"<script>(.*?)</script>", html_content, re.DOTALL)
         if not script_match:
             raise ValueError("No script content found in HTML")
         return script_match.group(1)
@@ -48,31 +48,31 @@ class TestRunner:
 
     def get_function_definitions(self, script_content):
         """Get all function definitions from JavaScript."""
-        return re.findall(r'function\s+(\w+)\s*\(', script_content)
+        return re.findall(r"function\s+(\w+)\s*\(", script_content)
 
     def test_bulk_upload_page_contains_required_elements(self):
         """Test that the bulk upload page contains all required DOM elements."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         # Test for critical model loading elements
         required_elements = [
-            'id="provider"',              # Provider selection dropdown
-            'id="modelSelect"',           # Single model selection dropdown
-            'id="modelSelectSpinner"',    # Loading spinner for models
+            'id="provider"',  # Provider selection dropdown
+            'id="modelSelect"',  # Single model selection dropdown
+            'id="modelSelectSpinner"',  # Loading spinner for models
             'id="bulkModelLoadingStatus"',  # Loading status text
-            'id="bulkModelError"',        # Error display div
+            'id="bulkModelError"',  # Error display div
             'id="refreshBulkModelsBtn"',  # Refresh models button
-            'id="enableComparison"',      # Multi-model comparison checkbox
-            'id="modelSelection"',        # Model selection section
-            'id="allModelsContainer"',    # Container for all models
-            'id="providerFilters"',       # Provider filter checkboxes
-            'id="modelSearch"',           # Model search input
-            'id="selectedCount"'          # Selected models count
+            'id="enableComparison"',  # Multi-model comparison checkbox
+            'id="modelSelection"',  # Model selection section
+            'id="allModelsContainer"',  # Container for all models
+            'id="providerFilters"',  # Provider filter checkboxes
+            'id="modelSearch"',  # Model search input
+            'id="selectedCount"',  # Selected models count
         ]
 
         all_elements_found = True
@@ -85,11 +85,11 @@ class TestRunner:
 
     def test_bulk_upload_page_no_references_to_missing_elements(self):
         """Test that the bulk upload page doesn't reference missing DOM elements."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         try:
@@ -98,14 +98,12 @@ class TestRunner:
 
             # Check for references to elements that shouldn't exist
             forbidden_elements = [
-                'popularModels',  # This was the problematic element that caused the original issue
+                "popularModels",  # This was the problematic element that caused the original issue
             ]
 
             for forbidden_element in forbidden_elements:
                 self.assert_not_contains(
-                    element_references,
-                    forbidden_element,
-                    f"No reference to forbidden element '{forbidden_element}'"
+                    element_references, forbidden_element, f"No reference to forbidden element '{forbidden_element}'"
                 )
 
         except ValueError as e:
@@ -113,11 +111,11 @@ class TestRunner:
 
     def test_javascript_no_dangerous_patterns(self):
         """Test that JavaScript code doesn't contain dangerous patterns."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         try:
@@ -125,8 +123,8 @@ class TestRunner:
 
             # Check for dangerous patterns
             dangerous_patterns = [
-                'popularModelsDiv',  # The original issue
-                'document.getElementById(\'popularModels\')',  # Direct reference
+                "popularModelsDiv",  # The original issue
+                "document.getElementById('popularModels')",  # Direct reference
             ]
 
             no_issues = True
@@ -143,11 +141,11 @@ class TestRunner:
 
     def test_all_javascript_elements_exist_in_dom(self):
         """Test that all JavaScript getElementById references exist in the DOM."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         try:
@@ -163,7 +161,7 @@ class TestRunner:
 
             self.assert_true(
                 len(missing_elements) == 0,
-                f"All JavaScript element references exist in DOM - Missing: {missing_elements}"
+                f"All JavaScript element references exist in DOM - Missing: {missing_elements}",
             )
 
         except ValueError as e:
@@ -171,11 +169,11 @@ class TestRunner:
 
     def test_critical_javascript_functions_exist(self):
         """Test that critical JavaScript functions exist and are properly defined."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         try:
@@ -184,23 +182,22 @@ class TestRunner:
 
             # Check for critical functions
             required_functions = [
-                'loadAvailableModels',
-                'loadAllProvidersModels',
-                'refreshBulkProviderModels',
-                'toggleModelSelection',
-                'updateSelectedModelCount',
-                'getModelDisplayName',
-                'getBulkFallbackModels',
-                'toggleCustomModelBulk',
-                'resetForm',
-                'loadJobTemplate'
+                "loadAvailableModels",
+                "loadAllProvidersModels",
+                "refreshBulkProviderModels",
+                "toggleModelSelection",
+                "updateSelectedModelCount",
+                "getModelDisplayName",
+                "getBulkFallbackModels",
+                "toggleCustomModelBulk",
+                "resetForm",
+                "loadJobTemplate",
             ]
 
             all_functions_found = True
             for function_name in required_functions:
                 if not self.assert_true(
-                    function_name in functions,
-                    f"Critical JavaScript function '{function_name}' exists"
+                    function_name in functions, f"Critical JavaScript function '{function_name}' exists"
                 ):
                     all_functions_found = False
 
@@ -212,39 +209,35 @@ class TestRunner:
 
     def test_regression_prevention_popular_models_element_missing(self):
         """Regression test: Ensure no references to the problematic popularModels element."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         # This is the specific regression that was fixed
+        self.assert_not_contains(html_content, "popularModelsDiv", "Regression: No reference to 'popularModelsDiv'")
         self.assert_not_contains(
             html_content,
-            'popularModelsDiv',
-            "Regression: No reference to 'popularModelsDiv'"
+            "getElementById('popularModels')",
+            "Regression: No direct reference to 'popularModels' element",
         )
         self.assert_not_contains(
             html_content,
-            'getElementById(\'popularModels\')',
-            "Regression: No direct reference to 'popularModels' element"
-        )
-        self.assert_not_contains(
-            html_content,
-            'document.getElementById(\'popularModels\')',
-            "Regression: No document.getElementById reference to 'popularModels' element"
+            "document.getElementById('popularModels')",
+            "Regression: No document.getElementById reference to 'popularModels' element",
         )
 
         self.test_results.append("✓ PASS: Regression test passed - no problematic references found")
 
     def test_model_loading_user_feedback_mechanisms(self):
         """Test that model loading provides proper user feedback."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         # Check for user feedback elements
@@ -265,11 +258,11 @@ class TestRunner:
 
     def test_model_loading_api_calls_exist(self):
         """Test that model loading API calls are present."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         try:
@@ -277,9 +270,9 @@ class TestRunner:
 
             # Check for API calls
             api_calls = [
-                '/api/models/${provider}',
-                '/api/models/all',
-                'fetch(',
+                "/api/models/${provider}",
+                "/api/models/all",
+                "fetch(",
             ]
 
             all_api_calls_found = True
@@ -295,11 +288,11 @@ class TestRunner:
 
     def test_error_handling_patterns_exist(self):
         """Test that error handling patterns are present."""
-        if not os.path.exists('../templates/bulk_upload.html'):
+        if not os.path.exists("../templates/bulk_upload.html"):
             self.test_results.append("✗ SKIP: templates/bulk_upload.html not found")
             return
 
-        with open('../templates/bulk_upload.html', 'r') as f:
+        with open("../templates/bulk_upload.html", "r") as f:
             html_content = f.read()
 
         try:
@@ -307,10 +300,10 @@ class TestRunner:
 
             # Check for error handling patterns
             error_patterns = [
-                'catch(',
-                'console.error(',
-                'errorDiv.style.display',
-                'status.textContent',
+                "catch(",
+                "console.error(",
+                "errorDiv.style.display",
+                "status.textContent",
             ]
 
             all_error_patterns_found = True
@@ -361,7 +354,7 @@ class TestRunner:
 
 if __name__ == "__main__":
     # Add the current directory to Python path
-    sys.path.insert(0, '.')
+    sys.path.insert(0, ".")
 
     # Run the tests
     runner = TestRunner()

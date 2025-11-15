@@ -16,9 +16,7 @@ class TestFileProcessing:
     @pytest.mark.unit
     def test_extract_text_from_txt(self):
         """Test extracting text from TXT files."""
-        content = (
-            "This is a test document.\nIt has multiple lines.\nAnd some formatting."
-        )
+        content = "This is a test document.\nIt has multiple lines.\nAnd some formatting."
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write(content)
@@ -272,14 +270,10 @@ class TestPromptProcessing:
     def test_combine_prompt_with_marking_scheme(self):
         """Test combining prompt with marking scheme."""
         prompt = "Please grade this essay."
-        marking_scheme = (
-            "GRADING RUBRIC:\n1. Content (40 points)\n2. Structure (30 points)"
-        )
+        marking_scheme = "GRADING RUBRIC:\n1. Content (40 points)\n2. Structure (30 points)"
 
         # Simple string concatenation for now
-        combined = (
-            f"{prompt}\n\nPlease use the following marking scheme:\n{marking_scheme}"
-        )
+        combined = f"{prompt}\n\nPlease use the following marking scheme:\n{marking_scheme}"
 
         assert prompt in combined
         assert marking_scheme in combined

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Wrapper script to run Celery worker, handles nix-shell if needed
+
+if [ -z "$FLASK_ENV" ]; then
+    # Not in nix-shell, wrap with nix-shell
+    exec nix-shell --run "celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance $*"
+else
+    # Already in nix-shell, run directly
+    exec celery -A tasks worker --loglevel=info --concurrency=1 --queues=grading,maintenance "$@"
+fi

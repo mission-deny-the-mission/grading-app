@@ -14,7 +14,6 @@ from werkzeug.exceptions import NotFound
 
 from models import (
     BatchTemplate,
-    ExtractedContent,
     GradingJob,
     ImageQualityMetrics,
     ImageSubmission,
@@ -47,9 +46,11 @@ def get_cached_models(provider_name):
     current_time = time.time()
 
     # Check if we have cached data and it's not expired
-    if (provider_name in _model_cache
-            and provider_name in _cache_timestamp
-            and current_time - _cache_timestamp[provider_name] < CACHE_TTL):
+    if (
+        provider_name in _model_cache
+        and provider_name in _cache_timestamp
+        and current_time - _cache_timestamp[provider_name] < CACHE_TTL
+    ):
         return _model_cache[provider_name]
 
     # Cache is empty or expired, fetch fresh data
@@ -79,8 +80,10 @@ def get_cached_models(provider_name):
 
             # Build the expected response format
             formatted_models = {
-                "popular": [model["id"] for model in models_list] if models_list else provider_config.get("popular", []),
-                "default": provider_config.get("default", models_list[0]["id"] if models_list else "")
+                "popular": (
+                    [model["id"] for model in models_list] if models_list else provider_config.get("popular", [])
+                ),
+                "default": provider_config.get("default", models_list[0]["id"] if models_list else ""),
             }
 
             # Cache the successful result
@@ -100,45 +103,26 @@ def get_fallback_models(provider_name):
     """Get fallback hardcoded models for a provider."""
     fallback_models = {
         "openrouter": {
-            "popular": ["anthropic/claude-opus-4.1", "openai/gpt-5", "openai/gpt-4o", "anthropic/claude-3.5-sonnet-20241022"],
-            "default": "anthropic/claude-opus-4.1"
+            "popular": [
+                "anthropic/claude-opus-4.1",
+                "openai/gpt-5",
+                "openai/gpt-4o",
+                "anthropic/claude-3.5-sonnet-20241022",
+            ],
+            "default": "anthropic/claude-opus-4.1",
         },
         "claude": {
             "popular": ["claude-3.5-sonnet-20241022", "claude-3-opus-20240229", "claude-3-sonnet-20240229"],
-            "default": "claude-3.5-sonnet-20241022"
+            "default": "claude-3.5-sonnet-20241022",
         },
-        "gemini": {
-            "popular": ["gemini-2.0-flash-exp", "gemini-pro"],
-            "default": "gemini-2.0-flash-exp"
-        },
-        "openai": {
-            "popular": ["gpt-5", "gpt-4o", "gpt-4o-mini"],
-            "default": "gpt-4o"
-        },
-        "lm_studio": {
-            "popular": ["local-model"],
-            "default": "local-model"
-        },
-        "ollama": {
-            "popular": ["llama2", "llama3"],
-            "default": "llama2"
-        },
-        "nanogpt": {
-            "popular": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022"],
-            "default": "gpt-4o"
-        },
-        "chutes": {
-            "popular": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022"],
-            "default": "gpt-4o"
-        },
-        "zai": {
-            "popular": ["glm-4.6", "glm-4.5", "glm-4.5-x", "glm-4.5-flash"],
-            "default": "glm-4.6"
-        },
-        "zai_coding_plan": {
-            "popular": ["glm-4.6", "glm-4.5", "glm-4.5-air"],
-            "default": "glm-4.6"
-        }
+        "gemini": {"popular": ["gemini-2.0-flash-exp", "gemini-pro"], "default": "gemini-2.0-flash-exp"},
+        "openai": {"popular": ["gpt-5", "gpt-4o", "gpt-4o-mini"], "default": "gpt-4o"},
+        "lm_studio": {"popular": ["local-model"], "default": "local-model"},
+        "ollama": {"popular": ["llama2", "llama3"], "default": "llama2"},
+        "nanogpt": {"popular": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022"], "default": "gpt-4o"},
+        "chutes": {"popular": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022"], "default": "gpt-4o"},
+        "zai": {"popular": ["glm-4.6", "glm-4.5", "glm-4.5-x", "glm-4.5-flash"], "default": "glm-4.6"},
+        "zai_coding_plan": {"popular": ["glm-4.6", "glm-4.5", "glm-4.5-air"], "default": "glm-4.6"},
     }
     return fallback_models.get(provider_name, {"popular": [], "default": ""})
 
@@ -216,7 +200,18 @@ DEFAULT_MODELS = {
 @api_bp.route("/models")
 def get_available_models():
     """Get available models for each provider."""
-    providers = ["openrouter", "claude", "gemini", "openai", "lm_studio", "ollama", "nanogpt", "chutes", "zai", "zai_coding_plan"]
+    providers = [
+        "openrouter",
+        "claude",
+        "gemini",
+        "openai",
+        "lm_studio",
+        "ollama",
+        "nanogpt",
+        "chutes",
+        "zai",
+        "zai_coding_plan",
+    ]
     models = {}
 
     for provider in providers:
@@ -242,7 +237,18 @@ def get_provider_models(provider):
 @api_bp.route("/models/all")
 def get_all_models():
     """Get all available models from all providers for unified selection."""
-    providers = ["openrouter", "claude", "gemini", "openai", "lm_studio", "ollama", "nanogpt", "chutes", "zai", "zai_coding_plan"]
+    providers = [
+        "openrouter",
+        "claude",
+        "gemini",
+        "openai",
+        "lm_studio",
+        "ollama",
+        "nanogpt",
+        "chutes",
+        "zai",
+        "zai_coding_plan",
+    ]
     all_models = {}
 
     for provider in providers:
@@ -367,9 +373,7 @@ def retry_failed_submissions(job_id):
         # Check if there are any failed submissions that can be retried
         if not job.can_retry_failed_submissions():
             return (
-                jsonify(
-                    {"success": False, "error": "No failed submissions can be retried"}
-                ),
+                jsonify({"success": False, "error": "No failed submissions can be retried"}),
                 400,
             )
 
@@ -445,9 +449,7 @@ def get_saved_prompts():
     """Get all saved prompts."""
     try:
         prompts = SavedPrompt.query.order_by(SavedPrompt.updated_at.desc()).all()
-        return jsonify(
-            {"success": True, "prompts": [prompt.to_dict() for prompt in prompts]}
-        )
+        return jsonify({"success": True, "prompts": [prompt.to_dict() for prompt in prompts]})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
@@ -533,12 +535,8 @@ def delete_saved_prompt(prompt_id):
 def get_saved_marking_schemes():
     """Get all saved marking schemes."""
     try:
-        schemes = SavedMarkingScheme.query.order_by(
-            SavedMarkingScheme.updated_at.desc()
-        ).all()
-        return jsonify(
-            {"success": True, "schemes": [scheme.to_dict() for scheme in schemes]}
-        )
+        schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.updated_at.desc()).all()
+        return jsonify({"success": True, "schemes": [scheme.to_dict() for scheme in schemes]})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
@@ -683,17 +681,11 @@ def api_get_templates():
             query = query.filter(BatchTemplate.category == category)
 
         if search:
-            query = query.filter(
-                BatchTemplate.name.contains(search)
-                | BatchTemplate.description.contains(search)
-            )
+            query = query.filter(BatchTemplate.name.contains(search) | BatchTemplate.description.contains(search))
 
         if not is_public:
             # Only show user's own templates if not requesting public
-            query = query.filter(
-                (BatchTemplate.is_public is True)
-                | (BatchTemplate.created_by == request.remote_addr)
-            )
+            query = query.filter((BatchTemplate.is_public is True) | (BatchTemplate.created_by == request.remote_addr))
 
         templates = query.order_by(BatchTemplate.usage_count.desc()).all()
 
@@ -820,13 +812,9 @@ def api_update_template(template_id):
 
         if is_batch_template:
             # Update batch template specific fields
-            template.default_settings = data.get(
-                "default_settings", template.default_settings
-            )
+            template.default_settings = data.get("default_settings", template.default_settings)
             template.job_structure = data.get("job_structure", template.job_structure)
-            template.processing_rules = data.get(
-                "processing_rules", template.processing_rules
-            )
+            template.processing_rules = data.get("processing_rules", template.processing_rules)
         else:
             # Update job template specific fields
             template.provider = data.get("provider", template.provider)
@@ -834,15 +822,9 @@ def api_update_template(template_id):
             template.prompt = data.get("prompt", template.prompt)
             template.temperature = data.get("temperature", template.temperature)
             template.max_tokens = data.get("max_tokens", template.max_tokens)
-            template.models_to_compare = data.get(
-                "models_to_compare", template.models_to_compare
-            )
-            template.saved_prompt_id = data.get(
-                "saved_prompt_id", template.saved_prompt_id
-            )
-            template.saved_marking_scheme_id = data.get(
-                "saved_marking_scheme_id", template.saved_marking_scheme_id
-            )
+            template.models_to_compare = data.get("models_to_compare", template.models_to_compare)
+            template.saved_prompt_id = data.get("saved_prompt_id", template.saved_prompt_id)
+            template.saved_marking_scheme_id = data.get("saved_marking_scheme_id", template.saved_marking_scheme_id)
 
         template.updated_at = datetime.now(timezone.utc)
         db.session.commit()
@@ -1009,16 +991,11 @@ def api_get_template_analytics():
         batch_analytics = {
             "total_count": len(batch_templates),
             "total_usage": sum(t.usage_count for t in batch_templates),
-            "most_used": (
-                max(batch_templates, key=lambda x: x.usage_count).to_dict()
-                if batch_templates
-                else None
-            ),
+            "most_used": (max(batch_templates, key=lambda x: x.usage_count).to_dict() if batch_templates else None),
             "recently_used": (
                 sorted(
                     batch_templates,
-                    key=lambda x: x.last_used
-                    or datetime.min.replace(tzinfo=timezone.utc),
+                    key=lambda x: x.last_used or datetime.min.replace(tzinfo=timezone.utc),
                     reverse=True,
                 )[0].to_dict()
                 if batch_templates
@@ -1032,16 +1009,11 @@ def api_get_template_analytics():
         job_analytics = {
             "total_count": len(job_templates),
             "total_usage": sum(t.usage_count for t in job_templates),
-            "most_used": (
-                max(job_templates, key=lambda x: x.usage_count).to_dict()
-                if job_templates
-                else None
-            ),
+            "most_used": (max(job_templates, key=lambda x: x.usage_count).to_dict() if job_templates else None),
             "recently_used": (
                 sorted(
                     job_templates,
-                    key=lambda x: x.last_used
-                    or datetime.min.replace(tzinfo=timezone.utc),
+                    key=lambda x: x.last_used or datetime.min.replace(tzinfo=timezone.utc),
                     reverse=True,
                 )[0].to_dict()
                 if job_templates
@@ -1053,15 +1025,11 @@ def api_get_template_analytics():
         # Calculate category breakdowns
         for template in batch_templates:
             category = template.category or "Uncategorized"
-            batch_analytics["by_category"][category] = (
-                batch_analytics["by_category"].get(category, 0) + 1
-            )
+            batch_analytics["by_category"][category] = batch_analytics["by_category"].get(category, 0) + 1
 
         for template in job_templates:
             category = template.category or "Uncategorized"
-            job_analytics["by_category"][category] = (
-                job_analytics["by_category"].get(category, 0) + 1
-            )
+            job_analytics["by_category"][category] = job_analytics["by_category"].get(category, 0) + 1
 
         return jsonify(
             {
@@ -1071,13 +1039,9 @@ def api_get_template_analytics():
                     "job_templates": job_analytics,
                     "overall": {
                         "total_templates": len(batch_templates) + len(job_templates),
-                        "total_usage": batch_analytics["total_usage"]
-                        + job_analytics["total_usage"],
+                        "total_usage": batch_analytics["total_usage"] + job_analytics["total_usage"],
                         "average_usage_per_template": round(
-                            (
-                                batch_analytics["total_usage"]
-                                + job_analytics["total_usage"]
-                            )
+                            (batch_analytics["total_usage"] + job_analytics["total_usage"])
                             / (len(batch_templates) + len(job_templates) or 1),
                             2,
                         ),
@@ -1118,15 +1082,12 @@ def api_get_batches():
         if tag:
             query = query.filter(JobBatch.tags.contains([tag]))
         if search:
-            query = query.filter(
-                JobBatch.batch_name.contains(search)
-                | JobBatch.description.contains(search)
-            )
+            query = query.filter(JobBatch.batch_name.contains(search) | JobBatch.description.contains(search))
 
         # Pagination
-        paginated = query.order_by(
-            JobBatch.priority.desc(), JobBatch.created_at.desc()
-        ).paginate(page=page, per_page=per_page, error_out=False)
+        paginated = query.order_by(JobBatch.priority.desc(), JobBatch.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
 
         return jsonify(
             {
@@ -1173,9 +1134,7 @@ def api_update_batch(batch_id):
         if "tags" in data:
             batch.tags = data["tags"]
         if "deadline" in data:
-            batch.deadline = (
-                datetime.fromisoformat(data["deadline"]) if data["deadline"] else None
-            )
+            batch.deadline = datetime.fromisoformat(data["deadline"]) if data["deadline"] else None
         if "batch_settings" in data:
             batch.batch_settings = data["batch_settings"]
         if "auto_assign_jobs" in data:
@@ -1538,9 +1497,7 @@ def api_create_job_in_batch(batch_id):
                 saved_prompt.increment_usage()
 
         if job.saved_marking_scheme_id and not data.get("saved_marking_scheme_id"):
-            saved_scheme = db.session.get(
-                SavedMarkingScheme, job.saved_marking_scheme_id
-            )
+            saved_scheme = db.session.get(SavedMarkingScheme, job.saved_marking_scheme_id)
             if saved_scheme:
                 saved_scheme.increment_usage()
 
@@ -1592,16 +1549,8 @@ def api_create_job_in_batch_with_files(batch_id):
             "prompt": request.form.get("prompt"),
             "model": request.form.get("model"),
             "models_to_compare": models_to_compare if models_to_compare else None,
-            "temperature": (
-                float(request.form.get("temperature"))
-                if request.form.get("temperature")
-                else None
-            ),
-            "max_tokens": (
-                int(request.form.get("max_tokens"))
-                if request.form.get("max_tokens")
-                else None
-            ),
+            "temperature": (float(request.form.get("temperature")) if request.form.get("temperature") else None),
+            "max_tokens": (int(request.form.get("max_tokens")) if request.form.get("max_tokens") else None),
             "priority": 5,
         }
 
@@ -1710,15 +1659,10 @@ def api_get_available_jobs_for_batch(batch_id):
 
         # Apply search filter if provided
         if search:
-            query = query.filter(
-                GradingJob.job_name.contains(search)
-                | GradingJob.description.contains(search)
-            )
+            query = query.filter(GradingJob.job_name.contains(search) | GradingJob.description.contains(search))
 
         # Paginate
-        paginated = query.order_by(GradingJob.created_at.desc()).paginate(
-            page=page, per_page=per_page, error_out=False
-        )
+        paginated = query.order_by(GradingJob.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
         return jsonify(
             {
@@ -1899,11 +1843,7 @@ def api_batch_analytics(batch_id):
                 "completed_submissions": completed_submissions,
                 "failed_submissions": failed_submissions,
                 "success_rate": round(
-                    (
-                        (completed_submissions / total_submissions * 100)
-                        if total_submissions > 0
-                        else 0
-                    ),
+                    ((completed_submissions / total_submissions * 100) if total_submissions > 0 else 0),
                     2,
                 ),
                 "progress": batch.get_progress(),
@@ -1913,12 +1853,8 @@ def api_batch_analytics(batch_id):
             "provider_breakdown": provider_counts,
             "timeline": {
                 "created_at": batch.created_at.isoformat(),
-                "started_at": (
-                    batch.started_at.isoformat() if batch.started_at else None
-                ),
-                "completed_at": (
-                    batch.completed_at.isoformat() if batch.completed_at else None
-                ),
+                "started_at": (batch.started_at.isoformat() if batch.started_at else None),
+                "completed_at": (batch.completed_at.isoformat() if batch.completed_at else None),
                 "deadline": batch.deadline.isoformat() if batch.deadline else None,
             },
         }
@@ -2037,14 +1973,13 @@ def delete_saved_marking_scheme(scheme_id):
         db.session.delete(scheme)
         db.session.commit()
 
-        return jsonify(
-            {"success": True, "message": "Marking scheme deleted successfully"}
-        )
+        return jsonify({"success": True, "message": "Marking scheme deleted successfully"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
 
 # Image Submission Endpoints
+
 
 @api_bp.route("/submissions/<submission_id>/images", methods=["POST"])
 def upload_image(submission_id):
@@ -2062,10 +1997,10 @@ def upload_image(submission_id):
         submission = Submission.query.get_or_404(submission_id)
 
         # Get uploaded file
-        if 'image' not in request.files:
+        if "image" not in request.files:
             return jsonify({"success": False, "error": "No image file provided"}), 400
 
-        file = request.files['image']
+        file = request.files["image"]
 
         # Validate image
         try:
@@ -2075,10 +2010,10 @@ def upload_image(submission_id):
 
         # Get file extension
         filename_lower = file.filename.lower()
-        file_ext = filename_lower.rsplit('.', 1)[1] if '.' in filename_lower else 'png'
+        file_ext = filename_lower.rsplit(".", 1)[1] if "." in filename_lower else "png"
 
         # Generate storage path
-        upload_folder = current_app.config.get('UPLOAD_FOLDER', '/app/uploads')
+        upload_folder = current_app.config.get("UPLOAD_FOLDER", "/app/uploads")
         storage_path, file_uuid = generate_storage_path(file_ext, upload_folder)
 
         # Save file
@@ -2086,6 +2021,7 @@ def upload_image(submission_id):
 
         # Get image dimensions using PIL
         from PIL import Image as PILImage
+
         with PILImage.open(storage_path) as img:
             width, height = img.size
             aspect_ratio = width / height if height > 0 else 0
@@ -2095,7 +2031,8 @@ def upload_image(submission_id):
 
         # Calculate file hash
         import hashlib
-        with open(storage_path, 'rb') as f:
+
+        with open(storage_path, "rb") as f:
             file_hash = hashlib.sha256(f.read()).hexdigest()
 
         # Create ImageSubmission record
@@ -2111,7 +2048,7 @@ def upload_image(submission_id):
             height_pixels=height,
             aspect_ratio=aspect_ratio,
             file_hash=file_hash,
-            processing_status='queued'
+            processing_status="queued",
         )
 
         db.session.add(image_submission)
@@ -2120,10 +2057,7 @@ def upload_image(submission_id):
         # Queue OCR processing task
         process_image_ocr.delay(image_submission.id)
 
-        return jsonify({
-            "success": True,
-            "image": image_submission.to_dict()
-        }), 201
+        return jsonify({"success": True, "image": image_submission.to_dict()}), 201
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
@@ -2149,20 +2083,20 @@ def get_submission_images(submission_id):
         query = ImageSubmission.query.filter_by(submission_id=submission.id)
 
         # Filter by status if provided
-        status = request.args.get('status')
+        status = request.args.get("status")
         if status:
             query = query.filter_by(processing_status=status)
 
         images = query.all()
 
         # Include OCR content if requested
-        include_content = request.args.get('include_content', '').lower() == 'true'
+        include_content = request.args.get("include_content", "").lower() == "true"
 
         result = []
         for img in images:
             img_dict = img.to_dict()
             if include_content and img.extracted_content:
-                img_dict['extracted_content'] = img.extracted_content.to_dict()
+                img_dict["extracted_content"] = img.extracted_content.to_dict()
             result.append(img_dict)
 
         return jsonify({"success": True, "images": result})
@@ -2186,10 +2120,10 @@ def get_image(image_id):
 
         # Include related data
         if image.extracted_content:
-            result['extracted_content'] = image.extracted_content.to_dict()
+            result["extracted_content"] = image.extracted_content.to_dict()
 
         if image.quality_metrics:
-            result['quality_metrics'] = image.quality_metrics.to_dict()
+            result["quality_metrics"] = image.quality_metrics.to_dict()
 
         return jsonify({"success": True, "image": result})
 
@@ -2214,10 +2148,7 @@ def download_image(image_id):
 
         # Send file
         return send_file(
-            image.storage_path,
-            mimetype=image.mime_type,
-            as_attachment=True,
-            download_name=image.original_filename
+            image.storage_path, mimetype=image.mime_type, as_attachment=True, download_name=image.original_filename
         )
 
     except Exception as e:
@@ -2238,39 +2169,28 @@ def get_image_ocr(image_id):
         image = ImageSubmission.query.get_or_404(image_id)
 
         # Check if OCR is complete
-        if image.processing_status == 'completed':
+        if image.processing_status == "completed":
             if image.extracted_content:
-                return jsonify({
-                    "success": True,
-                    "status": "completed",
-                    "content": image.extracted_content.to_dict()
-                })
+                return jsonify({"success": True, "status": "completed", "content": image.extracted_content.to_dict()})
             else:
-                return jsonify({
-                    "success": False,
-                    "error": "OCR completed but no content found"
-                }), 404
+                return jsonify({"success": False, "error": "OCR completed but no content found"}), 404
 
-        elif image.processing_status in ['queued', 'processing']:
-            return jsonify({
-                "success": True,
-                "status": image.processing_status,
-                "message": f"OCR is {image.processing_status}"
-            }), 202
+        elif image.processing_status in ["queued", "processing"]:
+            return (
+                jsonify(
+                    {"success": True, "status": image.processing_status, "message": f"OCR is {image.processing_status}"}
+                ),
+                202,
+            )
 
-        elif image.processing_status == 'failed':
-            return jsonify({
-                "success": False,
-                "status": "failed",
-                "error": image.error_message
-            }), 400
+        elif image.processing_status == "failed":
+            return jsonify({"success": False, "status": "failed", "error": image.error_message}), 400
 
         else:
-            return jsonify({
-                "success": False,
-                "status": image.processing_status,
-                "error": "Unknown processing status"
-            }), 400
+            return (
+                jsonify({"success": False, "status": image.processing_status, "error": "Unknown processing status"}),
+                400,
+            )
 
     except NotFound:
         return jsonify({"success": False, "error": "Image not found"}), 404
@@ -2298,7 +2218,7 @@ def delete_image(image_id):
         db.session.delete(image)
         db.session.commit()
 
-        return '', 204
+        return "", 204
 
     except NotFound:
         return jsonify({"success": False, "error": "Image not found"}), 404
@@ -2320,20 +2240,12 @@ def get_image_quality(image_id):
         image = ImageSubmission.query.get_or_404(image_id)
 
         # Get quality metrics
-        quality_metrics = ImageQualityMetrics.query.filter_by(
-            image_submission_id=image_id
-        ).first()
+        quality_metrics = ImageQualityMetrics.query.filter_by(image_submission_id=image_id).first()
 
         if not quality_metrics:
-            return jsonify({
-                "success": False,
-                "error": "Quality assessment not available yet"
-            }), 404
+            return jsonify({"success": False, "error": "Quality assessment not available yet"}), 404
 
-        return jsonify({
-            "success": True,
-            "quality_metrics": quality_metrics.to_dict()
-        }), 200
+        return jsonify({"success": True, "quality_metrics": quality_metrics.to_dict()}), 200
 
     except NotFound:
         return jsonify({"success": False, "error": "Image not found"}), 404

@@ -26,9 +26,7 @@ def test_start_batch_success(mock_delay, client, app):
     with app.app_context():
         from models import GradingJob, db
 
-        job = GradingJob(
-            job_name="BJob", provider="openrouter", prompt="p", batch_id=bid
-        )
+        job = GradingJob(job_name="BJob", provider="openrouter", prompt="p", batch_id=bid)
         db.session.add(job)
         db.session.commit()
     resp = client.post(f"/api/batches/{bid}/start")

@@ -5,8 +5,13 @@ Handles template management UI and related functionality.
 
 from flask import Blueprint, jsonify, render_template, request
 
-from models import (BatchTemplate, JobTemplate, SavedMarkingScheme,
-                    SavedPrompt, db)
+from models import (
+    BatchTemplate,
+    JobTemplate,
+    SavedMarkingScheme,
+    SavedPrompt,
+    db,
+)
 
 templates_bp = Blueprint("templates", __name__)
 
@@ -27,15 +32,11 @@ def templates_page():
     filtered_templates = []
 
     for template in batch_templates:
-        if _template_matches_filter(
-            template, template_type, category_filter, search_query
-        ):
+        if _template_matches_filter(template, template_type, category_filter, search_query):
             filtered_templates.append(template)
 
     for template in job_templates:
-        if _template_matches_filter(
-            template, template_type, category_filter, search_query
-        ):
+        if _template_matches_filter(template, template_type, category_filter, search_query):
             filtered_templates.append(template)
 
     # Get available filter options
@@ -46,9 +47,7 @@ def templates_page():
 
     # Get saved configurations for template creation
     saved_prompts = SavedPrompt.query.order_by(SavedPrompt.name).all()
-    saved_marking_schemes = SavedMarkingScheme.query.order_by(
-        SavedMarkingScheme.name
-    ).all()
+    saved_marking_schemes = SavedMarkingScheme.query.order_by(SavedMarkingScheme.name).all()
 
     return render_template(
         "templates.html",
@@ -140,9 +139,7 @@ def _template_matches_filter(template, template_type, category_filter, search_qu
     # Filter by search
     if search_query:
         search_lower = search_query.lower()
-        name_match = (
-            hasattr(template.name, "lower") and search_lower in template.name.lower()
-        )
+        name_match = hasattr(template.name, "lower") and search_lower in template.name.lower()
         desc_match = (
             hasattr(template.description, "lower")
             and template.description

@@ -773,7 +773,7 @@ class TestImportConfig:
             config_data = {
                 "version": "1.0",
                 "exported_at": "2025-01-15T14:30:00Z",
-                "openai_api_key": "sk-proj-" + ("x" * 48),
+                "openai_api_key": "sk-" + ("x" * 48),
             }
 
             response = client.post(
@@ -787,6 +787,6 @@ class TestImportConfig:
             # Verify openai was updated, others preserved
             load_response = client.get("/load_config")
             load_data = json.loads(load_response.data)
-            assert load_data["openai_api_key"] == "sk-proj-" + ("x" * 48)
+            assert load_data["openai_api_key"] == "sk-" + ("x" * 48)
             # Other keys should remain (or be from env)
             assert "openrouter_api_key" in load_data

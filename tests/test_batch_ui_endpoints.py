@@ -47,9 +47,7 @@ class TestBatchUIEndpoints:
             "provider": "openrouter",
             "prompt": "Please grade this document.",
         }
-        response = client.post(
-            f"/api/batches/{sample_batch.id}/jobs/create", json=json_data
-        )
+        response = client.post(f"/api/batches/{sample_batch.id}/jobs/create", json=json_data)
         assert response.status_code == 200
 
         data = response.get_json()
@@ -65,9 +63,7 @@ class TestBatchUIEndpoints:
     @pytest.mark.integration
     def test_add_jobs_to_batch_endpoint(self, client, sample_batch, sample_job):
         """Test POST /api/batches/{batch_id}/jobs endpoint."""
-        response = client.post(
-            f"/api/batches/{sample_batch.id}/jobs", json={"job_ids": [sample_job.id]}
-        )
+        response = client.post(f"/api/batches/{sample_batch.id}/jobs", json={"job_ids": [sample_job.id]})
         assert response.status_code == 200
 
         data = response.get_json()
@@ -114,9 +110,7 @@ class TestBatchUIEndpoints:
         assert response.status_code in [400, 404]
 
         # Test create job endpoint
-        response = client.post(
-            "/api/batches/99999/jobs/create", json={"job_name": "Test Job"}
-        )
+        response = client.post("/api/batches/99999/jobs/create", json={"job_name": "Test Job"})
         assert response.status_code in [400, 404]
 
         # Test add jobs endpoint
@@ -136,9 +130,7 @@ class TestBatchUIEndpoints:
         assert response.status_code == 400
 
         # Test create job endpoint
-        response = client.post(
-            "/api/batches/invalid-id/jobs/create", json={"job_name": "Test Job"}
-        )
+        response = client.post("/api/batches/invalid-id/jobs/create", json={"job_name": "Test Job"})
         assert response.status_code == 400
 
         # Test add jobs endpoint
@@ -150,9 +142,7 @@ class TestBatchUIEndpoints:
     def test_batch_endpoints_pagination(self, client, sample_batch):
         """Test batch endpoints support pagination parameters."""
         # Test available jobs with pagination
-        response = client.get(
-            f"/api/batches/{sample_batch.id}/available-jobs?page=1&per_page=10"
-        )
+        response = client.get(f"/api/batches/{sample_batch.id}/available-jobs?page=1&per_page=10")
         assert response.status_code == 200
 
         data = response.get_json()
