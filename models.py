@@ -207,6 +207,10 @@ class GradingJob(db.Model):
     marking_scheme_id = db.Column(
         db.String(36), db.ForeignKey("marking_schemes.id"), nullable=True
     )
+    # Grading scheme reference (for 003-structured-grading-scheme feature)
+    scheme_id = db.Column(
+        db.String(36), db.ForeignKey("grading_schemes.id"), nullable=True
+    )
 
     # Saved configurations references
     saved_prompt_id = db.Column(
@@ -225,6 +229,7 @@ class GradingJob(db.Model):
         "Submission", backref="job", lazy=True, cascade="all, delete-orphan"
     )
     owner = db.relationship("User", backref="grading_jobs", foreign_keys=[owner_id])
+    scheme = db.relationship("GradingScheme", backref="jobs_using_scheme", lazy=True)
 
     def to_dict(self):
         """Convert job to dictionary."""
