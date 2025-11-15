@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -1587,7 +1588,7 @@ class GradingScheme(db.Model):
     category = db.Column(db.String(100), index=True)
 
     # Calculated fields (denormalized for performance)
-    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.00'))
     total_questions = db.Column(db.Integer, nullable=False, default=0)
     total_criteria = db.Column(db.Integer, nullable=False, default=0)
 
@@ -1627,7 +1628,7 @@ class GradingScheme(db.Model):
             "name": self.name,
             "description": self.description,
             "category": self.category,
-            "total_possible_points": float(self.total_possible_points),
+            "total_possible_points": float(self.total_possible_points) if self.total_possible_points else 0.0,
             "total_questions": self.total_questions,
             "total_criteria": self.total_criteria,
             "created_by": self.created_by,
@@ -1661,7 +1662,7 @@ class SchemeQuestion(db.Model):
     display_order = db.Column(db.Integer, nullable=False)
 
     # Calculated field
-    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.00'))
 
     # Relationships
     criteria = db.relationship(
@@ -1689,7 +1690,7 @@ class SchemeQuestion(db.Model):
             "title": self.title,
             "description": self.description,
             "display_order": self.display_order,
-            "total_possible_points": float(self.total_possible_points),
+            "total_possible_points": float(self.total_possible_points) if self.total_possible_points else 0.0,
             "criteria": [c.to_dict() for c in self.criteria] if self.criteria else [],
         }
 
@@ -1746,7 +1747,7 @@ class SchemeCriterion(db.Model):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "name": self.name,
             "description": self.description,
-            "max_points": float(self.max_points),
+            "max_points": float(self.max_points) if self.max_points else 0.0,
             "display_order": self.display_order,
         }
 
@@ -1783,7 +1784,7 @@ class GradedSubmission(db.Model):
     evaluation_version = db.Column(db.Integer, default=1)
 
     # Calculated totals (denormalized for performance)
-    total_points_earned = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    total_points_earned = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal('0.00'))
     total_points_possible = db.Column(db.Numeric(10, 2), nullable=False)
     percentage_score = db.Column(db.Numeric(5, 2))
 
@@ -1830,10 +1831,10 @@ class GradedSubmission(db.Model):
             "submission_reference": self.submission_reference,
             "graded_by": self.graded_by,
             "graded_at": self.graded_at.isoformat() if self.graded_at else None,
-            "is_complete": self.is_complete,
+            "is_complete": self.is_complete if self.is_complete is not None else False,
             "evaluation_version": self.evaluation_version,
-            "total_points_earned": float(self.total_points_earned),
-            "total_points_possible": float(self.total_points_possible),
+            "total_points_earned": float(self.total_points_earned) if self.total_points_earned else 0.0,
+            "total_points_possible": float(self.total_points_possible) if self.total_points_possible else 0.0,
             "percentage_score": float(self.percentage_score) if self.percentage_score else None,
             "evaluations": [e.to_dict() for e in self.evaluations] if self.evaluations else [],
         }
@@ -1892,9 +1893,9 @@ class CriterionEvaluation(db.Model):
             "criterion_id": self.criterion_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "points_awarded": float(self.points_awarded),
+            "points_awarded": float(self.points_awarded) if self.points_awarded else 0.0,
             "feedback": self.feedback,
-            "max_points": float(self.max_points),
+            "max_points": float(self.max_points) if self.max_points else 0.0,
             "criterion_name": self.criterion_name,
             "question_title": self.question_title,
         }
