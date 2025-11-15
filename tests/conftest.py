@@ -30,8 +30,19 @@ def app():
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "WTF_CSRF_ENABLED": False,
             "UPLOAD_FOLDER": tempfile.mkdtemp(),
+            "RATELIMIT_ENABLED": False,
         }
     )
+    
+    # Disable rate limiting for tests by monkey-patching the limiter
+    try:
+        from app import limiter
+        if hasattr(limiter, '_enabled'):
+            limiter._enabled = False
+        elif hasattr(limiter, 'enabled'):
+            limiter.enabled = False
+    except (ImportError, AttributeError):
+        pass
 
     # Create the database tables
     with flask_app.app_context():
@@ -222,3 +233,71 @@ def sample_pdf_file():
 
     # Clean up
     os.unlink(temp_path)
+
+
+@pytest.fixture
+def multi_user_mode(app):
+    """Set deployment to multi-user mode."""
+    from services.deployment_service import DeploymentService
+    
+    with app.app_context():
+        DeploymentService.set_mode("multi-user")
+        yield
+        # Cleanup: reset to single-user mode
+        DeploymentService.set_mode("single-user")
+
+
+@pytest.fixture
+def test_user(app, multi_user_mode):
+    """Create a regular test user for authentication tests."""
+    from services.auth_service import AuthService
+    
+    with app.app_context():
+        user = AuthService.create_user(
+            "testuser@example.com", 
+            "TestPass123!", 
+            "Test User", 
+            is_admin=False
+        )
+        yield user
+
+
+@pytest.fixture
+def admin_user(app, multi_user_mode):
+    """Create an admin user for authentication tests."""
+    from services.auth_service import AuthService
+    
+    with app.app_context():
+        user = AuthService.create_user(
+            "admin@example.com", 
+            "AdminPass123!", 
+            "Admin User", 
+            is_admin=True
+        )
+        yield user
+
+
+@pytest.fixture
+def auth_headers(client, test_user):
+    """Get authentication headers for a regular user."""
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "testuser@example.com", "password": "TestPass123!"}
+    )
+    assert response.status_code == 200
+    # Flask-Login uses session cookies, so no need for explicit headers
+    # The session is maintained by the test client
+    return {}
+
+
+@pytest.fixture
+def admin_headers(client, admin_user):
+    """Get authentication headers for an admin user."""
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.com", "password": "AdminPass123!"}
+    )
+    assert response.status_code == 200
+    # Flask-Login uses session cookies, so no need for explicit headers
+    # The session is maintained by the test client
+    return {}
