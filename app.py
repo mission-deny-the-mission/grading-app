@@ -2,11 +2,36 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_login import LoginManager
-from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import RequestEntityTooLarge
+
+try:
+    from flask_login import LoginManager
+    FLASK_LOGIN_AVAILABLE = True
+except ImportError:
+    FLASK_LOGIN_AVAILABLE = False
+    # Create a no-op LoginManager for testing
+    class LoginManager:
+        def __init__(self):
+            self.login_view = None
+            self.session_protection = None
+        def init_app(self, app):
+            pass
+        def user_loader(self, func):
+            return func
+
+# Optional imports for rate limiting and CSRF protection
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    FLASK_LIMITER_AVAILABLE = True
+except ImportError:
+    FLASK_LIMITER_AVAILABLE = False
+
+try:
+    from flask_wtf.csrf import CSRFProtect
+    CSRF_PROTECT_AVAILABLE = True
+except ImportError:
+    CSRF_PROTECT_AVAILABLE = False
 
 try:
     from flask_migrate import Migrate
@@ -106,17 +131,30 @@ db.init_app(app)
 if FLASK_MIGRATE_AVAILABLE:
     migrate = Migrate(app, db)
 
-# Initialize CSRF protection
-csrf = CSRFProtect(app)
+# Initialize CSRF protection (optional)
+csrf = None
+if CSRF_PROTECT_AVAILABLE:
+    csrf = CSRFProtect(app)
 
-# Initialize rate limiter BEFORE importing blueprints to avoid circular imports
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["1000 per day", "100 per hour"],
-    storage_uri="memory://",
-    strategy="fixed-window"
-)
+# Initialize rate limiter BEFORE importing blueprints to avoid circular imports (optional)
+class NoOpLimiter:
+    """No-op limiter for when Flask-Limiter is not available."""
+    def limit(self, *args, **kwargs):
+        """Return a no-op decorator."""
+        def decorator(func):
+            return func
+        return decorator
+
+if FLASK_LIMITER_AVAILABLE:
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["1000 per day", "100 per hour"],
+        storage_uri="memory://",
+        strategy="fixed-window"
+    )
+else:
+    limiter = NoOpLimiter()
 
 # Flask-Login user_loader callback (will be properly configured after User model is available)
 @login_manager.user_loader
