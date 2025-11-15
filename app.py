@@ -9,17 +9,15 @@ from flask_migrate import Migrate
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from models import db
-from routes.admin_routes import admin_bp
+# Import blueprints that don't depend on limiter - these go after limiter initialization
 from routes.api import api_bp
-from routes.auth_routes import auth_bp
 from routes.batches import batches_bp
 from routes.config_routes import config_bp
-from routes.sharing_routes import sharing_bp
-from routes.usage_routes import usage_bp
 # Import route blueprints
 from routes.main import main_bp
 from routes.templates import templates_bp
 from routes.upload import upload_bp
+# admin_routes, auth_routes, sharing_routes, usage_routes are imported after limiter is initialized
 
 load_dotenv()
 
@@ -58,7 +56,7 @@ db.init_app(app)
 # Initialize Flask-Migrate for database migrations
 migrate = Migrate(app, db)
 
-# Initialize rate limiter
+# Initialize rate limiter BEFORE importing blueprints to avoid circular imports
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
@@ -73,6 +71,12 @@ def load_user(user_id):
     """Load user from database for Flask-Login session management."""
     from models import User
     return User.query.get(user_id)
+
+# NOW import blueprints that depend on limiter (after limiter is initialized)
+from routes.admin_routes import admin_bp
+from routes.auth_routes import auth_bp
+from routes.sharing_routes import sharing_bp
+from routes.usage_routes import usage_bp
 
 # Register blueprints
 app.register_blueprint(main_bp)
