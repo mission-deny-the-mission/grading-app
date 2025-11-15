@@ -1559,3 +1559,342 @@ class ImageQualityMetrics(db.Model):
             "issues": self.issues,
             "assessment_duration_ms": self.assessment_duration_ms,
         }
+
+
+# ============================================================================
+# Grading Scheme Models (Feature: 003-structured-grading-scheme)
+# ============================================================================
+
+
+class GradingScheme(db.Model):
+    """Reusable template defining how papers/assignments should be evaluated."""
+
+    __tablename__ = "grading_schemes"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    version_number = db.Column(db.Integer, default=1)
+    is_deleted = db.Column(db.Boolean, default=False)
+
+    # Metadata
+    name = db.Column(db.String(255), nullable=False, index=True)
+    description = db.Column(db.Text)
+    category = db.Column(db.String(100), index=True)
+
+    # Calculated fields (denormalized for performance)
+    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    total_questions = db.Column(db.Integer, nullable=False, default=0)
+    total_criteria = db.Column(db.Integer, nullable=False, default=0)
+
+    # Metadata
+    created_by = db.Column(db.String(255))
+    last_modified_by = db.Column(db.String(255))
+
+    # Relationships
+    questions = db.relationship(
+        "SchemeQuestion",
+        backref="scheme",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+    graded_submissions = db.relationship(
+        "GradedSubmission",
+        backref="scheme",
+        lazy=True,
+        foreign_keys="GradedSubmission.scheme_id",
+    )
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_scheme_name", "name"),
+        db.Index("idx_scheme_category", "category"),
+        db.Index("idx_scheme_version", "id", "version_number"),
+    )
+
+    def to_dict(self):
+        """Convert grading scheme to dictionary."""
+        return {
+            "id": self.id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "version_number": self.version_number,
+            "is_deleted": self.is_deleted,
+            "name": self.name,
+            "description": self.description,
+            "category": self.category,
+            "total_possible_points": float(self.total_possible_points),
+            "total_questions": self.total_questions,
+            "total_criteria": self.total_criteria,
+            "created_by": self.created_by,
+            "last_modified_by": self.last_modified_by,
+            "questions": [q.to_dict() for q in self.questions] if self.questions else [],
+        }
+
+
+class SchemeQuestion(db.Model):
+    """Major section or question within a grading scheme."""
+
+    __tablename__ = "scheme_questions"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    scheme_id = db.Column(
+        db.String(36),
+        db.ForeignKey("grading_schemes.id"),
+        nullable=False,
+        index=True,
+    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Question metadata
+    title = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.Text)
+    display_order = db.Column(db.Integer, nullable=False)
+
+    # Calculated field
+    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+
+    # Relationships
+    criteria = db.relationship(
+        "SchemeCriterion",
+        backref="question",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_question_scheme", "scheme_id"),
+        db.Index("idx_question_order", "scheme_id", "display_order"),
+        db.UniqueConstraint("scheme_id", "display_order", name="uq_question_order"),
+        db.CheckConstraint("display_order > 0", name="ck_question_order"),
+    )
+
+    def to_dict(self):
+        """Convert scheme question to dictionary."""
+        return {
+            "id": self.id,
+            "scheme_id": self.scheme_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "title": self.title,
+            "description": self.description,
+            "display_order": self.display_order,
+            "total_possible_points": float(self.total_possible_points),
+            "criteria": [c.to_dict() for c in self.criteria] if self.criteria else [],
+        }
+
+
+class SchemeCriterion(db.Model):
+    """Individual evaluation point within a question."""
+
+    __tablename__ = "scheme_criteria"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    question_id = db.Column(
+        db.String(36),
+        db.ForeignKey("scheme_questions.id"),
+        nullable=False,
+        index=True,
+    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Criterion metadata
+    name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text)
+    max_points = db.Column(db.Numeric(10, 2), nullable=False)
+    display_order = db.Column(db.Integer, nullable=False)
+
+    # Relationships
+    evaluations = db.relationship(
+        "CriterionEvaluation",
+        backref="criterion",
+        lazy=True,
+        foreign_keys="CriterionEvaluation.criterion_id",
+    )
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_criterion_question", "question_id"),
+        db.Index("idx_criterion_order", "question_id", "display_order"),
+        db.UniqueConstraint("question_id", "display_order", name="uq_criterion_order"),
+        db.CheckConstraint("max_points > 0", name="ck_max_points_positive"),
+        db.CheckConstraint("max_points <= 1000", name="ck_max_points_max"),
+        db.CheckConstraint("display_order > 0", name="ck_criterion_order"),
+    )
+
+    def to_dict(self):
+        """Convert scheme criterion to dictionary."""
+        return {
+            "id": self.id,
+            "question_id": self.question_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "name": self.name,
+            "description": self.description,
+            "max_points": float(self.max_points),
+            "display_order": self.display_order,
+        }
+
+
+class GradedSubmission(db.Model):
+    """Represents a student's work that has been evaluated using a grading scheme."""
+
+    __tablename__ = "graded_submissions"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    scheme_id = db.Column(
+        db.String(36),
+        db.ForeignKey("grading_schemes.id"),
+        nullable=False,
+        index=True,
+    )
+    scheme_version = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Submission metadata
+    student_id = db.Column(db.String(255), nullable=False, index=True)
+    student_name = db.Column(db.String(255))
+    submission_reference = db.Column(db.String(255))
+
+    # Grading metadata
+    graded_by = db.Column(db.String(255), nullable=False)
+    graded_at = db.Column(db.DateTime, index=True)
+    is_complete = db.Column(db.Boolean, default=False, index=True)
+    evaluation_version = db.Column(db.Integer, default=1)
+
+    # Calculated totals (denormalized for performance)
+    total_points_earned = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    total_points_possible = db.Column(db.Numeric(10, 2), nullable=False)
+    percentage_score = db.Column(db.Numeric(5, 2))
+
+    # Scheme snapshot (for historical integrity)
+    scheme_snapshot = db.Column(db.JSON)
+
+    # Relationships
+    evaluations = db.relationship(
+        "CriterionEvaluation",
+        backref="submission",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_submission_scheme", "scheme_id", "scheme_version"),
+        db.Index("idx_submission_student", "student_id"),
+        db.Index("idx_submission_graded_at", "graded_at"),
+        db.Index("idx_submission_complete", "is_complete"),
+        db.CheckConstraint("total_points_earned >= 0", name="ck_points_earned_min"),
+        db.CheckConstraint(
+            "total_points_earned <= total_points_possible",
+            name="ck_points_earned_max",
+        ),
+        db.CheckConstraint("percentage_score >= 0", name="ck_percentage_min"),
+        db.CheckConstraint("percentage_score <= 100", name="ck_percentage_max"),
+        db.CheckConstraint(
+            "is_complete = false OR graded_at IS NOT NULL",
+            name="ck_complete_graded_at",
+        ),
+    )
+
+    def to_dict(self):
+        """Convert graded submission to dictionary."""
+        return {
+            "id": self.id,
+            "scheme_id": self.scheme_id,
+            "scheme_version": self.scheme_version,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "student_id": self.student_id,
+            "student_name": self.student_name,
+            "submission_reference": self.submission_reference,
+            "graded_by": self.graded_by,
+            "graded_at": self.graded_at.isoformat() if self.graded_at else None,
+            "is_complete": self.is_complete,
+            "evaluation_version": self.evaluation_version,
+            "total_points_earned": float(self.total_points_earned),
+            "total_points_possible": float(self.total_points_possible),
+            "percentage_score": float(self.percentage_score) if self.percentage_score else None,
+            "evaluations": [e.to_dict() for e in self.evaluations] if self.evaluations else [],
+        }
+
+
+class CriterionEvaluation(db.Model):
+    """Actual grade and feedback for one criterion on one submission."""
+
+    __tablename__ = "criterion_evaluations"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    submission_id = db.Column(
+        db.String(36),
+        db.ForeignKey("graded_submissions.id"),
+        nullable=False,
+        index=True,
+    )
+    criterion_id = db.Column(
+        db.String(36),
+        db.ForeignKey("scheme_criteria.id"),
+        nullable=False,
+        index=True,
+    )
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Evaluation data
+    points_awarded = db.Column(db.Numeric(10, 2), nullable=False)
+    feedback = db.Column(db.Text)
+    max_points = db.Column(db.Numeric(10, 2), nullable=False)
+
+    # Metadata (denormalized for export performance)
+    criterion_name = db.Column(db.String(255), nullable=False)
+    question_title = db.Column(db.String(500), nullable=False)
+
+    # Indexes
+    __table_args__ = (
+        db.Index("idx_evaluation_submission", "submission_id"),
+        db.Index("idx_evaluation_criterion", "criterion_id"),
+        db.UniqueConstraint(
+            "submission_id", "criterion_id", name="uq_evaluation_unique"
+        ),
+        db.CheckConstraint("points_awarded >= 0", name="ck_points_awarded_min"),
+        db.CheckConstraint("points_awarded <= max_points", name="ck_points_awarded_max"),
+    )
+
+    def to_dict(self):
+        """Convert criterion evaluation to dictionary."""
+        return {
+            "id": self.id,
+            "submission_id": self.submission_id,
+            "criterion_id": self.criterion_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "points_awarded": float(self.points_awarded),
+            "feedback": self.feedback,
+            "max_points": float(self.max_points),
+            "criterion_name": self.criterion_name,
+            "question_title": self.question_title,
+        }
