@@ -453,19 +453,237 @@ With multiple developers:
 
 ---
 
-## Summary
+---
 
-- **Total Tasks**: 169
-- **User Story 5 (P1)**: 13 tasks (deployment mode configuration - enabler)
-- **User Story 1 (P1)**: 10 tasks (single-user mode - MVP core)
-- **User Story 2 (P2)**: 29 tasks (multi-user authentication)
-- **User Story 3 (P2)**: 36 tasks (AI usage tracking and limits)
-- **User Story 4 (P3)**: 32 tasks (project sharing)
-- **Setup**: 11 tasks
-- **Foundational**: 18 tasks (BLOCKS all user stories)
-- **Polish**: 20 tasks
-- **Parallel Opportunities**: 80+ tasks marked [P] can run in parallel within their phase
-- **Independent Test Criteria**: Each user story has clear acceptance scenarios and test tasks
-- **Suggested MVP Scope**: US5 + US1 (deployment mode + single-user mode = 23 tasks after setup/foundation)
+## Phase 9: Security Hardening (CRITICAL - Required for Merge)
 
-**Format Validation**: ✅ All tasks follow checklist format with checkbox, ID, labels, and file paths
+**Purpose**: Fix critical security vulnerabilities identified in comprehensive code review before merge to main
+
+**Status**: 🔴 BLOCKING - Must complete before merge
+
+**Reference**: See `/home/harry/grading-app-auth/claudedocs/COMPREHENSIVE_REVIEW_REPORT.md` for detailed findings
+
+### Critical Security Fixes (BLOCKING)
+
+- [ ] T360 [SEC-CRITICAL] Implement CSRF protection using Flask-WTF in app.py (4 hours)
+  - Install Flask-WTF dependency
+  - Initialize CSRFProtect in app.py
+  - Add CSRF tokens to all POST/PUT/DELETE routes
+  - Add CSRF attack simulation tests
+
+- [ ] T361 [SEC-CRITICAL] Enforce SECRET_KEY validation at startup in app.py (1 hour)
+  - Validate SECRET_KEY is not default value
+  - Fail in production if SECRET_KEY not properly set
+  - Generate secure default for development only
+  - Add startup validation tests
+
+- [ ] T362 [SEC-CRITICAL] Migrate password reset tokens to Redis backend in services/auth_service.py (4 hours)
+  - Replace in-memory token storage with Redis
+  - Configure Redis connection for tokens
+  - Test multi-worker token validation
+  - Update documentation with Redis requirement
+
+- [ ] T363 [SEC-CRITICAL] Enable admin authorization check on registration endpoint in routes/auth_routes.py (30 minutes)
+  - Uncomment authorization check at line 166-168
+  - Add authorization bypass tests
+  - Update API documentation
+
+- [ ] T364 [SEC-HIGH] Add security headers middleware in middleware/auth_middleware.py (2 hours)
+  - Implement Content-Security-Policy
+  - Add X-Frame-Options header
+  - Configure Strict-Transport-Security (HSTS)
+  - Add X-Content-Type-Options header
+  - Test header presence in responses
+
+- [ ] T365 [SEC-HIGH] Make cookie security flags environment-based in app.py (1 hour)
+  - Replace hardcoded SESSION_COOKIE_SECURE with environment check
+  - Configure based on FLASK_ENV (production vs development)
+  - Test in both development and production modes
+
+### High-Priority Security Fixes (Before Production)
+
+- [ ] T366 [SEC-HIGH] Implement account lockout mechanism in models.py and services/auth_service.py (6 hours)
+  - Add failed_login_attempts and locked_until columns to User model
+  - Implement progressive lockout logic
+  - Add unlock mechanism after timeout
+  - Create lockout scenario tests
+
+- [ ] T367 [SEC-HIGH] Add encryption key validation at startup in app.py (2 hours)
+  - Validate DB_ENCRYPTION_KEY at application startup
+  - Fail fast in production if key missing
+  - Warn in development mode
+  - Add encryption key validation tests
+
+- [ ] T368 [SEC-HIGH] Sanitize email addresses in authentication logs in routes/auth_routes.py and services/auth_service.py (3 hours)
+  - Hash email addresses for logging
+  - Remove sensitive data from log messages
+  - Update logging configuration
+  - Add logging sanitization tests
+
+- [ ] T369 [SEC-HIGH] Add rate limiting to admin endpoints in routes/admin_routes.py (2 hours)
+  - Apply rate limits to user creation endpoint
+  - Apply rate limits to user update endpoint
+  - Apply rate limits to user deletion endpoint
+  - Test rate limit enforcement
+
+- [ ] T370 [SEC-HIGH] Remove password complexity bypass option in services/auth_service.py (2 hours)
+  - Remove check_complexity parameter
+  - Enforce password requirements always
+  - Add common password blacklist check
+  - Add password validation tests
+
+- [ ] T371 [SEC-MED] Implement display name sanitization in services/auth_service.py (3 hours)
+  - Add HTML/XSS sanitization for display names
+  - Add length validation
+  - Add character whitelist validation
+  - Create XSS prevention tests
+
+---
+
+## Phase 10: Test Coverage Improvements (Required for Stability)
+
+**Purpose**: Fill critical gaps in test coverage identified in code review
+
+**Status**: 🟡 HIGH PRIORITY - Required for production confidence
+
+### Middleware Testing (0% → 80% coverage target)
+
+- [ ] T372 [TEST] Create middleware authentication enforcement tests in tests/test_auth_middleware.py (8 hours)
+  - Test public route exceptions
+  - Test login redirects for web requests
+  - Test API vs web request handling
+  - Test session validation logic
+  - Test deployment mode routing
+
+### Session Security Testing
+
+- [ ] T373 [TEST] Create session security tests in tests/test_session_security.py (8 hours)
+  - Test session fixation attack prevention
+  - Test concurrent session handling
+  - Test session rotation on privilege escalation
+  - Test absolute timeout enforcement
+  - Test session invalidation on logout
+
+### Multi-User Data Isolation Testing
+
+- [ ] T374 [TEST] Create data isolation tests in tests/test_data_isolation.py (8 hours)
+  - Test cross-user project access attempts
+  - Test shared project permission boundaries
+  - Test admin vs regular user data access
+  - Test quota enforcement across users
+  - Test unauthorized data modification attempts
+
+### tasks.py Coverage Improvement (56.72% → 80% target)
+
+- [ ] T375 [TEST] Create Celery failure scenario tests in tests/test_tasks.py (12 hours)
+  - Test Celery worker failures
+  - Test retry logic under load
+  - Test race conditions in batch processing
+  - Test error recovery scenarios
+  - Test task timeout handling
+
+---
+
+## Phase 11: Code Quality & Refactoring (Post-Merge Acceptable)
+
+**Purpose**: Improve maintainability and consistency
+
+**Status**: 🟢 MEDIUM PRIORITY - Can be done post-merge with care
+
+### Database Transaction Safety
+
+- [ ] T376 [REFACTOR] Move database commits from routes to service layer (12 hours)
+  - Refactor admin_routes.py commits to AuthService
+  - Refactor auth_routes.py commits to AuthService
+  - Refactor usage_routes.py commits to UsageTrackingService
+  - Refactor sharing_routes.py commits to SharingService
+  - Add transaction rollback tests
+
+### Error Response Standardization
+
+- [ ] T377 [REFACTOR] Standardize error response format across all routes (4 hours)
+  - Choose single error response pattern
+  - Update all routes to use consistent format
+  - Update all tests to expect consistent format
+  - Document error response schema
+
+### Authorization Decorator Creation
+
+- [ ] T378 [REFACTOR] Create authorization decorators in utils/decorators.py (2 hours)
+  - Create @require_admin decorator
+  - Create @require_ownership decorator
+  - Create @require_project_access decorator
+  - Update routes to use decorators
+
+---
+
+## Phase 12: Documentation & Operational Readiness
+
+**Purpose**: Ensure production deployment success
+
+**Status**: 🟢 RECOMMENDED - Improves operability
+
+### API Documentation
+
+- [ ] T379 [DOCS] Create OpenAPI specification for authentication endpoints (6 hours)
+  - Document all auth routes
+  - Document all admin routes
+  - Document all usage routes
+  - Document all sharing routes
+  - Add request/response examples
+
+### Operational Runbooks
+
+- [ ] T380 [DOCS] Create security incident response procedures in docs/security/ (3 hours)
+  - Document breach response steps
+  - Document password reset procedures
+  - Document account lockout handling
+  - Document encryption key rotation
+
+- [ ] T381 [DOCS] Create rollback procedures documentation in docs/operations/ (3 hours)
+  - Document database rollback steps
+  - Document deployment rollback procedures
+  - Document encryption key recovery
+  - Document emergency access procedures
+
+### Deployment Scripts
+
+- [ ] T382 [SCRIPT] Create secrets generation script in scripts/generate_secrets.sh (2 hours)
+  - Generate SECRET_KEY
+  - Generate DB_ENCRYPTION_KEY
+  - Validate secret strength
+  - Store in secure location
+
+- [ ] T383 [SCRIPT] Create environment validation script in scripts/verify_env.py (2 hours)
+  - Validate all required environment variables
+  - Check encryption key format
+  - Verify database connectivity
+  - Validate Redis connectivity
+
+---
+
+## Summary (Updated)
+
+- **Total Tasks**: 193 (was 169, +24 new tasks)
+- **User Story 5 (P1)**: 13 tasks (deployment mode configuration - enabler) ✅ COMPLETE
+- **User Story 1 (P1)**: 10 tasks (single-user mode - MVP core) ✅ COMPLETE
+- **User Story 2 (P2)**: 29 tasks (multi-user authentication) ✅ COMPLETE
+- **User Story 3 (P2)**: 36 tasks (AI usage tracking and limits) ✅ COMPLETE
+- **User Story 4 (P3)**: 32 tasks (project sharing) ✅ COMPLETE
+- **Setup**: 11 tasks ✅ COMPLETE
+- **Foundational**: 18 tasks ✅ COMPLETE
+- **Polish**: 20 tasks ✅ COMPLETE
+- **Phase 9 - Security Hardening**: 12 tasks 🔴 BLOCKING (24 hours estimated)
+- **Phase 10 - Test Coverage**: 4 tasks 🟡 HIGH PRIORITY (36 hours estimated)
+- **Phase 11 - Code Quality**: 3 tasks 🟢 POST-MERGE (18 hours estimated)
+- **Phase 12 - Documentation**: 5 tasks 🟢 RECOMMENDED (16 hours estimated)
+
+**Merge Readiness Status**:
+- ✅ **Phases 1-8**: Complete (169 tasks done)
+- 🔴 **Phase 9 Critical Fixes**: REQUIRED before merge (12-16 hours)
+- 🟡 **Phase 10 Test Coverage**: REQUIRED before production (36 hours)
+- 🟢 **Phases 11-12**: OPTIONAL but recommended (34 hours)
+
+**Critical Path to Merge**: Complete Phase 9 (24 hours estimated, 3-4 working days)
+
+**Format Validation**: ✅ All tasks follow checklist format with checkbox, ID, labels, file paths, and time estimates
