@@ -1,6 +1,7 @@
 """Authentication API routes for user login, logout, and session management."""
 
 import logging
+import os
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required, login_user, logout_user
@@ -37,14 +38,25 @@ def login():
     """
     # Check deployment mode
     if DeploymentService.is_single_user_mode():
-        return jsonify({"success": False, "message": "Authentication disabled in single-user mode"}), 400
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Authentication disabled in single-user mode",
+                }
+            ),
+            400,
+        )
 
     data = request.get_json() or {}
     email = data.get("email")
     password = data.get("password")
 
     if not email or not password:
-        return jsonify({"success": False, "message": "Email and password required"}), 400
+        return (
+            jsonify({"success": False, "message": "Email and password required"}),
+            400,
+        )
 
     try:
         # Authenticate user
@@ -52,19 +64,25 @@ def login():
 
         if not user:
             logger.warning(f"Login failed for {email}: invalid credentials")
-            return jsonify({"success": False, "message": "Invalid email or password"}), 401
+            return (
+                jsonify({"success": False, "message": "Invalid email or password"}),
+                401,
+            )
 
         # Login user with Flask-Login
         login_user(user, remember=data.get("remember_me", False))
         logger.info(f"User logged in: {email}")
 
-        return jsonify(
-            {
-                "success": True,
-                "message": f"Welcome, {user.display_name or user.email}",
-                "user": user.to_dict(),
-            }
-        ), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"Welcome, {user.display_name or user.email}",
+                    "user": user.to_dict(),
+                }
+            ),
+            200,
+        )
 
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
@@ -111,31 +129,40 @@ def get_session():
 
     # Single-user mode: always return authenticated (dummy session)
     if mode == "single-user":
-        return jsonify(
-            {
-                "authenticated": True,
-                "user": {"email": "single-user@localhost", "id": "system"},
-                "mode": "single-user",
-            }
-        ), 200
+        return (
+            jsonify(
+                {
+                    "authenticated": True,
+                    "user": {"email": "single-user@localhost", "id": "system"},
+                    "mode": "single-user",
+                }
+            ),
+            200,
+        )
 
     # Multi-user mode: check actual authentication
     if current_user.is_authenticated:
-        return jsonify(
+        return (
+            jsonify(
+                {
+                    "authenticated": True,
+                    "user": current_user.to_dict(),
+                    "mode": "multi-user",
+                }
+            ),
+            200,
+        )
+
+    return (
+        jsonify(
             {
-                "authenticated": True,
-                "user": current_user.to_dict(),
+                "authenticated": False,
+                "user": None,
                 "mode": "multi-user",
             }
-        ), 200
-
-    return jsonify(
-        {
-            "authenticated": False,
-            "user": None,
-            "mode": "multi-user",
-        }
-    ), 200
+        ),
+        200,
+    )
 
 
 @auth_bp.route("/register", methods=["POST"])
@@ -161,7 +188,15 @@ def register():
     """
     # Check deployment mode
     if DeploymentService.is_single_user_mode():
-        return jsonify({"success": False, "message": "Registration disabled in single-user mode"}), 400
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Registration disabled in single-user mode",
+                }
+            ),
+            400,
+        )
 
     # Check admin privilege - only admins can create users
     if not current_user.is_authenticated or not current_user.is_admin:
@@ -173,19 +208,25 @@ def register():
     display_name = data.get("display_name")
 
     if not email or not password:
-        return jsonify({"success": False, "message": "Email and password required"}), 400
+        return (
+            jsonify({"success": False, "message": "Email and password required"}),
+            400,
+        )
 
     try:
         user = AuthService.create_user(email, password, display_name)
         logger.info(f"User registered: {email}")
 
-        return jsonify(
-            {
-                "success": True,
-                "message": f"User {email} registered successfully",
-                "user": user.to_dict(),
-            }
-        ), 201
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": f"User {email} registered successfully",
+                    "user": user.to_dict(),
+                }
+            ),
+            201,
+        )
 
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
@@ -209,12 +250,24 @@ def request_password_reset():
         {
             "success": bool,
             "message": str,
-            "token": str  # Only in development; in production this would be emailed
+            "token": str (optional),  # Only included when FLASK_ENV != 'production'
+            "expires_at": str (optional)  # Only included when FLASK_ENV != 'production'
         }
+
+    Note: In production (FLASK_ENV='production'), the token is sent via email
+    and not returned in the response for security.
     """
     # Check deployment mode
     if DeploymentService.is_single_user_mode():
-        return jsonify({"success": False, "message": "Password reset disabled in single-user mode"}), 400
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Password reset disabled in single-user mode",
+                }
+            ),
+            400,
+        )
 
     data = request.get_json() or {}
     email = data.get("email")
@@ -226,23 +279,40 @@ def request_password_reset():
         result = AuthService.generate_password_reset_token(email)
         logger.info(f"Password reset requested for {email}")
 
-        # In production, the token would be sent via email
-        # For development/testing, we return it in the response
-        return jsonify(
-            {
-                "success": True,
-                "message": "Password reset token generated",
-                "token": result["token"],  # Remove this in production
-                "expires_at": result["expires_at"],
-            }
-        ), 200
+        # Build response based on environment
+        response_data = {
+            "success": True,
+            "message": "Password reset token generated",
+        }
+
+        # Only include token in non-production environments (development/testing)
+        # In production, the token should be sent via email instead
+        flask_env = os.getenv("FLASK_ENV", "production")
+        is_testing = os.getenv("TESTING", "").lower() in ["true", "1", "yes"]
+
+        if flask_env != "production" or is_testing:
+            response_data["token"] = result["token"]
+            response_data["expires_at"] = result["expires_at"]
+
+        return jsonify(response_data), 200
 
     except ValueError as e:
         # Return success even if email doesn't exist (security best practice)
-        return jsonify({"success": True, "message": "If this email exists, a reset link has been sent"}), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "If this email exists, a reset link has been sent",
+                }
+            ),
+            200,
+        )
     except Exception as e:
         logger.error(f"Password reset error: {e}")
-        return jsonify({"success": False, "message": "Password reset request failed"}), 500
+        return (
+            jsonify({"success": False, "message": "Password reset request failed"}),
+            500,
+        )
 
 
 @auth_bp.route("/password-reset/<token>", methods=["POST"])
@@ -263,7 +333,15 @@ def reset_password(token):
     """
     # Check deployment mode
     if DeploymentService.is_single_user_mode():
-        return jsonify({"success": False, "message": "Password reset disabled in single-user mode"}), 400
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Password reset disabled in single-user mode",
+                }
+            ),
+            400,
+        )
 
     data = request.get_json() or {}
     password = data.get("password")
@@ -275,12 +353,15 @@ def reset_password(token):
         user = AuthService.reset_password_with_token(token, password)
         logger.info(f"Password reset successful for {user.email}")
 
-        return jsonify(
-            {
-                "success": True,
-                "message": "Password reset successful",
-            }
-        ), 200
+        return (
+            jsonify(
+                {
+                    "success": True,
+                    "message": "Password reset successful",
+                }
+            ),
+            200,
+        )
 
     except ValueError as e:
         return jsonify({"success": False, "message": str(e)}), 400
@@ -301,9 +382,12 @@ def get_current_user():
             "user": {...}
         }
     """
-    return jsonify(
-        {
-            "success": True,
-            "user": current_user.to_dict(),
-        }
-    ), 200
+    return (
+        jsonify(
+            {
+                "success": True,
+                "user": current_user.to_dict(),
+            }
+        ),
+        200,
+    )
