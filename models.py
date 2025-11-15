@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime, timezone
-from decimal import Decimal
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -178,7 +177,9 @@ class GradingJob(db.Model):
     # Job metadata
     job_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
-    status = db.Column(db.String(50), default="pending")  # pending, processing, completed, failed
+    status = db.Column(
+        db.String(50), default="pending"
+    )  # pending, processing, completed, failed
     priority = db.Column(db.Integer, default=5)  # 1-10, higher is more important
 
     # Processing info
@@ -192,26 +193,38 @@ class GradingJob(db.Model):
     model = db.Column(db.String(100))
 
     # Model parameters
-    temperature = db.Column(db.Float, default=0.3)  # Default temperature for all providers
-    max_tokens = db.Column(db.Integer, default=2000)  # Default max tokens for all providers
+    temperature = db.Column(
+        db.Float, default=0.3
+    )  # Default temperature for all providers
+    max_tokens = db.Column(
+        db.Integer, default=2000
+    )  # Default max tokens for all providers
 
     # Multi-model support
     models_to_compare = db.Column(db.JSON)  # List of models to use for comparison
 
     # Marking scheme reference
-    marking_scheme_id = db.Column(db.String(36), db.ForeignKey("marking_schemes.id"), nullable=True)
+    marking_scheme_id = db.Column(
+        db.String(36), db.ForeignKey("marking_schemes.id"), nullable=True
+    )
 
     # Saved configurations references
-    saved_prompt_id = db.Column(db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True)
-    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True)
+    saved_prompt_id = db.Column(
+        db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True
+    )
+    saved_marking_scheme_id = db.Column(
+        db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True
+    )
 
     # Foreign keys
     batch_id = db.Column(db.String(36), db.ForeignKey("job_batches.id"), nullable=True)
-    scheme_id = db.Column(db.String(36), db.ForeignKey("grading_schemes.id"), nullable=True)
+    owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True, index=True)
 
     # Relationships
-    submissions = db.relationship("Submission", backref="job", lazy=True, cascade="all, delete-orphan")
-    scheme = db.relationship("GradingScheme", backref="jobs_using_scheme", lazy=True)
+    submissions = db.relationship(
+        "Submission", backref="job", lazy=True, cascade="all, delete-orphan"
+    )
+    owner = db.relationship("User", backref="grading_jobs", foreign_keys=[owner_id])
 
     def to_dict(self):
         """Convert job to dictionary."""
@@ -219,19 +232,27 @@ class GradingJob(db.Model):
             # Try to access related objects, but handle detached instance errors
             marking_scheme_dict = None
             try:
-                marking_scheme_dict = self.marking_scheme.to_dict() if self.marking_scheme else None
+                marking_scheme_dict = (
+                    self.marking_scheme.to_dict() if self.marking_scheme else None
+                )
             except Exception:
                 pass
 
             saved_prompt_dict = None
             try:
-                saved_prompt_dict = self.saved_prompt.to_dict() if self.saved_prompt else None
+                saved_prompt_dict = (
+                    self.saved_prompt.to_dict() if self.saved_prompt else None
+                )
             except Exception:
                 pass
 
             saved_marking_scheme_dict = None
             try:
-                saved_marking_scheme_dict = self.saved_marking_scheme.to_dict() if self.saved_marking_scheme else None
+                saved_marking_scheme_dict = (
+                    self.saved_marking_scheme.to_dict()
+                    if self.saved_marking_scheme
+                    else None
+                )
             except Exception:
                 pass
 
@@ -270,7 +291,6 @@ class GradingJob(db.Model):
                 "saved_prompt": saved_prompt_dict,
                 "saved_marking_scheme_id": self.saved_marking_scheme_id,
                 "saved_marking_scheme": saved_marking_scheme_dict,
-                "scheme_id": self.scheme_id,
                 "progress": progress,
                 "can_retry": can_retry,
             }
@@ -288,7 +308,9 @@ class GradingJob(db.Model):
         if self.total_submissions == 0:
             return 0
         return round(
-            (self.processed_submissions + self.failed_submissions) / self.total_submissions * 100,
+            (self.processed_submissions + self.failed_submissions)
+            / self.total_submissions
+            * 100,
             2,
         )
 
@@ -302,19 +324,27 @@ class GradingJob(db.Model):
             Submission = None
 
         if Submission is not None:
-            actual_total = db.session.query(Submission).filter(Submission.job_id == self.id).count()
+            actual_total = (
+                db.session.query(Submission)
+                .filter(Submission.job_id == self.id)
+                .count()
+            )
             processed_count = (
                 db.session.query(Submission)
                 .filter(Submission.job_id == self.id, Submission.status == "completed")
                 .count()
             )
             failed_count = (
-                db.session.query(Submission).filter(Submission.job_id == self.id, Submission.status == "failed").count()
+                db.session.query(Submission)
+                .filter(Submission.job_id == self.id, Submission.status == "failed")
+                .count()
             )
         else:
             # Fallback to relationship if import failed
             actual_total = len(self.submissions)
-            processed_count = sum(1 for s in self.submissions if s.status == "completed")
+            processed_count = sum(
+                1 for s in self.submissions if s.status == "completed"
+            )
             failed_count = sum(1 for s in self.submissions if s.status == "failed")
 
         if self.total_submissions != actual_total:
@@ -325,7 +355,8 @@ class GradingJob(db.Model):
 
         if (
             self.total_submissions > 0
-            and self.processed_submissions + self.failed_submissions >= self.total_submissions
+            and self.processed_submissions + self.failed_submissions
+            >= self.total_submissions
         ):
             if self.failed_submissions == 0:
                 self.status = "completed"
@@ -364,7 +395,8 @@ class GradingJob(db.Model):
         # Ensure status reflects completed submissions
         if (
             self.total_submissions > 0
-            and self.processed_submissions + self.failed_submissions >= self.total_submissions
+            and self.processed_submissions + self.failed_submissions
+            >= self.total_submissions
         ):
             if self.failed_submissions == 0:
                 self.status = "completed"
@@ -394,7 +426,9 @@ class GradeResult(db.Model):
     grade_metadata = db.Column(db.JSON)  # Store usage, tokens, etc.
 
     # Foreign keys
-    submission_id = db.Column(db.String(36), db.ForeignKey("submissions.id"), nullable=False)
+    submission_id = db.Column(
+        db.String(36), db.ForeignKey("submissions.id"), nullable=False
+    )
 
     def to_dict(self):
         """Convert grade result to dictionary."""
@@ -431,7 +465,9 @@ class Submission(db.Model):
     file_type = db.Column(db.String(10))  # docx, pdf
 
     # Processing status
-    status = db.Column(db.String(50), default="pending")  # pending, processing, completed, failed
+    status = db.Column(
+        db.String(50), default="pending"
+    )  # pending, processing, completed, failed
     error_message = db.Column(db.Text)
     retry_count = db.Column(db.Integer, default=0)  # Number of retry attempts
     started_at = db.Column(db.DateTime)
@@ -448,7 +484,9 @@ class Submission(db.Model):
     job_id = db.Column(db.String(36), db.ForeignKey("grading_jobs.id"), nullable=False)
 
     # Relationships
-    grade_results = db.relationship("GradeResult", backref="submission", lazy=True, cascade="all, delete-orphan")
+    grade_results = db.relationship(
+        "GradeResult", backref="submission", lazy=True, cascade="all, delete-orphan"
+    )
 
     def to_dict(self):
         """Convert submission to dictionary."""
@@ -482,7 +520,9 @@ class Submission(db.Model):
                 "retry_count": self.retry_count,
                 "can_retry": can_retry_val,
                 "started_at": self.started_at.isoformat() if self.started_at else None,
-                "completed_at": (self.completed_at.isoformat() if self.completed_at else None),
+                "completed_at": (
+                    self.completed_at.isoformat() if self.completed_at else None
+                ),
             }
         except Exception as e:
             return {
@@ -659,8 +699,12 @@ class JobTemplate(db.Model):
     models_to_compare = db.Column(db.JSON)  # List of models to use for comparison
 
     # References to saved configurations
-    saved_prompt_id = db.Column(db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True)
-    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True)
+    saved_prompt_id = db.Column(
+        db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True
+    )
+    saved_marking_scheme_id = db.Column(
+        db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True
+    )
 
     # Usage tracking
     usage_count = db.Column(db.Integer, default=0)
@@ -672,7 +716,9 @@ class JobTemplate(db.Model):
 
     # Relationships
     saved_prompt = db.relationship("SavedPrompt", backref="job_templates", lazy=True)
-    saved_marking_scheme = db.relationship("SavedMarkingScheme", backref="job_templates", lazy=True)
+    saved_marking_scheme = db.relationship(
+        "SavedMarkingScheme", backref="job_templates", lazy=True
+    )
 
     def to_dict(self):
         """Convert job template to dictionary."""
@@ -753,21 +799,27 @@ class JobBatch(db.Model):
     estimated_completion = db.Column(db.DateTime)
 
     # Template reference
-    template_id = db.Column(db.String(36), db.ForeignKey("batch_templates.id"), nullable=True)
+    template_id = db.Column(
+        db.String(36), db.ForeignKey("batch_templates.id"), nullable=True
+    )
 
     # Ownership and permissions
     created_by = db.Column(db.String(100))
     shared_with = db.Column(db.JSON)  # List of users/groups with access
 
     # Saved configurations references
-    saved_prompt_id = db.Column(db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True)
-    saved_marking_scheme_id = db.Column(db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True)
-    scheme_id = db.Column(db.String(36), db.ForeignKey("grading_schemes.id"), nullable=True)
+    saved_prompt_id = db.Column(
+        db.String(36), db.ForeignKey("saved_prompts.id"), nullable=True
+    )
+    saved_marking_scheme_id = db.Column(
+        db.String(36), db.ForeignKey("saved_marking_schemes.id"), nullable=True
+    )
 
     # Relationships
-    jobs = db.relationship("GradingJob", backref="batch", lazy=True, foreign_keys="GradingJob.batch_id")
+    jobs = db.relationship(
+        "GradingJob", backref="batch", lazy=True, foreign_keys="GradingJob.batch_id"
+    )
     template = db.relationship("BatchTemplate", backref="batches", lazy=True)
-    scheme = db.relationship("GradingScheme", backref="batches_using_scheme", lazy=True)
 
     def to_dict(self):
         """Convert batch to dictionary."""
@@ -780,9 +832,17 @@ class JobBatch(db.Model):
             pending_jobs = 0
             try:
                 total_jobs = len(self.jobs)
-                completed_jobs = sum(1 for job in self.jobs if job.status == "completed")
-                failed_jobs = sum(1 for job in self.jobs if job.status in ["failed", "completed_with_errors"])
-                processing_jobs = sum(1 for job in self.jobs if job.status == "processing")
+                completed_jobs = sum(
+                    1 for job in self.jobs if job.status == "completed"
+                )
+                failed_jobs = sum(
+                    1
+                    for job in self.jobs
+                    if job.status in ["failed", "completed_with_errors"]
+                )
+                processing_jobs = sum(
+                    1 for job in self.jobs if job.status == "processing"
+                )
                 pending_jobs = sum(1 for job in self.jobs if job.status == "pending")
             except Exception:
                 pass
@@ -835,15 +895,20 @@ class JobBatch(db.Model):
                 "pending_jobs": pending_jobs,
                 "deadline": self.deadline.isoformat() if self.deadline else None,
                 "started_at": self.started_at.isoformat() if self.started_at else None,
-                "completed_at": (self.completed_at.isoformat() if self.completed_at else None),
-                "estimated_completion": (self.estimated_completion.isoformat() if self.estimated_completion else None),
+                "completed_at": (
+                    self.completed_at.isoformat() if self.completed_at else None
+                ),
+                "estimated_completion": (
+                    self.estimated_completion.isoformat()
+                    if self.estimated_completion
+                    else None
+                ),
                 "template_id": self.template_id,
                 "template": template_dict,
                 "created_by": self.created_by,
                 "shared_with": self.shared_with or [],
                 "saved_prompt_id": self.saved_prompt_id,
                 "saved_marking_scheme_id": self.saved_marking_scheme_id,
-                "scheme_id": self.scheme_id,
                 "progress": progress,
                 "can_retry": can_retry,
                 "can_start": can_start,
@@ -863,7 +928,11 @@ class JobBatch(db.Model):
         if not self.jobs:
             return 0
         total = len(self.jobs)
-        completed = sum(1 for job in self.jobs if job.status in ["completed", "failed", "completed_with_errors"])
+        completed = sum(
+            1
+            for job in self.jobs
+            if job.status in ["completed", "failed", "completed_with_errors"]
+        )
         return round((completed / total) * 100, 2) if total > 0 else 0
 
     def update_progress(self):
@@ -873,7 +942,9 @@ class JobBatch(db.Model):
 
         total = len(self.jobs)
         completed = sum(1 for job in self.jobs if job.status == "completed")
-        failed = sum(1 for job in self.jobs if job.status in ["failed", "completed_with_errors"])
+        failed = sum(
+            1 for job in self.jobs if job.status in ["failed", "completed_with_errors"]
+        )
         processing = sum(1 for job in self.jobs if job.status == "processing")
 
         self.total_jobs = total
@@ -911,7 +982,9 @@ class JobBatch(db.Model):
     def can_retry_failed_jobs(self):
         """Check if batch has failed jobs that can be retried."""
         return any(
-            job.can_retry_failed_submissions() for job in self.jobs if job.status in ["failed", "completed_with_errors"]
+            job.can_retry_failed_submissions()
+            for job in self.jobs
+            if job.status in ["failed", "completed_with_errors"]
         )
 
     def start_batch(self):
@@ -979,7 +1052,10 @@ class JobBatch(db.Model):
         retried_count = 0
 
         for job in self.jobs:
-            if job.status in ["failed", "completed_with_errors"] and job.can_retry_failed_submissions():
+            if (
+                job.status in ["failed", "completed_with_errors"]
+                and job.can_retry_failed_submissions()
+            ):
                 count = job.retry_failed_submissions()
                 if count > 0:
                     retried_count += 1
@@ -1034,15 +1110,26 @@ class JobBatch(db.Model):
             "job_name": job_name,
             "description": description or "",
             "provider": kwargs.get("provider") or self.provider or "openrouter",
-            "prompt": kwargs.get("prompt") or self.prompt or "Please grade this document.",
+            "prompt": kwargs.get("prompt")
+            or self.prompt
+            or "Please grade this document.",
             "model": kwargs.get("model") or self.model,
-            "models_to_compare": kwargs.get("models_to_compare") or self.models_to_compare,
-            "temperature": (kwargs.get("temperature") if kwargs.get("temperature") is not None else self.temperature),
-            "max_tokens": (kwargs.get("max_tokens") if kwargs.get("max_tokens") is not None else self.max_tokens),
+            "models_to_compare": kwargs.get("models_to_compare")
+            or self.models_to_compare,
+            "temperature": (
+                kwargs.get("temperature")
+                if kwargs.get("temperature") is not None
+                else self.temperature
+            ),
+            "max_tokens": (
+                kwargs.get("max_tokens")
+                if kwargs.get("max_tokens") is not None
+                else self.max_tokens
+            ),
             "priority": kwargs.get("priority", 5),
             "saved_prompt_id": kwargs.get("saved_prompt_id") or self.saved_prompt_id,
-            "saved_marking_scheme_id": kwargs.get("saved_marking_scheme_id") or self.saved_marking_scheme_id,
-            "scheme_id": kwargs.get("scheme_id") or self.scheme_id,
+            "saved_marking_scheme_id": kwargs.get("saved_marking_scheme_id")
+            or self.saved_marking_scheme_id,
             "batch_id": self.id,
         }
 
@@ -1072,8 +1159,12 @@ class JobBatch(db.Model):
         try:
             saved_marking_scheme_name = None
             if self.saved_marking_scheme_id:
-                saved_marking_scheme = db.session.get(SavedMarkingScheme, self.saved_marking_scheme_id)
-                saved_marking_scheme_name = saved_marking_scheme.name if saved_marking_scheme else None
+                saved_marking_scheme = db.session.get(
+                    SavedMarkingScheme, self.saved_marking_scheme_id
+                )
+                saved_marking_scheme_name = (
+                    saved_marking_scheme.name if saved_marking_scheme else None
+                )
         except Exception:
             saved_marking_scheme_name = None
 
@@ -1396,7 +1487,9 @@ class ImageSubmission(db.Model):
     )
 
     # Relationship to existing submission
-    submission_id = db.Column(db.String(36), db.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
+    submission_id = db.Column(
+        db.String(36), db.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
+    )
 
     # File storage (UUID-based two-level hashing)
     storage_path = db.Column(db.String(500), nullable=False)
@@ -1616,6 +1709,7 @@ class ImageQualityMetrics(db.Model):
 
 
 # ============================================================================
+
 # Grading Scheme Models (Feature: 003-structured-grading-scheme)
 # ============================================================================
 
@@ -1953,23 +2047,236 @@ class CriterionEvaluation(db.Model):
 
 
 # ===== Helper Methods for Auto-Calculation =====
-# These methods are called from routes to recalculate submission totals
+
+# AUTHENTICATION & MULTI-USER MODELS (004-optional-auth-system)
+# ============================================================================
 
 
-def recalculate_submission_total(submission_id):
-    """
-    Recalculate submission total points earned from all evaluations.
+class DeploymentConfig(db.Model):
+    """System-wide deployment mode configuration (singleton pattern)."""
 
-    Args:
-        submission_id: ID of the submission to recalculate
-    """
-    submission = GradedSubmission.query.filter_by(id=submission_id).first()
-    if not submission:
-        return
+    __tablename__ = "deployment_config"
 
-    evaluations = CriterionEvaluation.query.filter_by(submission_id=submission_id).all()
-    new_total = Decimal("0.00")
-    for eval_item in evaluations:
-        new_total += eval_item.points_awarded
+    id = db.Column(db.String(36), primary_key=True, default="singleton")
+    mode = db.Column(db.String(20), nullable=False, default="single-user")  # single-user | multi-user
+    configured_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
-    submission.total_points_earned = new_total
+    @classmethod
+    def get_current_mode(cls):
+        """Get the current deployment mode."""
+        config = cls.query.filter_by(id="singleton").first()
+        if config:
+            return config.mode
+        # Default to single-user if not configured
+        return "single-user"
+
+    @classmethod
+    def set_mode(cls, mode):
+        """Set the deployment mode (single-user or multi-user)."""
+        if mode not in ("single-user", "multi-user"):
+            raise ValueError(f"Invalid deployment mode: {mode}")
+
+        config = cls.query.filter_by(id="singleton").first()
+        if not config:
+            config = cls(id="singleton", mode=mode)
+            db.session.add(config)
+        else:
+            config.mode = mode
+            config.updated_at = datetime.now(timezone.utc)
+
+        db.session.commit()
+        return config
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "mode": self.mode,
+            "configured_at": self.configured_at.isoformat() if self.configured_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class User(db.Model):
+    """User model for multi-user deployments with Flask-Login integration."""
+
+    __tablename__ = "users"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    display_name = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    is_admin = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True, index=True)
+
+    # Account lockout fields for security
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    ai_quotas = db.relationship("AIProviderQuota", backref="user", lazy=True, cascade="all, delete-orphan")
+    usage_records = db.relationship("UsageRecord", backref="user", lazy=True)
+    sessions = db.relationship("AuthSession", backref="user", lazy=True, cascade="all, delete-orphan")
+    # ProjectShare has two foreign keys to User (user_id and granted_by), so specify which one to use
+    shared_projects = db.relationship("ProjectShare", foreign_keys="ProjectShare.user_id", backref="recipient_user", lazy=True, cascade="all, delete-orphan")
+    granted_shares = db.relationship("ProjectShare", foreign_keys="ProjectShare.granted_by", backref="granter_user", lazy=True)
+
+    # Flask-Login required properties
+    @property
+    def is_authenticated(self):
+        """Return True if user is authenticated."""
+        return True
+
+    @property
+    def is_anonymous(self):
+        """Return False (user is not anonymous)."""
+        return False
+
+    def get_id(self):
+        """Return user ID for Flask-Login."""
+        return self.id
+
+    def to_dict(self):
+        """Convert user to dictionary (excluding password hash)."""
+        return {
+            "id": self.id,
+            "email": self.email,
+            "display_name": self.display_name,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "is_admin": self.is_admin,
+            "is_active": self.is_active,
+        }
+
+
+class AIProviderQuota(db.Model):
+    """Per-user AI usage limits for each provider."""
+
+    __tablename__ = "ai_provider_quotas"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    provider = db.Column(db.String(50), nullable=False)  # openrouter, claude, gemini, lmstudio
+    limit_type = db.Column(db.String(20), nullable=False)  # tokens | requests
+    limit_value = db.Column(db.Integer, nullable=False)  # -1 for unlimited
+    reset_period = db.Column(db.String(20), nullable=False)  # daily | weekly | monthly | unlimited
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (db.UniqueConstraint("user_id", "provider", name="unique_user_provider"),)
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "provider": self.provider,
+            "limit_type": self.limit_type,
+            "limit_value": self.limit_value,
+            "reset_period": self.reset_period,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class UsageRecord(db.Model):
+    """Audit trail of all AI provider usage."""
+
+    __tablename__ = "usage_records"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
+    provider = db.Column(db.String(50), nullable=False)
+    tokens_consumed = db.Column(db.Integer, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    project_id = db.Column(db.String(36))  # Reference to GradingJob (nullable for backward compat)
+    operation_type = db.Column(db.String(50), nullable=False)  # grading | ocr | analysis
+    model_name = db.Column(db.String(100))
+
+    __table_args__ = (
+        db.Index("idx_usage_user_provider_time", "user_id", "provider", "timestamp"),
+        db.Index("idx_usage_project", "project_id"),
+    )
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "provider": self.provider,
+            "tokens_consumed": self.tokens_consumed,
+            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "project_id": self.project_id,
+            "operation_type": self.operation_type,
+            "model_name": self.model_name,
+        }
+
+
+class ProjectShare(db.Model):
+    """Project sharing permissions between users."""
+
+    __tablename__ = "project_shares"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = db.Column(db.String(36), nullable=False)  # Reference to GradingJob
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    permission_level = db.Column(db.String(10), nullable=False)  # read | write
+    granted_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    granted_by = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("project_id", "user_id", name="unique_project_share"),
+        db.Index("idx_share_user", "user_id"),
+    )
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "project_id": self.project_id,
+            "user_id": self.user_id,
+            "permission_level": self.permission_level,
+            "granted_at": self.granted_at.isoformat() if self.granted_at else None,
+            "granted_by": self.granted_by,
+        }
+
+
+class AuthSession(db.Model):
+    """Active user sessions for authentication."""
+
+    __tablename__ = "auth_sessions"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    last_activity = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    ip_address = db.Column(db.String(45))  # IPv4/IPv6
+    user_agent = db.Column(db.String(255))
+
+    __table_args__ = (db.Index("idx_session_user", "user_id"),)
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "session_id": self.session_id,
+            "user_id": self.user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_activity": self.last_activity.isoformat() if self.last_activity else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+        }
