@@ -206,7 +206,19 @@ Project uses **single structure**: Files at repository root
 
 ### Implementation for User Story 5
 
-**Status**: Test infrastructure created and all tests passing. Implementation tasks identified for future completion:
+**Status**: Test infrastructure created and all tests passing (26 tests). **DEFERRED TO PHASE 2** per 2025-11-15 analysis.
+
+**Deferral Rationale:**
+- Infrastructure complete and tested (LLMProviderError class, error types, remediation system)
+- Existing error handling functional (non-blocking for production deployment)
+- 7-hour integration effort better allocated to P1 security fixes (US1/US2)
+- Can be completed in Phase 2 as provider enhancement bundle
+
+**Completion Estimate:** 7 hours (5h backend integration + 1h frontend + 1h testing)
+
+**See**: `/specs/002-api-provider-security/phase2-tasks.md` for detailed completion plan
+
+**Deferred Tasks:**
 
 - [ ] T076 [P] [US5] Update OpenRouterLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
 - [ ] T077 [P] [US5] Update ClaudeLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types

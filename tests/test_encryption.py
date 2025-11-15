@@ -134,7 +134,7 @@ class TestDecryptValue:
         with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": valid_key}):
             invalid_ciphertext = "gAAAAA-invalid-ciphertext"
 
-            with pytest.raises(ValueError, match="Decryption failed"):
+            with pytest.raises(ValueError, match="Failed to decrypt value"):
                 decrypt_value(invalid_ciphertext)
 
     def test_raises_error_for_wrong_key(self):
@@ -170,10 +170,10 @@ class TestGenerateEncryptionKey:
 
         # Should be a string
         assert isinstance(key, str)
-        # Should be non-empty
-        assert len(key) > 0
-        # Should start with Fernet key prefix
-        assert key.startswith(('gAAAAA', 'Fg'))  # Valid Fernet key formats
+        # Should be 44 characters (base64-encoded 32-byte key)
+        assert len(key) == 44
+        # Should end with = (base64 padding)
+        assert key.endswith('=')
 
     def test_generates_different_keys(self):
         """Test that generate_encryption_key produces different keys each time."""

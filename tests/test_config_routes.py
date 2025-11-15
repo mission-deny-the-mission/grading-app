@@ -412,7 +412,7 @@ class TestProviderTypeBadges:
             for provider in cloud_providers:
                 # Each cloud provider should have a badge with provider type indicator
                 assert f'provider-section' in html_content, f"Provider section class missing for {provider}"
-                assert f'class="cloud-provider"' in html_content or 'cloud-api' in html_content.lower(), \
+                assert f'class="provider-badge cloud"' in html_content or 'cloud-api' in html_content.lower(), \
                     f"Cloud provider badge missing for {provider}"
 
     def test_config_page_contains_local_provider_badges(self, client, encryption_key):
@@ -432,7 +432,7 @@ class TestProviderTypeBadges:
             for provider in local_providers:
                 # Each local provider should have a badge with provider type indicator
                 assert f'provider-section' in html_content, f"Provider section class missing for {provider}"
-                assert f'class="local-provider"' in html_content or 'local-only' in html_content.lower(), \
+                assert f'class="provider-badge local"' in html_content or 'local-only' in html_content.lower(), \
                     f"Local provider badge missing for {provider}"
 
     def test_config_page_contains_zai_explanation_panel(self, client, encryption_key):

@@ -221,8 +221,9 @@ class TestConfigEncryptionEdgeCases:
         """Test that very long API keys can be encrypted and stored."""
         with patch.dict(os.environ, {"DB_ENCRYPTION_KEY": encryption_key}):
             config = Config()
-            # Fernet ciphertext is longer than plaintext, so test limits
-            long_key = "x" * 400  # Will expand to ~500+ when encrypted
+            # Fernet ciphertext is longer than plaintext, so test within limits
+            # 300 chars plaintext → ~484 chars encrypted (fits in VARCHAR(500))
+            long_key = "x" * 300
 
             config.openrouter_api_key = long_key
             db.session.add(config)
