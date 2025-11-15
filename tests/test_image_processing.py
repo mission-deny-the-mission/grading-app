@@ -67,8 +67,7 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                file_path="/tmp/test.txt",
-                student_name="Test Student",
+                filename="test.txt", original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -108,7 +107,7 @@ class TestImageUploadAndOCR:
             except Exception:
                 pass
 
-    @patch("utils.llm_providers.extract_text_from_image_azure")
+    @patch("tasks.extract_text_from_image_azure")
     def test_ocr_processing_creates_extracted_content(
         self, mock_azure_ocr, client, app
     ):
@@ -143,8 +142,7 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                file_path="/tmp/test.txt",
-                student_name="Test Student",
+                filename="test.txt", original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -187,7 +185,7 @@ class TestImageUploadAndOCR:
             except Exception:
                 pass
 
-    @patch("utils.llm_providers.extract_text_from_image_azure")
+    @patch("tasks.extract_text_from_image_azure")
     def test_extracted_text_matches_expected_content(
         self, mock_azure_ocr, client, app
     ):
@@ -217,8 +215,7 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                file_path="/tmp/test.txt",
-                student_name="Test Student",
+                filename="test.txt", original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -255,7 +252,7 @@ class TestImageUploadAndOCR:
             except Exception:
                 pass
 
-    @patch("utils.llm_providers.extract_text_from_image_azure")
+    @patch("tasks.extract_text_from_image_azure")
     def test_confidence_score_meets_threshold(self, mock_azure_ocr, client, app):
         """Test: Verify confidence score ≥ 0.9 for clear image."""
         # Mock high-confidence OCR result
@@ -284,8 +281,7 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                file_path="/tmp/test.txt",
-                student_name="Test Student",
+                filename="test.txt", original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -339,8 +335,7 @@ class TestImageUploadAndOCR:
 
             submission = Submission(
                 job_id=job.id,
-                file_path="/tmp/test.txt",
-                student_name="Test Student",
+                filename="test.txt", original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -511,7 +506,7 @@ class TestQualityAssessmentFlow:
         return img
 
     @patch("tasks.assess_image_quality.delay")
-    @patch("utils.llm_providers.extract_text_from_image_azure")
+    @patch("tasks.extract_text_from_image_azure")
     def test_quality_assessment_triggered_after_ocr(
         self, mock_azure_ocr, mock_quality_task, client, app
     ):
@@ -539,8 +534,7 @@ class TestQualityAssessmentFlow:
 
             submission = Submission(
                 job_id=job.id,
-                file_path="/tmp/test.txt",
-                student_name="Test Student",
+                filename="test.txt", original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
@@ -576,7 +570,7 @@ class TestQualityAssessmentFlow:
             except Exception:
                 pass
 
-    @patch("utils.llm_providers.extract_text_from_image_azure")
+    @patch("tasks.extract_text_from_image_azure")
     def test_blurry_image_quality_metrics_show_is_blurry_true(
         self, mock_azure_ocr, client, app
     ):
@@ -604,8 +598,7 @@ class TestQualityAssessmentFlow:
 
             submission = Submission(
                 job_id=job.id,
-                file_path="/tmp/test.txt",
-                student_name="Test Student",
+                filename="test.txt", original_filename="test.txt",
             )
             db.session.add(submission)
             db.session.commit()
