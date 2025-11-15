@@ -30,8 +30,8 @@ Project uses **single structure**: Files at repository root
 
 **Purpose**: Project initialization, dependencies, and environment configuration
 
-- [ ] T001 Add cryptography>=41.0.0 to requirements.txt for Fernet encryption
-- [ ] T002 [P] Add Flask-Migrate>=4.0.0 to requirements.txt for database migrations
+- [x] T001 Add cryptography>=41.0.0 to requirements.txt for Fernet encryption
+- [x] T002 [P] Add Flask-Migrate>=4.0.0 to requirements.txt for database migrations
 - [ ] T003 [P] Install new dependencies with pip install -r requirements.txt
 - [ ] T004 Generate encryption key and document in .env.example with python -c "from cryptography.fernet import Fernet; print(f'DB_ENCRYPTION_KEY={Fernet.generate_key().decode()}')"
 - [ ] T005 Add DB_ENCRYPTION_KEY to .env file (do not commit to git)
@@ -47,11 +47,11 @@ Project uses **single structure**: Files at repository root
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Create utils/encryption.py with get_encryption_key(), encrypt_value(), decrypt_value() functions
-- [ ] T008 [P] Add API_KEY_PATTERNS dictionary to utils/llm_providers.py with regex patterns for all 10 providers
-- [ ] T009 [P] Add validate_api_key_format(provider, key) function to utils/llm_providers.py
-- [ ] T010 [P] Create LLMProviderError exception class in utils/llm_providers.py with ERROR_TYPES enum and to_dict() method
-- [ ] T011 [P] Add test_connection() method to LLMProvider base class in utils/llm_providers.py
+- [x] T007 Create utils/encryption.py with get_encryption_key(), encrypt_value(), decrypt_value() functions
+- [x] T008 [P] Add API_KEY_PATTERNS dictionary to utils/llm_providers.py with regex patterns for all 10 providers
+- [x] T009 [P] Add validate_api_key_format(provider, key) function to utils/llm_providers.py
+- [x] T010 [P] Create LLMProviderError exception class in utils/llm_providers.py with ERROR_TYPES enum and to_dict() method
+- [x] T011 [P] Add test_connection() method to LLMProvider base class in utils/llm_providers.py
 
 **Checkpoint**: Foundation ready - encryption utilities, validation patterns, error handling, and testing infrastructure complete. User story implementation can now begin in parallel.
 

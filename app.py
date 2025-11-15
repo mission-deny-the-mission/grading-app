@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify
+from flask_migrate import Migrate
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from models import db
@@ -31,6 +32,9 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Initialize database
 db.init_app(app)
+
+# Initialize Flask-Migrate for database migrations
+migrate = Migrate(app, db)
 
 # Register blueprints
 app.register_blueprint(main_bp)
