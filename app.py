@@ -7,7 +7,11 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 from models import db
 from routes.api import api_bp
+from routes.auth_routes import auth_bp
 from routes.batches import batches_bp
+from routes.config_routes import config_bp
+from routes.sharing_routes import sharing_bp
+from routes.usage_routes import usage_bp
 # Import route blueprints
 from routes.main import main_bp
 from routes.templates import templates_bp
@@ -60,6 +64,16 @@ app.register_blueprint(upload_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(batches_bp)
 app.register_blueprint(templates_bp)
+
+# Register authentication and configuration blueprints
+app.register_blueprint(auth_bp)
+app.register_blueprint(config_bp)
+app.register_blueprint(usage_bp)
+app.register_blueprint(sharing_bp)
+
+# Initialize authentication middleware
+from middleware.auth_middleware import init_auth_middleware
+init_auth_middleware(app)
 
 # Configure upload folder
 UPLOAD_FOLDER = "uploads"
