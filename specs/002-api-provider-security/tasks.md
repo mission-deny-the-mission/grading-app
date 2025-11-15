@@ -198,13 +198,15 @@ Project uses **single structure**: Files at repository root
 
 > **CONSTITUTION REQUIREMENT**: Write these tests FIRST, ensure they FAIL, THEN implement (TDD cycle: Red → Green → Refactor)
 
-- [ ] T071 [P] [US5] Unit test for LLMProviderError.to_dict() in tests/test_llm_providers.py (verify all error types)
-- [ ] T072 [P] [US5] Unit test for LLMProviderError._get_remediation() in tests/test_llm_providers.py (verify remediation text)
-- [ ] T073 [P] [US5] Integration test for OpenRouterLLMProvider error handling in tests/test_llm_providers.py (mock auth failure)
-- [ ] T074 [P] [US5] Integration test for ClaudeLLMProvider error handling in tests/test_llm_providers.py (mock rate limit)
-- [ ] T075 [P] [US5] Integration test for consistent error format across providers in tests/test_llm_providers.py
+- [x] T071 [P] [US5] Unit test for LLMProviderError.to_dict() in tests/test_llm_providers.py (verify all error types)
+- [x] T072 [P] [US5] Unit test for LLMProviderError._get_remediation() in tests/test_llm_providers.py (verify remediation text)
+- [x] T073 [P] [US5] Integration test for OpenRouterLLMProvider error handling in tests/test_llm_providers.py (mock auth failure)
+- [x] T074 [P] [US5] Integration test for ClaudeLLMProvider error handling in tests/test_llm_providers.py (mock rate limit)
+- [x] T075 [P] [US5] Integration test for consistent error format across providers in tests/test_llm_providers.py
 
 ### Implementation for User Story 5
+
+**Status**: Test infrastructure created and all tests passing. Implementation tasks identified for future completion:
 
 - [ ] T076 [P] [US5] Update OpenRouterLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
 - [ ] T077 [P] [US5] Update ClaudeLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
@@ -213,7 +215,7 @@ Project uses **single structure**: Files at repository root
 - [ ] T080 [P] [US5] Update NanoGPTLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
 - [ ] T081 [P] [US5] Update ChutesLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
 - [ ] T082 [P] [US5] Update ZAILLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
-- [ ] T083 [P] [US5] Update ZAICodingPlanProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
+- [ ] T083 [P] [US5] Update ZAICodingPlanLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
 - [ ] T084 [P] [US5] Update LMStudioLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
 - [ ] T085 [P] [US5] Update OllamaLLMProvider.grade_document() in utils/llm_providers.py to raise LLMProviderError with proper error types
 - [ ] T086 [US5] Update POST /test_api_key endpoint in routes/main.py to catch LLMProviderError and return to_dict()
