@@ -8,7 +8,7 @@ import os
 import zipfile
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, current_app, jsonify, request, send_file
 from werkzeug.exceptions import NotFound
 import time
 
@@ -16,6 +16,7 @@ from models import (
     BatchTemplate,
     ExtractedContent,
     GradingJob,
+    ImageQualityMetrics,
     ImageSubmission,
     JobBatch,
     JobTemplate,
@@ -2075,7 +2076,7 @@ def upload_image(submission_id):
         file_ext = filename_lower.rsplit('.', 1)[1] if '.' in filename_lower else 'png'
 
         # Generate storage path
-        upload_folder = os.getenv('UPLOAD_FOLDER', '/app/uploads')
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', '/app/uploads')
         storage_path, file_uuid = generate_storage_path(file_ext, upload_folder)
 
         # Save file
@@ -2296,6 +2297,41 @@ def delete_image(image_id):
         db.session.commit()
 
         return '', 204
+
+    except NotFound:
+        return jsonify({"success": False, "error": "Image not found"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@api_bp.route("/images/<image_id>/quality", methods=["GET"])
+def get_image_quality(image_id):
+    """
+    Get quality assessment results for an image.
+
+    Returns:
+        200: Quality metrics JSON
+        404: Image or quality metrics not found
+    """
+    try:
+        # Verify image exists
+        image = ImageSubmission.query.get_or_404(image_id)
+
+        # Get quality metrics
+        quality_metrics = ImageQualityMetrics.query.filter_by(
+            image_submission_id=image_id
+        ).first()
+
+        if not quality_metrics:
+            return jsonify({
+                "success": False,
+                "error": "Quality assessment not available yet"
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "quality_metrics": quality_metrics.to_dict()
+        }), 200
 
     except NotFound:
         return jsonify({"success": False, "error": "Image not found"}), 404

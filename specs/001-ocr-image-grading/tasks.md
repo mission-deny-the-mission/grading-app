@@ -318,7 +318,7 @@ Polish (Final Phase)
 
 ### Tasks
 
-- [ ] T029 [US2] Implement blur detection using Laplacian variance
+- [X] T029 [US2] Implement blur detection using Laplacian variance
   - Add function: detect_blur(image_path, threshold=100.0)
   - Load image with cv2.imread()
   - Convert to grayscale
@@ -326,7 +326,7 @@ Polish (Final Phase)
   - Return: {'is_blurry': bool, 'blur_score': float, 'threshold': float}
   - File: utils/image_processing.py
 
-- [ ] T030 [US2] Implement resolution and dimension checks
+- [X] T030 [US2] Implement resolution and dimension checks
   - Add function: check_resolution(image_path, min_width=800, min_height=600, max_size_mb=50)
   - Check file size in bytes
   - Read image dimensions with cv2.imread()
@@ -334,7 +334,7 @@ Polish (Final Phase)
   - Return: {'width': int, 'height': int, 'aspect_ratio': float, 'file_size_mb': float, 'meets_minimum': bool, 'too_large': bool, 'is_valid': bool}
   - File: utils/image_processing.py
 
-- [ ] T031 [US2] Implement completeness/cropping detection
+- [X] T031 [US2] Implement completeness/cropping detection
   - Add function: check_completeness(image_path, border_size=20, edge_threshold=50)
   - Apply Canny edge detection
   - Analyze edge density in borders (top, bottom, left, right)
@@ -342,7 +342,7 @@ Polish (Final Phase)
   - Return: {'edge_density': dict, 'avg_edge_density': float, 'max_edge_density': float, 'likely_cropped': bool, 'likely_incomplete': bool}
   - File: utils/image_processing.py
 
-- [ ] T032 [US2] Implement unified quality assessment class
+- [X] T032 [US2] Implement unified quality assessment class
   - Add class: ScreenshotQualityChecker
   - Add method: assess_quality(image_path) → quality assessment dict
   - Combine: blur detection + resolution check + completeness check
@@ -351,7 +351,7 @@ Polish (Final Phase)
   - Return comprehensive quality assessment
   - File: utils/image_processing.py
 
-- [ ] T033 [US2] Create Celery task for quality assessment
+- [X] T033 [US2] Create Celery task for quality assessment
   - Add @celery.task: assess_image_quality(image_submission_id)
   - Load ImageSubmission from database
   - Call ScreenshotQualityChecker.assess_quality()
@@ -360,32 +360,32 @@ Polish (Final Phase)
   - Log assessment duration
   - File: tasks.py
 
-- [ ] T034 [US2] Modify process_image_ocr task to trigger quality assessment
+- [X] T034 [US2] Modify process_image_ocr task to trigger quality assessment
   - After OCR completes, queue assess_image_quality task
   - Or: run quality assessment in same task before OCR
   - Chain tasks appropriately
   - File: tasks.py
 
-- [ ] T035 [P] [US2] Implement GET /api/images/{image_id}/quality endpoint
+- [X] T035 [P] [US2] Implement GET /api/images/{image_id}/quality endpoint
   - Query ImageQualityMetrics by image_submission_id
   - Return quality assessment JSON
   - Return 404 if not found or not assessed yet
   - File: routes/api.py
 
-- [ ] T036 [US2] Update image submission UI to display quality indicators
+- [X] T036 [US2] Update image submission UI to display quality indicators
   - Add quality badge (excellent/good/poor/rejected)
   - Display blur score and resolution
   - Show issues list if quality is poor/rejected
   - Add visual warning for failed quality checks
   - File: templates/submission_detail.html
 
-- [ ] T037 [US2] Write unit tests for blur detection
+- [X] T037 [US2] Write unit tests for blur detection
   - Test: Sharp image has blur_score > 100
   - Test: Blurry image has blur_score < 100
   - Test: Blur detection returns correct structure
   - File: tests/test_image_processing.py
 
-- [ ] T038 [US2] Write integration test for quality assessment flow
+- [X] T038 [US2] Write integration test for quality assessment flow
   - Test: Upload blurry image → quality metrics show is_blurry=true
   - Test: Upload low-res image → quality metrics show meets_min_resolution=false
   - Test: Upload cropped image → quality metrics show likely_cropped=true

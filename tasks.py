@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from models import (
     ExtractedContent,
     GradingJob,
+    ImageQualityMetrics,
     ImageSubmission,
     JobBatch,
     MarkingScheme,
@@ -797,6 +798,9 @@ def process_image_ocr(self, image_submission_id):
 
                 db.session.commit()
 
+                # Queue quality assessment task after OCR completes
+                assess_image_quality.delay(image_submission_id)
+
                 return {
                     'status': 'success',
                     'image_submission_id': image_submission_id,
@@ -831,6 +835,111 @@ def process_image_ocr(self, image_submission_id):
                 'status': 'error',
                 'image_submission_id': image_submission_id,
                 'error': f'Unexpected error: {str(e)}'
+            }
+
+
+@celery_app.task(bind=True)
+def assess_image_quality(self, image_submission_id):
+    """
+    Perform quality assessment on an image submission.
+
+    Args:
+        image_submission_id: ID of ImageSubmission to assess
+
+    Returns:
+        dict: Assessment result with status and quality metrics
+    """
+    app = create_app()
+    with app.app_context():
+        try:
+            # Import ScreenshotQualityChecker here to avoid circular imports
+            from utils.image_processing import ScreenshotQualityChecker
+
+            # Get ImageSubmission
+            image_submission = ImageSubmission.query.get(image_submission_id)
+            if not image_submission:
+                return {
+                    'status': 'error',
+                    'error': f'ImageSubmission {image_submission_id} not found'
+                }
+
+            # Check if file exists
+            if not os.path.exists(image_submission.storage_path):
+                return {
+                    'status': 'error',
+                    'error': f'Image file not found at {image_submission.storage_path}'
+                }
+
+            # Perform quality assessment
+            quality_checker = ScreenshotQualityChecker()
+            assessment_result = quality_checker.assess_quality(image_submission.storage_path)
+
+            # Create or update ImageQualityMetrics record
+            existing_metrics = ImageQualityMetrics.query.filter_by(
+                image_submission_id=image_submission.id
+            ).first()
+
+            if existing_metrics:
+                # Update existing record
+                quality_metrics = existing_metrics
+            else:
+                # Create new record
+                quality_metrics = ImageQualityMetrics(
+                    image_submission_id=image_submission.id
+                )
+                db.session.add(quality_metrics)
+
+            # Populate quality metrics
+            quality_metrics.overall_quality = assessment_result['overall_quality']
+            quality_metrics.passes_quality_check = assessment_result['passes_quality_check']
+
+            # Blur metrics
+            blur_data = assessment_result['blur_assessment']
+            quality_metrics.blur_score = blur_data['blur_score']
+            quality_metrics.is_blurry = blur_data['is_blurry']
+            quality_metrics.blur_threshold = blur_data['threshold']
+
+            # Resolution metrics
+            resolution_data = assessment_result['resolution_assessment']
+            quality_metrics.meets_min_resolution = resolution_data['meets_minimum']
+            quality_metrics.min_width_required = quality_checker.min_width
+            quality_metrics.min_height_required = quality_checker.min_height
+
+            # Completeness metrics
+            completeness_data = assessment_result['completeness_assessment']
+            quality_metrics.edge_density_top = completeness_data['edge_density']['top']
+            quality_metrics.edge_density_bottom = completeness_data['edge_density']['bottom']
+            quality_metrics.edge_density_left = completeness_data['edge_density']['left']
+            quality_metrics.edge_density_right = completeness_data['edge_density']['right']
+            quality_metrics.avg_edge_density = completeness_data['avg_edge_density']
+            quality_metrics.max_edge_density = completeness_data['max_edge_density']
+            quality_metrics.likely_cropped = completeness_data['likely_cropped']
+
+            # Issues and processing time
+            quality_metrics.issues = assessment_result['issues']
+            quality_metrics.assessment_duration_ms = assessment_result['assessment_duration_ms']
+
+            # Update ImageSubmission flags
+            image_submission.passes_quality_check = assessment_result['passes_quality_check']
+            image_submission.requires_manual_review = not assessment_result['passes_quality_check']
+
+            db.session.commit()
+
+            return {
+                'status': 'success',
+                'image_submission_id': image_submission_id,
+                'overall_quality': assessment_result['overall_quality'],
+                'passes_quality_check': assessment_result['passes_quality_check'],
+                'issues_count': len(assessment_result['issues']),
+                'assessment_duration_ms': assessment_result['assessment_duration_ms']
+            }
+
+        except Exception as e:
+            # Handle unexpected errors
+            return {
+                'status': 'error',
+                'image_submission_id': image_submission_id,
+                'error': f'Unexpected error during quality assessment: {str(e)}'
             }
 
 

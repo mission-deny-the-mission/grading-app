@@ -8,10 +8,13 @@ import os
 import time
 from unittest.mock import MagicMock, patch
 
+import cv2
+import numpy as np
 import pytest
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
-from models import ExtractedContent, ImageSubmission, Submission
+from models import ExtractedContent, ImageQualityMetrics, ImageSubmission, Submission, db
+from utils.image_processing import detect_blur, check_resolution, check_completeness, ScreenshotQualityChecker
 
 
 class TestImageUploadAndOCR:
@@ -56,7 +59,8 @@ class TestImageUploadAndOCR:
             job = GradingJob(
                 job_name="Test Job",
                 provider="openrouter",
-                model_name="test-model",
+                model="test-model",
+                prompt="Test grading prompt",
             )
             db.session.add(job)
             db.session.commit()
@@ -131,7 +135,8 @@ class TestImageUploadAndOCR:
             job = GradingJob(
                 job_name="Test Job",
                 provider="openrouter",
-                model_name="test-model",
+                model="test-model",
+                prompt="Test grading prompt",
             )
             db.session.add(job)
             db.session.commit()
@@ -204,7 +209,8 @@ class TestImageUploadAndOCR:
             job = GradingJob(
                 job_name="Test Job",
                 provider="openrouter",
-                model_name="test-model",
+                model="test-model",
+                prompt="Test grading prompt",
             )
             db.session.add(job)
             db.session.commit()
@@ -270,7 +276,8 @@ class TestImageUploadAndOCR:
             job = GradingJob(
                 job_name="Test Job",
                 provider="openrouter",
-                model_name="test-model",
+                model="test-model",
+                prompt="Test grading prompt",
             )
             db.session.add(job)
             db.session.commit()
@@ -324,7 +331,8 @@ class TestImageUploadAndOCR:
             job = GradingJob(
                 job_name="Test Job",
                 provider="openrouter",
-                model_name="test-model",
+                model="test-model",
+                prompt="Test grading prompt",
             )
             db.session.add(job)
             db.session.commit()
@@ -368,6 +376,275 @@ class TestImageUploadAndOCR:
             assert image.processing_status == "completed"
 
             # Cleanup
+            try:
+                os.remove(image.storage_path)
+            except Exception:
+                pass
+
+
+class TestBlurDetection:
+    """Unit tests for blur detection functionality."""
+
+    def create_sharp_image(self, width=800, height=600):
+        """Create a sharp test image with clear text and edges."""
+        img = Image.new("RGB", (width, height), color="white")
+        draw = ImageDraw.Draw(img)
+
+        # Draw clear black text
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 40)
+        except Exception:
+            font = ImageFont.load_default()
+
+        draw.text((50, 50), "Sharp Text Example", fill="black", font=font)
+
+        # Draw some shapes for edge detection
+        draw.rectangle([200, 200, 400, 400], outline="black", width=3)
+        draw.line([(100, 500), (700, 500)], fill="black", width=2)
+
+        return img
+
+    def create_blurry_image(self, width=800, height=600):
+        """Create a blurry test image."""
+        # Start with a sharp image
+        img = self.create_sharp_image(width, height)
+
+        # Apply Gaussian blur to make it blurry
+        img = img.filter(ImageFilter.GaussianBlur(radius=10))
+
+        return img
+
+    def test_sharp_image_has_high_blur_score(self, tmp_path):
+        """Test: Sharp image has blur_score > 100."""
+        # Create and save sharp image
+        sharp_img = self.create_sharp_image()
+        sharp_path = tmp_path / "sharp_test.png"
+        sharp_img.save(sharp_path)
+
+        # Test blur detection
+        result = detect_blur(str(sharp_path))
+
+        assert result['blur_score'] > 100, f"Sharp image blur score {result['blur_score']} should be > 100"
+        assert result['is_blurry'] is False
+        assert result['threshold'] == 100.0
+
+    def test_blurry_image_has_low_blur_score(self, tmp_path):
+        """Test: Blurry image has blur_score < 100."""
+        # Create and save blurry image
+        blurry_img = self.create_blurry_image()
+        blurry_path = tmp_path / "blurry_test.png"
+        blurry_img.save(blurry_path)
+
+        # Test blur detection
+        result = detect_blur(str(blurry_path))
+
+        assert result['blur_score'] < 100, f"Blurry image blur score {result['blur_score']} should be < 100"
+        assert result['is_blurry'] is True
+        assert result['threshold'] == 100.0
+
+    def test_blur_detection_returns_correct_structure(self, tmp_path):
+        """Test: Blur detection returns correct dictionary structure."""
+        sharp_img = self.create_sharp_image()
+        test_path = tmp_path / "structure_test.png"
+        sharp_img.save(test_path)
+
+        result = detect_blur(str(test_path))
+
+        # Check all required keys are present
+        assert 'is_blurry' in result
+        assert 'blur_score' in result
+        assert 'threshold' in result
+
+        # Check types
+        assert isinstance(result['is_blurry'], bool)
+        assert isinstance(result['blur_score'], (int, float))
+        assert isinstance(result['threshold'], (int, float))
+
+    def test_resolution_check_detects_low_resolution(self, tmp_path):
+        """Test: Low-resolution image fails meets_minimum check."""
+        # Create small image (below 800x600 minimum)
+        small_img = Image.new("RGB", (640, 480), color="white")
+        small_path = tmp_path / "small.png"
+        small_img.save(small_path)
+
+        result = check_resolution(str(small_path), min_width=800, min_height=600)
+
+        assert result['width'] == 640
+        assert result['height'] == 480
+        assert result['meets_minimum'] is False
+        assert result['is_valid'] is False
+
+    def test_resolution_check_accepts_high_resolution(self, tmp_path):
+        """Test: High-resolution image passes meets_minimum check."""
+        # Create large image (above 800x600 minimum)
+        large_img = Image.new("RGB", (1920, 1080), color="white")
+        large_path = tmp_path / "large.png"
+        large_img.save(large_path)
+
+        result = check_resolution(str(large_path), min_width=800, min_height=600)
+
+        assert result['width'] == 1920
+        assert result['height'] == 1080
+        assert result['meets_minimum'] is True
+        assert result['is_valid'] is True
+
+
+class TestQualityAssessmentFlow:
+    """Integration tests for complete quality assessment workflow."""
+
+    def create_test_image(self, quality="sharp", width=800, height=600):
+        """Create test images with different quality levels."""
+        img = Image.new("RGB", (width, height), color="white")
+        draw = ImageDraw.Draw(img)
+
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30)
+        except Exception:
+            font = ImageFont.load_default()
+
+        draw.text((50, 50), "Test Image", fill="black", font=font)
+        draw.rectangle([100, 100, 300, 300], outline="black", width=2)
+
+        if quality == "blurry":
+            img = img.filter(ImageFilter.GaussianBlur(radius=10))
+
+        return img
+
+    @patch("tasks.assess_image_quality.delay")
+    @patch("utils.llm_providers.extract_text_from_image_azure")
+    def test_quality_assessment_triggered_after_ocr(
+        self, mock_azure_ocr, mock_quality_task, client, app
+    ):
+        """Test: Quality assessment task is queued after OCR completes."""
+        mock_azure_ocr.return_value = {
+            "status": "success",
+            "text": "Test Image",
+            "confidence": 0.95,
+            "text_regions": [],
+            "processing_time_ms": 1000,
+        }
+
+        with app.app_context():
+            # Create test submission
+            from models import GradingJob
+
+            job = GradingJob(
+                job_name="Test Job",
+                provider="openrouter",
+                model="test-model",
+                prompt="Test grading prompt",
+            )
+            db.session.add(job)
+            db.session.commit()
+
+            submission = Submission(
+                job_id=job.id,
+                file_path="/tmp/test.txt",
+                student_name="Test Student",
+            )
+            db.session.add(submission)
+            db.session.commit()
+            submission_id = submission.id
+
+        # Upload image
+        test_img = self.create_test_image()
+        img_bytes = io.BytesIO()
+        test_img.save(img_bytes, format="PNG")
+        img_bytes.seek(0)
+
+        response = client.post(
+            f"/api/submissions/{submission_id}/images",
+            data={"image": (img_bytes, "test.png")},
+            content_type="multipart/form-data",
+        )
+
+        image_id = response.get_json()["image"]["id"]
+
+        # Run OCR task
+        with app.app_context():
+            from tasks import process_image_ocr
+
+            process_image_ocr(image_id)
+
+            # Verify quality assessment was queued
+            mock_quality_task.assert_called_once_with(image_id)
+
+            # Cleanup
+            image = ImageSubmission.query.get(image_id)
+            try:
+                os.remove(image.storage_path)
+            except Exception:
+                pass
+
+    @patch("utils.llm_providers.extract_text_from_image_azure")
+    def test_blurry_image_quality_metrics_show_is_blurry_true(
+        self, mock_azure_ocr, client, app
+    ):
+        """Test: Upload blurry image → quality metrics show is_blurry=true."""
+        mock_azure_ocr.return_value = {
+            "status": "success",
+            "text": "Blurry Test",
+            "confidence": 0.75,
+            "text_regions": [],
+            "processing_time_ms": 1000,
+        }
+
+        with app.app_context():
+            # Create test submission
+            from models import GradingJob
+
+            job = GradingJob(
+                job_name="Test Job",
+                provider="openrouter",
+                model="test-model",
+                prompt="Test grading prompt",
+            )
+            db.session.add(job)
+            db.session.commit()
+
+            submission = Submission(
+                job_id=job.id,
+                file_path="/tmp/test.txt",
+                student_name="Test Student",
+            )
+            db.session.add(submission)
+            db.session.commit()
+            submission_id = submission.id
+
+        # Create and upload blurry image
+        blurry_img = self.create_test_image(quality="blurry")
+        img_bytes = io.BytesIO()
+        blurry_img.save(img_bytes, format="PNG")
+        img_bytes.seek(0)
+
+        response = client.post(
+            f"/api/submissions/{submission_id}/images",
+            data={"image": (img_bytes, "blurry.png")},
+            content_type="multipart/form-data",
+        )
+
+        image_id = response.get_json()["image"]["id"]
+
+        # Run quality assessment
+        with app.app_context():
+            from tasks import assess_image_quality
+
+            result = assess_image_quality(image_id)
+
+            assert result['status'] == 'success'
+            assert result['overall_quality'] in ['good', 'poor', 'rejected']
+
+            # Check quality metrics in database
+            quality_metrics = ImageQualityMetrics.query.filter_by(
+                image_submission_id=image_id
+            ).first()
+
+            assert quality_metrics is not None
+            assert quality_metrics.is_blurry is True
+            assert float(quality_metrics.blur_score) < 100
+
+            # Cleanup
+            image = ImageSubmission.query.get(image_id)
             try:
                 os.remove(image.storage_path)
             except Exception:
