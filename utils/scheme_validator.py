@@ -1,5 +1,5 @@
 """Validation utilities for grading schemes and criteria."""
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 
 def validate_point_range(points, max_points):
@@ -19,7 +19,7 @@ def validate_point_range(points, max_points):
     try:
         pts = Decimal(str(points)) if points is not None else Decimal("0")
         max_pts = Decimal(str(max_points))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidOperation):
         raise ValueError("Points and max_points must be numeric values")
 
     if pts < 0:

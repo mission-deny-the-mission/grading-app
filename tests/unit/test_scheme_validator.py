@@ -40,7 +40,7 @@ class TestValidatePointRange:
 
     def test_non_numeric_points_invalid(self):
         """Non-numeric points should raise ValueError."""
-        with pytest.raises(ValueError, match="must be numeric"):
+        with pytest.raises(ValueError, match="must be numeric values"):
             validate_point_range("abc", Decimal("10.00"))
 
     def test_none_points_treated_as_zero(self):
