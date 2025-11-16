@@ -35,6 +35,23 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# IMPORTANT: Set DATABASE_URL to SQLite BEFORE importing the app
+# The app.py module reads DATABASE_URL at import time, so we must override it first
+import os
+
+# Get user data directory (inline to avoid import dependencies)
+if sys.platform == 'win32':
+    user_data_dir = Path(os.getenv('APPDATA')) / 'GradingApp'
+elif sys.platform == 'darwin':
+    user_data_dir = Path.home() / 'Library' / 'Application Support' / 'GradingApp'
+else:  # Linux
+    user_data_dir = Path(os.getenv('XDG_DATA_HOME', Path.home() / '.local' / 'share')) / 'GradingApp'
+
+user_data_dir.mkdir(parents=True, exist_ok=True)
+db_path = user_data_dir / 'grading.db'
+os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+logger.info(f"Set DATABASE_URL to: sqlite:///{db_path}")
+
 # Import Flask app from repository root
 try:
     # Add parent directory to path if not already there
