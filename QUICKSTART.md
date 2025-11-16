@@ -90,7 +90,12 @@ exit  # Exit current shell
 nix-shell  # Re-enter with updated dependencies
 ```
 
-2. Then run the desktop app:
+2. Test that all dependencies are available:
+```bash
+./test_desktop.sh
+```
+
+3. If the test passes, run the desktop app:
 ```bash
 python desktop/main.py
 ```
