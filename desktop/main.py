@@ -18,6 +18,9 @@ Usage:
     ./dist/GradingApp/GradingApp
 """
 
+# Application version (semver format)
+__version__ = "1.0.0"
+
 import logging
 import sys
 import threading
@@ -69,6 +72,88 @@ except ImportError as e:
 from desktop.app_wrapper import configure_app_for_desktop, get_free_port, get_user_data_dir
 from desktop.task_queue import task_queue
 from desktop.scheduler import start as start_scheduler, stop as stop_scheduler
+from desktop.settings import Settings
+
+
+def check_for_updates_async(settings: Settings) -> None:
+    """
+    Check for updates in a background thread.
+
+    This function runs asynchronously to avoid blocking application startup.
+    If an update is available and auto_check is enabled in settings, it will
+    show a notification to the user.
+
+    Args:
+        settings: Settings instance to read update preferences
+
+    Note:
+        This function runs in a background thread and should not block.
+    """
+    try:
+        # Check if auto-check is enabled
+        if not settings.get('updates.auto_check', True):
+            logger.debug("Auto-check for updates is disabled")
+            return
+
+        # Check if we should defer this version
+        deferred_version = settings.get('updates.deferred_version')
+
+        # Import updater (late import to avoid startup delay if not needed)
+        from desktop.updater import DesktopUpdater
+        from desktop.window_manager import show_update_notification
+        from datetime import datetime, timedelta
+
+        # Check last update check time to avoid too frequent checks
+        last_check = settings.get('updates.last_check')
+        if last_check:
+            try:
+                last_check_dt = datetime.fromisoformat(last_check.replace('Z', '+00:00'))
+                # Don't check more than once per day
+                if datetime.utcnow() - last_check_dt < timedelta(hours=24):
+                    logger.debug("Update check skipped - checked less than 24 hours ago")
+                    return
+            except (ValueError, AttributeError):
+                # Invalid timestamp, proceed with check
+                pass
+
+        logger.info("Checking for updates...")
+
+        # Create updater instance
+        updater = DesktopUpdater(
+            app_name="grading-app",
+            current_version=__version__,
+            update_url="https://github.com/user/grading-app"  # TODO: Update with actual repo URL
+        )
+
+        # Check for updates
+        update_info = updater.check_for_updates()
+
+        # Update last check time
+        settings.set('updates.last_check', datetime.utcnow().isoformat() + 'Z')
+        settings.save()
+
+        if not update_info.get('available'):
+            logger.info("No updates available")
+            return
+
+        new_version = update_info.get('version')
+
+        # Check if user deferred this version
+        if deferred_version == new_version:
+            logger.info(f"Update to {new_version} was deferred by user")
+            return
+
+        logger.info(f"Update available: {new_version}")
+
+        # Show notification to user (this might need to be on main thread)
+        # For now, just log it - actual notification would need coordination with main thread
+        logger.info(f"Update notification: New version {new_version} is available")
+
+        # Note: Actual notification UI would need to be called from main thread
+        # This is a background thread, so we can't directly show UI
+
+    except Exception as e:
+        logger.error(f"Update check failed: {e}", exc_info=True)
 
 
 def start_flask(host: str = '127.0.0.1', port: int = 5050, debug: bool = False) -> None:
@@ -226,6 +311,13 @@ def main() -> int:
         user_data_dir = get_user_data_dir()
         logger.info(f"User data directory: {user_data_dir}")
 
+        # Load settings
+        logger.info("Loading application settings...")
+        settings_path = user_data_dir / 'settings.json'
+        settings = Settings(settings_path)
+        settings.load()
+        logger.info("Settings loaded successfully")
+
         # Start the periodic task scheduler
         logger.info("Starting periodic task scheduler...")
         try:
@@ -234,6 +326,18 @@ def main() -> int:
         except Exception as e:
             logger.error(f"Failed to start scheduler: {e}")
             raise
+
+        # Check for updates in background thread (non-blocking)
+        if settings.get('updates.auto_check', True):
+            logger.info("Starting background update check...")
+            update_thread = threading.Thread(
+                target=check_for_updates_async,
+                args=(settings,),
+                daemon=True,
+                name="UpdateCheckThread"
+            )
+            update_thread.start()
+            logger.debug("Update check thread started")
 
         # Get a free port
         port = get_free_port()

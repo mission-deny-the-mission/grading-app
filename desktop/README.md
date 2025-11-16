@@ -97,15 +97,16 @@ pyinstaller grading-app.spec
 dist\GradingApp\GradingApp.exe
 ```
 
-**Installer creation** (optional):
-- Use Inno Setup or NSIS to create Windows installer
-- See `desktop/installer/` for installer scripts
+**Installer creation**:
+```powershell
+# Install Inno Setup from: https://jrsoftware.org/isinfo.php
+# Then compile the installer script:
+iscc desktop\installer\windows\installer.iss
 
-**Code signing** (recommended for distribution):
-```bash
-# Requires EV Code Signing Certificate (~$300-500/year)
-signtool.exe sign /f certificate.pfx /p password /t http://timestamp.digicert.com dist\GradingApp\GradingApp.exe
+# Output: desktop\installer\windows\Output\GradingApp-Setup.exe
 ```
+
+For detailed instructions, see `desktop/installer/windows/README.md`
 
 #### macOS
 
@@ -120,26 +121,18 @@ pyinstaller grading-app.spec
 dist/GradingApp/GradingApp
 ```
 
-**Bundle creation** (optional):
+**DMG creation**:
 ```bash
-# Uncomment BUNDLE section in grading-app.spec
-# Rebuild with PyInstaller
-# Creates: dist/GradingApp.app
+# Install create-dmg: npm install -g create-dmg
+# Create DMG installer:
+bash desktop/installer/macos/create-dmg.sh
+
+# Output: desktop/installer/macos/GradingApp-1.0.0.dmg
 ```
 
-**Code signing** (recommended for distribution):
-```bash
-# Requires Apple Developer Program ($99/year)
-codesign --deep --force --sign "Developer ID Application: Your Name" dist/GradingApp.app
-xcrun notarytool submit GradingApp.zip --apple-id you@example.com --password app-specific-password
-xcrun stapler staple dist/GradingApp.app
-```
+**Note**: For DMG creation, uncomment the BUNDLE section in `grading-app.spec` to create `dist/GradingApp.app`
 
-**DMG creation** (for distribution):
-```bash
-# Use create-dmg tool
-create-dmg dist/GradingApp.app
-```
+For detailed instructions including code signing and notarization, see `desktop/installer/macos/README.md`
 
 #### Linux
 
@@ -154,18 +147,44 @@ pyinstaller grading-app.spec
 dist/GradingApp/GradingApp
 ```
 
-**AppImage creation** (recommended for distribution):
+**AppImage creation** (portable, recommended):
 ```bash
-# Use appimagetool
-# See desktop/installer/linux/ for scripts
+# Create AppImage (auto-downloads tools if needed):
+bash desktop/installer/linux/create-appimage.sh
+
+# Output: desktop/installer/linux/GradingApp-1.0.0-x86_64.AppImage
 ```
 
-**DEB/RPM packaging** (alternative):
+**DEB package** (for Debian/Ubuntu):
 ```bash
-# Use fpm (Effing Package Management)
-fpm -s dir -t deb -n grading-app -v 1.0.0 dist/GradingApp/=/opt/grading-app
-fpm -s dir -t rpm -n grading-app -v 1.0.0 dist/GradingApp/=/opt/grading-app
+# Install fpm: sudo gem install fpm
+# Create DEB package:
+bash desktop/installer/linux/create-deb.sh
+
+# Output: desktop/installer/linux/grading-app_1.0.0_amd64.deb
 ```
+
+For detailed instructions including RPM and Flatpak, see `desktop/installer/linux/README.md`
+
+### Build All Installers
+
+To build installers for all platforms at once (or for the current platform):
+
+```bash
+# Verify PyInstaller build is ready
+bash desktop/installer/verify-build.sh
+
+# Build installers for current platform
+bash desktop/installer/build-all.sh
+
+# Or specify a platform
+bash desktop/installer/build-all.sh windows  # Windows only
+bash desktop/installer/build-all.sh macos    # macOS only
+bash desktop/installer/build-all.sh linux    # Linux only
+bash desktop/installer/build-all.sh all      # All platforms (cross-platform not supported)
+```
+
+**Note**: Cross-compilation is not supported. Windows installers must be built on Windows, macOS on macOS, and Linux on Linux.
 
 ### Automated Builds with GitHub Actions
 
