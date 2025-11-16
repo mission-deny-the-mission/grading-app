@@ -11,6 +11,7 @@ from pathlib import Path
 from apscheduler.schedulers.background import BackgroundScheduler
 from tasks import cleanup_old_files, cleanup_completed_batches
 from desktop.data_export import export_data
+from desktop.settings import Settings
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -97,7 +98,6 @@ def create_automatic_backup():
     in the user_data_dir/backups/ directory with timestamp naming.
     """
     try:
-        from desktop.settings import Settings
         import sys
         import os
 
@@ -156,8 +156,6 @@ def cleanup_old_backups():
     from user_data_dir/backups/ that are older than this period.
     """
     try:
-        from desktop.settings import Settings
-
         # Get user data directory
         user_data_dir = Settings._get_user_data_dir()
 
@@ -204,8 +202,6 @@ def schedule_automatic_backup():
     settings change.
     """
     try:
-        from desktop.settings import Settings
-
         # Get user data directory
         user_data_dir = Settings._get_user_data_dir()
 

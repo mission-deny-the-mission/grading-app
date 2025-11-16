@@ -130,6 +130,7 @@ class TestOfflineDatabaseOperations:
                 job_name='Test Job',
                 description='Test offline read',
                 provider='openrouter',
+                prompt='Test prompt for grading',
                 model='test-model'
             )
             db.session.add(job)
@@ -160,6 +161,7 @@ class TestOfflineDatabaseOperations:
                 job_name='Offline Write Test',
                 description='Created without internet',
                 provider='openrouter',
+                prompt='Offline write test prompt',
                 model='test-model'
             )
             db.session.add(job)
@@ -187,6 +189,7 @@ class TestOfflineDatabaseOperations:
                 job_name='Update Test',
                 description='Original description',
                 provider='openrouter',
+                prompt='Update test prompt',
                 model='test-model'
             )
             db.session.add(job)
@@ -219,6 +222,7 @@ class TestOfflineDatabaseOperations:
                 job_name='Delete Test',
                 description='To be deleted',
                 provider='openrouter',
+                prompt='Delete test prompt',
                 model='test-model'
             )
             db.session.add(job)
@@ -256,6 +260,7 @@ class TestOfflineGradingFeatures:
                 job_name='Offline Job',
                 description='Created without internet connection',
                 provider='openrouter',
+                prompt='Offline job prompt',
                 model='test-model',
                 priority=5
             )
@@ -284,6 +289,7 @@ class TestOfflineGradingFeatures:
             job = GradingJob(
                 job_name='Test Job',
                 provider='openrouter',
+                prompt='Test job prompt',
                 model='test-model'
             )
             db.session.add(job)
@@ -293,6 +299,7 @@ class TestOfflineGradingFeatures:
             submission = Submission(
                 job_id=job.id,
                 filename='test.pdf',
+                original_filename='test.pdf',
                 file_type='pdf',
                 file_size=1024,
                 status='pending'
@@ -323,6 +330,7 @@ class TestOfflineGradingFeatures:
                 filename='offline_scheme.txt',
                 file_type='txt',
                 file_size=512,
+                original_filename='offline_scheme.txt',
                 content='Created without internet'
             )
             db.session.add(scheme)
@@ -445,6 +453,7 @@ class TestOfflineAIAPIGracefulFailure:
             job = GradingJob(
                 job_name='Manual Grade Test',
                 provider='openrouter',
+                prompt='Manual grade test prompt',
                 model='test-model'
             )
             db.session.add(job)
@@ -453,6 +462,7 @@ class TestOfflineAIAPIGracefulFailure:
             submission = Submission(
                 job_id=job.id,
                 filename='test.pdf',
+                original_filename='test.pdf',
                 file_type='pdf',
                 file_size=1024,
                 status='submitted'
@@ -586,6 +596,7 @@ class TestOfflineIntegrationScenarios:
                 job_name='Offline Work',
                 description='Created during offline session',
                 provider='openrouter',
+                prompt='Offline work prompt',
                 model='test-model',
                 priority=5
             )
@@ -636,6 +647,7 @@ class TestOfflineIntegrationScenarios:
                 job_name='Offline Job',
                 description='Created offline',
                 provider='openrouter',
+                prompt='Offline job recovery prompt',
                 model='test-model'
             )
             db.session.add(job)

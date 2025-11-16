@@ -18,6 +18,12 @@ Supported provider keys:
 import keyring
 import logging
 
+# Try to import CryptFileKeyring for fallback support
+try:
+    from keyrings.cryptfile.cryptfile import CryptFileKeyring
+except ImportError:
+    CryptFileKeyring = None
+
 logger = logging.getLogger(__name__)
 
 SERVICE_NAME = "grading-app"
@@ -31,11 +37,13 @@ def initialize_keyring():
     except Exception as e:
         logger.warning(f"System keyring unavailable: {e}")
         logger.info("Attempting to use encrypted file storage fallback")
-        try:
-            from keyrings.cryptfile.cryptfile import CryptFileKeyring
-            keyring.set_keyring(CryptFileKeyring())
-            logger.info("Using CryptFileKeyring fallback")
-        except ImportError:
+        if CryptFileKeyring is not None:
+            try:
+                keyring.set_keyring(CryptFileKeyring())
+                logger.info("Using CryptFileKeyring fallback")
+            except Exception as fallback_error:
+                logger.warning(f"Failed to set CryptFileKeyring: {fallback_error}")
+        else:
             logger.warning("keyrings.cryptfile not available, using default keyring")
             # keyring will use its default backend
 

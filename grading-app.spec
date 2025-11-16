@@ -13,7 +13,7 @@ For more information, see desktop/README.md
 """
 
 # Hidden imports required for runtime module loading
-# These modules are imported dynamically by SQLAlchemy, Flask, and Celery
+# These modules are imported dynamically by SQLAlchemy and Flask
 hiddenimports = [
     # SQLAlchemy runtime imports
     'sqlalchemy.sql.default_comparator',
@@ -24,9 +24,10 @@ hiddenimports = [
     'flask_sqlalchemy',
     'flask_migrate',
 
-    # Celery (will be removed in future phases, replaced by ThreadPoolExecutor)
-    'celery',
-    'celery.fixups.django',
+    # Desktop app dependencies
+    'apscheduler',
+    'apscheduler.schedulers',
+    'apscheduler.schedulers.background',
 
     # Additional runtime dependencies
     'werkzeug.security',
