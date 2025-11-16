@@ -146,16 +146,19 @@ def configure_app_for_desktop(app):
     
     # Get user data directory
     user_data_dir = get_user_data_dir()
-    
+
     # Create necessary directories
     user_data_dir.mkdir(parents=True, exist_ok=True)
     (user_data_dir / 'uploads').mkdir(parents=True, exist_ok=True)
     (user_data_dir / 'logs').mkdir(parents=True, exist_ok=True)
     logger.info(f"User data directory: {user_data_dir}")
-    
+
     # Configure SQLite database path
+    # IMPORTANT: Override DATABASE_URL environment variable to force SQLite usage
     db_path = user_data_dir / 'grading.db'
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    sqlite_uri = f'sqlite:///{db_path}'
+    os.environ['DATABASE_URL'] = sqlite_uri  # Override env var
+    app.config['SQLALCHEMY_DATABASE_URI'] = sqlite_uri
     logger.info(f"Database path: {db_path}")
     
     # Configure upload folder
