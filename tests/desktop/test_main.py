@@ -17,13 +17,16 @@ from unittest.mock import MagicMock, patch, call, Mock
 
 import pytest
 
-# Mock webview and keyring before importing desktop modules
+# Mock webview, keyring, and apscheduler before importing desktop modules
 mock_webview = MagicMock()
 sys.modules['webview'] = mock_webview
 sys.modules['keyring'] = MagicMock()
 sys.modules['keyrings'] = MagicMock()
 sys.modules['keyrings.cryptfile'] = MagicMock()
 sys.modules['keyrings.cryptfile.cryptfile'] = MagicMock()
+sys.modules['apscheduler'] = MagicMock()
+sys.modules['apscheduler.schedulers'] = MagicMock()
+sys.modules['apscheduler.schedulers.background'] = MagicMock()
 
 
 class TestStartFlask:
@@ -197,10 +200,11 @@ class TestCreateMainWindow:
 class TestShutdownGracefully:
     """Test suite for shutdown_gracefully() function."""
 
+    @patch('desktop.main.stop_scheduler')
     @patch('desktop.main.task_queue')
     @patch('desktop.main.logger')
-    def test_shutdown_calls_task_queue_shutdown(self, mock_logger, mock_task_queue):
-        """Test that shutdown_gracefully() calls task_queue.shutdown()."""
+    def test_shutdown_calls_task_queue_shutdown(self, mock_logger, mock_task_queue, mock_stop_scheduler):
+        """Test that shutdown_gracefully() calls task_queue.shutdown() and stop_scheduler()."""
         from desktop.main import shutdown_gracefully
 
         shutdown_gracefully()
@@ -208,15 +212,21 @@ class TestShutdownGracefully:
         # Verify task queue shutdown was called with correct parameters
         mock_task_queue.shutdown.assert_called_once_with(wait=True, timeout=30)
 
+        # Verify scheduler stop was called
+        mock_stop_scheduler.assert_called_once()
+
         # Verify logging
         mock_logger.info.assert_any_call('Initiating graceful shutdown...')
         mock_logger.info.assert_any_call('Shutting down task queue...')
         mock_logger.info.assert_any_call('Task queue shutdown complete')
+        mock_logger.info.assert_any_call('Stopping periodic task scheduler...')
+        mock_logger.info.assert_any_call('Scheduler stopped successfully')
         mock_logger.info.assert_any_call('Graceful shutdown complete')
 
+    @patch('desktop.main.stop_scheduler')
     @patch('desktop.main.task_queue')
     @patch('desktop.main.logger')
-    def test_shutdown_handles_task_queue_errors(self, mock_logger, mock_task_queue):
+    def test_shutdown_handles_task_queue_errors(self, mock_logger, mock_task_queue, mock_stop_scheduler):
         """Test that shutdown_gracefully() handles task queue errors gracefully."""
         from desktop.main import shutdown_gracefully
 
@@ -228,16 +238,42 @@ class TestShutdownGracefully:
         shutdown_gracefully()
 
         # Verify error was logged
-        mock_logger.error.assert_called_once()
-        assert 'Error during task queue shutdown' in str(mock_logger.error.call_args)
+        assert any('Error during task queue shutdown' in str(call) for call in mock_logger.error.call_args_list)
+
+        # Verify scheduler stop was still called
+        mock_stop_scheduler.assert_called_once()
 
         # Reset for other tests
         mock_task_queue.shutdown.side_effect = None
+
+    @patch('desktop.main.stop_scheduler')
+    @patch('desktop.main.task_queue')
+    @patch('desktop.main.logger')
+    def test_shutdown_handles_scheduler_errors(self, mock_logger, mock_task_queue, mock_stop_scheduler):
+        """Test that shutdown_gracefully() handles scheduler errors gracefully."""
+        from desktop.main import shutdown_gracefully
+
+        # Make scheduler stop raise an error
+        test_error = RuntimeError("Scheduler error")
+        mock_stop_scheduler.side_effect = test_error
+
+        # Should not raise, just log the error
+        shutdown_gracefully()
+
+        # Verify error was logged
+        assert any('Error during scheduler shutdown' in str(call) for call in mock_logger.error.call_args_list)
+
+        # Verify task queue shutdown was still called
+        mock_task_queue.shutdown.assert_called_once_with(wait=True, timeout=30)
+
+        # Reset for other tests
+        mock_stop_scheduler.side_effect = None
 
 
 class TestMainFunction:
     """Test suite for main() function."""
 
+    @patch('desktop.main.start_scheduler')
     @patch('desktop.main.create_main_window')
     @patch('desktop.main.get_free_port')
     @patch('desktop.main.configure_app_for_desktop')
@@ -247,7 +283,7 @@ class TestMainFunction:
     @patch('desktop.main.get_user_data_dir')
     def test_main_success_flow(self, mock_get_user_data_dir, mock_thread_class,
                                mock_app, mock_shutdown, mock_configure,
-                               mock_get_port, mock_create_window):
+                               mock_get_port, mock_create_window, mock_start_scheduler):
         """Test successful execution flow of main() function."""
         from desktop.main import main
         from models import db
@@ -276,6 +312,9 @@ class TestMainFunction:
         # Verify configuration was called
         mock_configure.assert_called_once_with(mock_app)
 
+        # Verify scheduler was started
+        mock_start_scheduler.assert_called_once()
+
         # Verify port was obtained
         mock_get_port.assert_called_once()
 
@@ -297,6 +336,7 @@ class TestMainFunction:
         # Verify shutdown was called
         mock_shutdown.assert_called_once()
 
+    @patch('desktop.main.start_scheduler')
     @patch('desktop.main.create_main_window')
     @patch('desktop.main.get_free_port')
     @patch('desktop.main.configure_app_for_desktop')
@@ -305,7 +345,7 @@ class TestMainFunction:
     @patch('desktop.main.threading.Thread')
     def test_main_keyboard_interrupt(self, mock_thread_class, mock_app,
                                      mock_shutdown, mock_configure,
-                                     mock_get_port, mock_create_window):
+                                     mock_get_port, mock_create_window, mock_start_scheduler):
         """Test that main() handles KeyboardInterrupt gracefully."""
         from desktop.main import main
         from models import db
@@ -353,6 +393,7 @@ class TestMainFunction:
         # Verify shutdown was still called
         mock_shutdown.assert_called_once()
 
+    @patch('desktop.main.start_scheduler')
     @patch('desktop.main.create_main_window')
     @patch('desktop.main.get_free_port')
     @patch('desktop.main.configure_app_for_desktop')
@@ -363,7 +404,7 @@ class TestMainFunction:
     @patch('desktop.main.get_user_data_dir')
     def test_main_logs_progress(self, mock_get_user_data_dir, mock_logger,
                                 mock_thread_class, mock_app, mock_shutdown,
-                                mock_configure, mock_get_port, mock_create_window):
+                                mock_configure, mock_get_port, mock_create_window, mock_start_scheduler):
         """Test that main() logs progress messages."""
         from desktop.main import main
         from models import db
@@ -390,6 +431,8 @@ class TestMainFunction:
         assert 'Starting Grading App Desktop Application' in log_text
         assert 'Configuring Flask app for desktop deployment' in log_text
         assert 'Initializing database' in log_text
+        assert 'Starting periodic task scheduler' in log_text
+        assert 'Scheduler started successfully' in log_text
         assert 'Flask server thread started' in log_text
         assert 'Creating main window' in log_text
         assert 'Application exited successfully' in log_text
@@ -398,14 +441,15 @@ class TestMainFunction:
 class TestIntegrationWithAppWrapper:
     """Test suite for integration with app_wrapper module."""
 
+    @patch('desktop.main.start_scheduler')
     @patch('desktop.main.create_main_window')
     @patch('desktop.main.shutdown_gracefully')
     @patch('desktop.main.app')
     @patch('desktop.main.threading.Thread')
     def test_configure_app_called_before_flask_start(self, mock_thread_class,
                                                      mock_app, mock_shutdown,
-                                                     mock_create_window):
-        """Test that configure_app_for_desktop() is called before Flask starts."""
+                                                     mock_create_window, mock_start_scheduler):
+        """Test that configure_app_for_desktop() and start_scheduler() are called before Flask starts."""
         from desktop.main import main
         from models import db
 
@@ -415,6 +459,9 @@ class TestIntegrationWithAppWrapper:
         def track_configure(app):
             call_order.append('configure')
             return app
+
+        def track_scheduler():
+            call_order.append('scheduler_start')
 
         def track_thread(*args, **kwargs):
             call_order.append('thread_create')
@@ -436,20 +483,23 @@ class TestIntegrationWithAppWrapper:
             with patch('desktop.main.get_free_port', return_value=5050):
                 with patch('desktop.main.get_user_data_dir', return_value=Path('/tmp/test')):
                     with patch.object(db, 'create_all'):
+                        mock_start_scheduler.side_effect = track_scheduler
                         mock_thread_class.side_effect = track_thread
                         main()
 
-        # Verify configure was called before thread creation and start
-        assert call_order.index('configure') < call_order.index('thread_create')
+        # Verify configure and scheduler start were called before thread creation and start
+        assert call_order.index('configure') < call_order.index('scheduler_start')
+        assert call_order.index('scheduler_start') < call_order.index('thread_create')
         assert call_order.index('thread_create') < call_order.index('thread_start')
 
+    @patch('desktop.main.start_scheduler')
     @patch('desktop.main.create_main_window')
     @patch('desktop.main.shutdown_gracefully')
     @patch('desktop.main.app')
     @patch('desktop.main.threading.Thread')
     @patch('desktop.main.get_user_data_dir')
     def test_user_data_dir_logged(self, mock_get_user_data_dir, mock_thread_class,
-                                  mock_app, mock_shutdown, mock_create_window):
+                                  mock_app, mock_shutdown, mock_create_window, mock_start_scheduler):
         """Test that user data directory is logged."""
         from desktop.main import main
         from models import db
@@ -503,10 +553,39 @@ class TestErrorHandling:
         # Verify error was logged
         mock_logger.error.assert_called()
 
+    @patch('desktop.main.start_scheduler')
+    @patch('desktop.main.configure_app_for_desktop')
+    @patch('desktop.main.logger')
+    def test_scheduler_start_failure_logged(self, mock_logger, mock_configure, mock_start_scheduler):
+        """Test that scheduler start failures are logged and propagated."""
+        from desktop.main import main
+        from models import db
+
+        # Make scheduler start fail
+        mock_start_scheduler.side_effect = RuntimeError("Scheduler error")
+
+        with patch('desktop.main.app') as mock_app:
+            mock_app_context = MagicMock()
+            mock_app.app_context.return_value.__enter__ = MagicMock(return_value=mock_app_context)
+            mock_app.app_context.return_value.__exit__ = MagicMock(return_value=False)
+
+            with patch.object(db, 'create_all'):
+                with patch('desktop.main.get_user_data_dir', return_value=Path('/tmp/test')):
+                    with patch('desktop.main.shutdown_gracefully'):
+                        result = main()
+
+        # Verify error code
+        assert result == 1
+
+        # Verify error was logged
+        mock_logger.error.assert_called()
+        assert any('Failed to start scheduler' in str(call) for call in mock_logger.error.call_args_list)
+
+    @patch('desktop.main.start_scheduler')
     @patch('desktop.main.get_free_port')
     @patch('desktop.main.configure_app_for_desktop')
     @patch('desktop.main.logger')
-    def test_port_allocation_failure_logged(self, mock_logger, mock_configure, mock_get_port):
+    def test_port_allocation_failure_logged(self, mock_logger, mock_configure, mock_get_port, mock_start_scheduler):
         """Test that port allocation failures are logged."""
         from desktop.main import main
         from models import db
@@ -520,8 +599,9 @@ class TestErrorHandling:
             mock_app.app_context.return_value.__exit__ = MagicMock(return_value=False)
 
             with patch.object(db, 'create_all'):
-                with patch('desktop.main.shutdown_gracefully'):
-                    result = main()
+                with patch('desktop.main.get_user_data_dir', return_value=Path('/tmp/test')):
+                    with patch('desktop.main.shutdown_gracefully'):
+                        result = main()
 
         # Verify error code
         assert result == 1

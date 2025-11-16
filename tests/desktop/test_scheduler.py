@@ -4,7 +4,9 @@ Unit tests for desktop/scheduler.py
 Tests periodic task scheduling functionality using APScheduler.
 """
 
+import os
 import pytest
+from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import importlib
 import sys
@@ -278,6 +280,203 @@ class TestJobExecution:
         calls = mock_scheduler.add_job.call_args_list
         for call in calls:
             assert call[1].get('replace_existing') is True
+
+
+class TestAutomaticBackups:
+    """Test automatic backup scheduling and execution."""
+
+    @patch('desktop.scheduler.export_data')
+    @patch('desktop.scheduler.Settings')
+    @patch('desktop.scheduler.cleanup_old_backups')
+    def test_create_automatic_backup_success(
+        self,
+        mock_cleanup,
+        mock_settings_class,
+        mock_export
+    ):
+        """Test successful automatic backup creation."""
+        from desktop.scheduler import create_automatic_backup
+        from pathlib import Path
+
+        # Mock settings
+        mock_settings = MagicMock()
+        mock_settings.get.side_effect = lambda key, default=None: {
+            'data.database_path': '/path/to/grading.db',
+            'data.uploads_path': '/path/to/uploads',
+            'app_version': '0.1.0'
+        }.get(key, default)
+        mock_settings_class.return_value = mock_settings
+        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+
+        # Create backup
+        create_automatic_backup()
+
+        # Verify export_data was called with correct parameters
+        mock_export.assert_called_once()
+        args = mock_export.call_args
+        assert args[1]['database_path'] == '/path/to/grading.db'
+        assert args[1]['uploads_path'] == '/path/to/uploads'
+        assert args[1]['app_version'] == '0.1.0'
+        assert 'auto-backup-' in args[1]['output_path']
+        assert args[1]['output_path'].endswith('.zip')
+
+        # Verify cleanup was called
+        mock_cleanup.assert_called_once()
+
+    @patch('desktop.scheduler.export_data')
+    @patch('desktop.scheduler.Settings')
+    def test_create_automatic_backup_with_defaults(
+        self,
+        mock_settings_class,
+        mock_export
+    ):
+        """Test backup creation with default paths."""
+        from desktop.scheduler import create_automatic_backup
+        from pathlib import Path
+
+        # Mock settings with no paths configured
+        mock_settings = MagicMock()
+        mock_settings.get.side_effect = lambda key, default=None: {
+            'app_version': '0.2.0'
+        }.get(key, default)
+        mock_settings_class.return_value = mock_settings
+        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+
+        # Create backup
+        create_automatic_backup()
+
+        # Verify defaults were used
+        args = mock_export.call_args
+        assert '/tmp/user_data/grading.db' in args[1]['database_path']
+        assert '/tmp/user_data/uploads' in args[1]['uploads_path']
+
+    @patch('desktop.scheduler.Settings')
+    def test_cleanup_old_backups(self, mock_settings_class):
+        """Test cleanup of old backup files."""
+        from desktop.scheduler import cleanup_old_backups
+        from pathlib import Path
+        import tempfile
+        import time
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            backups_dir = Path(tmpdir) / 'backups'
+            backups_dir.mkdir()
+
+            # Mock settings
+            mock_settings = MagicMock()
+            mock_settings.get.return_value = 30  # 30 days retention
+            mock_settings_class.return_value = mock_settings
+            mock_settings_class._get_user_data_dir.return_value = Path(tmpdir)
+
+            # Create test backup files
+            old_backup = backups_dir / 'auto-backup-20231101-020000.zip'
+            recent_backup = backups_dir / 'auto-backup-20251116-020000.zip'
+
+            old_backup.touch()
+            recent_backup.touch()
+
+            # Set old file modification time to 40 days ago
+            old_time = time.time() - (40 * 24 * 60 * 60)
+            os.utime(old_backup, (old_time, old_time))
+
+            # Run cleanup
+            cleanup_old_backups()
+
+            # Verify old backup was deleted, recent kept
+            assert not old_backup.exists()
+            assert recent_backup.exists()
+
+    @patch('desktop.scheduler.scheduler')
+    @patch('desktop.scheduler.Settings')
+    def test_schedule_automatic_backup_daily(self, mock_settings_class, mock_scheduler):
+        """Test scheduling daily backups."""
+        from desktop.scheduler import schedule_automatic_backup
+
+        # Mock settings - backups enabled, daily frequency
+        mock_settings = MagicMock()
+        mock_settings.get.side_effect = lambda key, default=None: {
+            'data.backups_enabled': True,
+            'data.backup_frequency': 'daily'
+        }.get(key, default)
+        mock_settings_class.return_value = mock_settings
+        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+
+        # Schedule backups
+        schedule_automatic_backup()
+
+        # Verify job was added with cron trigger
+        mock_scheduler.add_job.assert_called()
+        call_kwargs = mock_scheduler.add_job.call_args[1]
+        assert call_kwargs['id'] == 'automatic_backup'
+        assert call_kwargs['hour'] == 2
+        assert call_kwargs['minute'] == 0
+
+    @patch('desktop.scheduler.scheduler')
+    @patch('desktop.scheduler.Settings')
+    def test_schedule_automatic_backup_weekly(self, mock_settings_class, mock_scheduler):
+        """Test scheduling weekly backups."""
+        from desktop.scheduler import schedule_automatic_backup
+
+        # Mock settings - backups enabled, weekly frequency
+        mock_settings = MagicMock()
+        mock_settings.get.side_effect = lambda key, default=None: {
+            'data.backups_enabled': True,
+            'data.backup_frequency': 'weekly'
+        }.get(key, default)
+        mock_settings_class.return_value = mock_settings
+        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+
+        # Schedule backups
+        schedule_automatic_backup()
+
+        # Verify job was added with weekly schedule
+        mock_scheduler.add_job.assert_called()
+        call_kwargs = mock_scheduler.add_job.call_args[1]
+        assert call_kwargs['id'] == 'automatic_backup'
+        assert call_kwargs['day_of_week'] == 'sun'
+        assert call_kwargs['hour'] == 2
+
+    @patch('desktop.scheduler.scheduler')
+    @patch('desktop.scheduler.Settings')
+    def test_schedule_automatic_backup_disabled(self, mock_settings_class, mock_scheduler):
+        """Test that backups are not scheduled when disabled."""
+        from desktop.scheduler import schedule_automatic_backup
+
+        # Mock settings - backups disabled
+        mock_settings = MagicMock()
+        mock_settings.get.side_effect = lambda key, default=None: {
+            'data.backups_enabled': False,
+            'data.backup_frequency': 'daily'
+        }.get(key, default)
+        mock_settings_class.return_value = mock_settings
+        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+
+        # Schedule backups
+        schedule_automatic_backup()
+
+        # Verify job was NOT added
+        mock_scheduler.add_job.assert_not_called()
+
+    @patch('desktop.scheduler.scheduler')
+    @patch('desktop.scheduler.Settings')
+    def test_schedule_automatic_backup_never(self, mock_settings_class, mock_scheduler):
+        """Test that backups are not scheduled when frequency is 'never'."""
+        from desktop.scheduler import schedule_automatic_backup
+
+        # Mock settings - frequency set to never
+        mock_settings = MagicMock()
+        mock_settings.get.side_effect = lambda key, default=None: {
+            'data.backups_enabled': True,
+            'data.backup_frequency': 'never'
+        }.get(key, default)
+        mock_settings_class.return_value = mock_settings
+        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+
+        # Schedule backups
+        schedule_automatic_backup()
+
+        # Verify job was NOT added
+        mock_scheduler.add_job.assert_not_called()
 
 
 class TestSchedulerIntegration:

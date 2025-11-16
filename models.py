@@ -925,9 +925,10 @@ class JobBatch(db.Model):
         # Queue all pending jobs for processing
         for job in self.jobs:
             if job.status == "pending":
+                from desktop.task_queue import task_queue
                 from tasks import process_job
 
-                process_job.delay(job.id)
+                task_queue.submit(process_job, job.id)
 
         db.session.commit()
         return True
@@ -952,9 +953,10 @@ class JobBatch(db.Model):
         # Queue pending jobs for processing
         for job in self.jobs:
             if job.status == "pending":
+                from desktop.task_queue import task_queue
                 from tasks import process_job
 
-                process_job.delay(job.id)
+                task_queue.submit(process_job, job.id)
 
         db.session.commit()
         return True

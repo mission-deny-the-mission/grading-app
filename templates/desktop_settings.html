@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% block title %}Desktop Settings - Document Grader{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i class="fas fa-desktop me-3"></i>
+                Desktop Settings
+            </h1>
+            <p class="lead text-muted">
+                Configure AI provider API keys with secure OS credential storage
+            </p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <!-- Credential Storage Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>Credential Storage Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Backend:</strong> {{ backend_info.backend }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Type:</strong>
+                        {% if backend_info.type == 'native' %}
+                            <span class="badge bg-success">Native OS Storage</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Encrypted File Storage</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Security:</strong>
+                        {% if backend_info.secure %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-lock me-1"></i>Secure
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-unlock me-1"></i>Not Secure
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if backend_info.requires_password %}
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This system uses encrypted file storage. You may be prompted for a password to secure your credentials.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div id="messageContainer"></div>
+
+        <!-- API Keys Configuration -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-key me-2"></i>AI Provider API Keys
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-4">
+                    API keys are stored securely in your operating system's credential manager.
+                    Only the last 4 characters are displayed for security.
+                </p>
+
+                {% for provider in providers %}
+                <div class="mb-4 pb-4 border-bottom" id="provider-{{ provider.key }}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="fw-bold text-primary mb-1">
+                                <i class="fas fa-cloud me-2"></i>{{ provider.name }}
+                            </h6>
+                            <small class="text-muted">{{ provider.description }}</small>
+                        </div>
+                        {% if provider.has_key %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>Configured
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-times me-1"></i>Not Set
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <form class="provider-form" data-provider="{{ provider.key }}" data-provider-name="{{ provider.name }}">
+                        <div class="row align-items-end">
+                            <div class="col-md-6">
+                                <label for="{{ provider.key }}" class="form-label">
+                                    API Key
+                                    {% if provider.has_key %}
+                                    <small class="text-muted">(Current: {{ provider.masked_key }})</small>
+                                    {% endif %}
+                                </label>
+                                <input
+                                    type="password"
+                                    class="form-control api-key-input"
+                                    id="{{ provider.key }}"
+                                    name="{{ provider.key }}"
+                                    placeholder="{{ provider.placeholder }}"
+                                    autocomplete="new-password"
+                                >
+                                <div class="form-text">
+                                    Enter new API key to update (leave blank to keep current)
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary w-100"
+                                    onclick="togglePasswordVisibility('{{ provider.key }}')"
+                                >
+                                    <i class="fas fa-eye"></i> Show/Hide
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <button
+                                    type="button"
+                                    class="btn btn-success w-100 save-btn"
+                                    onclick="saveApiKey('{{ provider.key }}', '{{ provider.name }}')"
+                                >
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                            </div>
+                            <div class="col-md-2">
+                                <button
+                                    type="button"
+                                    class="btn btn-danger w-100 delete-btn"
+                                    onclick="deleteApiKey('{{ provider.key }}', '{{ provider.name }}')"
+                                    {% if not provider.has_key %}disabled{% endif %}
+                                >
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                {% endfor %}
+
+                <div class="mt-4 pt-3 border-top">
+                    <a href="/" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Application
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePasswordVisibility(providerId) {
+    const input = document.getElementById(providerId);
+    if (input.type === 'password') {
+        input.type = 'text';
+    } else {
+        input.type = 'password';
+    }
+}
+
+function showMessage(message, type = 'success') {
+    const container = document.getElementById('messageContainer');
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-dismissible fade show`;
+    alert.innerHTML = `
+        <i class="fas ${icon} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    container.appendChild(alert);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
+function saveApiKey(providerKey, providerName) {
+    const input = document.getElementById(providerKey);
+    const apiKey = input.value.trim();
+
+    if (!apiKey) {
+        showMessage('Please enter an API key', 'error');
+        return;
+    }
+
+    // Show loading state
+    const saveBtn = event.target;
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    // Send update request
+    const data = {};
+    data[providerKey] = apiKey;
+
+    fetch('/desktop/settings/api-keys', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(`${providerName} API key saved successfully`, 'success');
+            // Clear the input and reload to show masked version
+            input.value = '';
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showMessage(data.message || 'Failed to save API key', 'error');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Failed to save API key: ' + error.message, 'error');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    });
+}
+
+function deleteApiKey(providerKey, providerName) {
+    if (!confirm(`Are you sure you want to delete the ${providerName} API key?`)) {
+        return;
+    }
+
+    // Show loading state
+    const deleteBtn = event.target;
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+
+    fetch(`/desktop/settings/api-keys/${providerKey}`, {
+        method: 'DELETE',
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(`${providerName} API key deleted successfully`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showMessage(data.message || 'Failed to delete API key', 'error');
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Failed to delete API key: ' + error.message, 'error');
+        deleteBtn.disabled = false;
+        deleteBtn.innerHTML = originalText;
+    });
+}
+</script>
+{% endblock %}

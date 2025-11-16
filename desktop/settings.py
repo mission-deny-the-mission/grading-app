@@ -210,6 +210,11 @@ class Settings:
         if check_freq and check_freq not in ['startup', 'daily', 'weekly', 'never']:
             raise ValueError(f"Invalid check_frequency: {check_freq}")
 
+        # Validate backups_enabled
+        backups_enabled = self.get('data.backups_enabled')
+        if backups_enabled is not None and not isinstance(backups_enabled, bool):
+            raise ValueError("backups_enabled must be a boolean")
+
         # Validate backup_frequency
         backup_freq = self.get('data.backup_frequency')
         if backup_freq and backup_freq not in ['never', 'daily', 'weekly']:

@@ -23,6 +23,9 @@ from routes.grading import grading_bp
 from routes.export import export_bp
 from routes.schemes_ui import schemes_ui_bp
 from routes.grading_ui import grading_ui_bp
+# Import desktop settings blueprint
+from routes.desktop_settings import desktop_settings_bp
+from routes.desktop_data import desktop_data_bp
 
 load_dotenv()
 
@@ -60,6 +63,9 @@ app.register_blueprint(grading_bp)
 app.register_blueprint(export_bp)
 app.register_blueprint(schemes_ui_bp)
 app.register_blueprint(grading_ui_bp)
+# Register desktop settings blueprint
+app.register_blueprint(desktop_settings_bp)
+app.register_blueprint(desktop_data_bp)
 
 # Configure upload folder
 UPLOAD_FOLDER = "uploads"

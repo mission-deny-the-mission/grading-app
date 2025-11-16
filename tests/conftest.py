@@ -2,11 +2,23 @@
 Pytest configuration and fixtures for the grading app tests.
 """
 
+import sys
 import os
 import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# Mock desktop-specific dependencies before importing app
+# This is needed because app.py imports routes which import desktop modules
+sys.modules['webview'] = MagicMock()
+sys.modules['keyring'] = MagicMock()
+sys.modules['keyrings'] = MagicMock()
+sys.modules['keyrings.cryptfile'] = MagicMock()
+sys.modules['keyrings.cryptfile.cryptfile'] = MagicMock()
+sys.modules['apscheduler'] = MagicMock()
+sys.modules['apscheduler.schedulers'] = MagicMock()
+sys.modules['apscheduler.schedulers.background'] = MagicMock()
 
 # Import the app and models
 from app import app as flask_app

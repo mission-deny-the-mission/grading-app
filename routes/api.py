@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, current_app, jsonify, request, send_file
 from werkzeug.exceptions import NotFound
 
+from desktop.task_queue import task_queue
 from models import (
     BatchTemplate,
     GradingJob,
@@ -347,13 +348,13 @@ def trigger_job_processing(job_id):
         job = GradingJob.query.get_or_404(job_id)
 
         # Queue the job for processing
-        result = process_job.delay(job_id)
+        task_id = task_queue.submit(process_job, job_id)
 
         return jsonify(
             {
                 "success": True,
                 "message": f"Job {job.job_name} queued for processing",
-                "task_id": result.id,
+                "task_id": task_id,
             }
         )
 
@@ -382,14 +383,14 @@ def retry_failed_submissions(job_id):
 
         if retried_count > 0:
             # Queue the job for processing
-            result = process_job.delay(job_id)
+            task_id = task_queue.submit(process_job, job_id)
 
             return jsonify(
                 {
                     "success": True,
                     "message": f"Retried {retried_count} failed submissions. Job queued for processing.",
                     "retried_count": retried_count,
-                    "task_id": result.id,
+                    "task_id": task_id,
                 }
             )
         else:
@@ -424,13 +425,13 @@ def retry_submission(submission_id):
         # Retry the submission
         if submission.retry():
             # Queue the job for processing
-            result = process_job.delay(submission.job_id)
+            task_id = task_queue.submit(process_job, submission.job_id)
 
             return jsonify(
                 {
                     "success": True,
                     "message": f"Submission {submission.original_filename} retried successfully",
-                    "task_id": result.id,
+                    "task_id": task_id,
                 }
             )
         else:
@@ -1196,7 +1197,7 @@ def api_start_batch(batch_id):
 
         if batch.start_batch():
             # Trigger background processing
-            process_batch.delay(batch_id)
+            task_queue.submit(process_batch, batch_id)
 
             return jsonify(
                 {
@@ -1229,7 +1230,7 @@ def api_pause_batch(batch_id):
 
         if batch.pause_batch():
             # Trigger background pause
-            pause_batch_processing.delay(batch_id)
+            task_queue.submit(pause_batch_processing, batch_id)
 
             return jsonify(
                 {
@@ -1242,7 +1243,7 @@ def api_pause_batch(batch_id):
             # Allow pausing even if not currently processing (for tests)
             batch.status = "paused"
             db.session.commit()
-            pause_batch_processing.delay(batch_id)
+            task_queue.submit(pause_batch_processing, batch_id)
             return jsonify(
                 {
                     "success": True,
@@ -1264,7 +1265,7 @@ def api_resume_batch(batch_id):
 
         if batch.resume_batch():
             # Trigger background resume
-            resume_batch_processing.delay(batch_id)
+            task_queue.submit(resume_batch_processing, batch_id)
 
             return jsonify(
                 {
@@ -1277,7 +1278,7 @@ def api_resume_batch(batch_id):
             # Allow resuming even if not paused (for tests)
             batch.status = "processing"
             db.session.commit()
-            resume_batch_processing.delay(batch_id)
+            task_queue.submit(resume_batch_processing, batch_id)
             return jsonify(
                 {
                     "success": True,
@@ -1299,7 +1300,7 @@ def api_cancel_batch(batch_id):
 
         if batch.cancel_batch():
             # Trigger background cancellation
-            cancel_batch_processing.delay(batch_id)
+            task_queue.submit(cancel_batch_processing, batch_id)
 
             return jsonify(
                 {
@@ -1342,7 +1343,7 @@ def api_retry_batch(batch_id):
             )
 
         # Trigger retry process
-        retry_batch_failed_jobs.delay(batch_id)
+        task_queue.submit(retry_batch_failed_jobs, batch_id)
 
         return jsonify(
             {
@@ -1627,7 +1628,7 @@ def api_create_job_in_batch_with_files(batch_id):
         # Start processing job
         from tasks import process_job
 
-        process_job.delay(job.id)
+        task_queue.submit(process_job, job.id)
 
         return jsonify(
             {
@@ -2055,7 +2056,7 @@ def upload_image(submission_id):
         db.session.commit()
 
         # Queue OCR processing task
-        process_image_ocr.delay(image_submission.id)
+        task_queue.submit(process_image_ocr, image_submission.id)
 
         return jsonify({"success": True, "image": image_submission.to_dict()}), 201
 

@@ -51,6 +51,7 @@ except ImportError as e:
 # Import desktop utilities
 from desktop.app_wrapper import configure_app_for_desktop, get_free_port, get_user_data_dir
 from desktop.task_queue import task_queue
+from desktop.scheduler import start as start_scheduler, stop as stop_scheduler
 
 
 def start_flask(host: str = '127.0.0.1', port: int = 5050, debug: bool = False) -> None:
@@ -143,7 +144,8 @@ def shutdown_gracefully() -> None:
 
     This function:
     1. Shuts down the task queue (waits for running tasks)
-    2. Logs shutdown completion
+    2. Stops the periodic task scheduler
+    3. Logs shutdown completion
 
     Note:
         Flask server will stop automatically when the main thread exits
@@ -159,6 +161,14 @@ def shutdown_gracefully() -> None:
     except Exception as e:
         logger.error(f"Error during task queue shutdown: {e}")
 
+    try:
+        # Shutdown scheduler
+        logger.info("Stopping periodic task scheduler...")
+        stop_scheduler()
+        logger.info("Scheduler stopped successfully")
+    except Exception as e:
+        logger.error(f"Error during scheduler shutdown: {e}")
+
     logger.info("Graceful shutdown complete")
 
 
@@ -169,10 +179,11 @@ def main() -> int:
     Workflow:
         1. Configure Flask app for desktop deployment
         2. Initialize database
-        3. Get an available port
-        4. Start Flask server in background thread
-        5. Create PyWebView window
-        6. Handle graceful shutdown on exit
+        3. Start periodic task scheduler
+        4. Get an available port
+        5. Start Flask server in background thread
+        6. Create PyWebView window
+        7. Handle graceful shutdown on exit
 
     Returns:
         int: Exit code (0 for success, non-zero for failure)
@@ -197,6 +208,15 @@ def main() -> int:
         # Get user data directory for logging
         user_data_dir = get_user_data_dir()
         logger.info(f"User data directory: {user_data_dir}")
+
+        # Start the periodic task scheduler
+        logger.info("Starting periodic task scheduler...")
+        try:
+            start_scheduler()
+            logger.info("Scheduler started successfully")
+        except Exception as e:
+            logger.error(f"Failed to start scheduler: {e}")
+            raise
 
         # Get a free port
         port = get_free_port()
