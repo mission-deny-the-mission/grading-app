@@ -1,35 +1,40 @@
-# Git
+# Git files
 .git
 .gitignore
+.gitattributes
 
-# Python
+# Python cache
 __pycache__
 *.pyc
 *.pyo
 *.pyd
 .Python
-env
-pip-log.txt
-pip-delete-this-directory.txt
-.tox
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.git
-.mypy_cache
-.pytest_cache
-.hypothesis
+*.so
+*.egg
+*.egg-info
+.eggs/
+dist/
+build/
 
 # Virtual environments
-venv/
+.env
+.venv
 env/
+venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Testing
+.pytest_cache
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
 
 # IDE
 .vscode/
@@ -38,41 +43,37 @@ venv.bak/
 *.swo
 *~
 
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Project specific
-instance/
-uploads/
+# Database files
 *.db
 *.sqlite
 *.sqlite3
+grading_app.db
 
-# Docker
-Dockerfile.dev
-docker-compose.dev.yml
-.dockerignore
-
-# Dev Container
-.devcontainer/
+# Uploads and temporary files
+uploads/
+*.tmp
+*.log
 
 # Documentation
-README.md
+docs/
 *.md
+!README.md
 
 # Tests
-test_*.py
-*_test.py
+tests/
+pytest.ini
 
-# Development scripts
-start_services.sh
-run.sh
+# Nix
+.direnv
+flake.nix
+flake.lock
+shell.nix
+default.nix
 
-# Development requirements
-requirements-dev.txt
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Backup files
+*.bak
+*.backup

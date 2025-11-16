@@ -7,7 +7,7 @@ quota enforcement, and unauthorized modification attempts.
 """
 
 import pytest
-from models import User, Project, Submission, UsageRecord, SharedProject, db
+from models import User, GradingJob, Submission, UsageRecord, ProjectShare, db
 from datetime import datetime, timezone
 
 
@@ -28,11 +28,13 @@ class TestCrossUserProjectAccess:
         db.session.add_all([user_a, user_b])
         db.session.commit()
 
-        # Create project for user B
-        project_b = Project(
-            name='User B Project',
+        # Create grading job for user B
+        project_b = GradingJob(
+            job_name='User B Project',
             owner_id=user_b.id,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
+            provider='openrouter',
+            prompt='Test prompt'
         )
         db.session.add(project_b)
         db.session.commit()
@@ -58,9 +60,9 @@ class TestCrossUserProjectAccess:
         db.session.add_all([user_a, user_b])
         db.session.commit()
 
-        # Create projects for both users
-        project_a = Project(name='User A Project', owner_id=user_a.id, created_at=datetime.now(timezone.utc))
-        project_b = Project(name='User B Project', owner_id=user_b.id, created_at=datetime.now(timezone.utc))
+        # Create grading jobs for both users
+        project_a = GradingJob(job_name='User A Project', owner_id=user_a.id, created_at=datetime.now(timezone.utc), provider='openrouter', prompt='Test prompt')
+        project_b = GradingJob(job_name='User B Project', owner_id=user_b.id, created_at=datetime.now(timezone.utc), provider='openrouter', prompt='Test prompt')
         db.session.add_all([project_a, project_b])
         db.session.commit()
 
@@ -73,7 +75,7 @@ class TestCrossUserProjectAccess:
 
         data = response.get_json()
         # Should only see own projects
-        project_names = [p['name'] for p in data.get('projects', [])]
+        project_names = [p.get('job_name') or p.get('name') for p in data.get('projects', [])]
         assert 'User A Project' in project_names
         assert 'User B Project' not in project_names
 
@@ -91,11 +93,13 @@ class TestCrossUserProjectAccess:
         db.session.add_all([user_a, user_b])
         db.session.commit()
 
-        # Create project for user B
-        project_b = Project(
-            name='User B Project',
+        # Create grading job for user B
+        project_b = GradingJob(
+            job_name='User B Project',
             owner_id=user_b.id,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
+            provider='openrouter',
+            prompt='Test prompt'
         )
         db.session.add(project_b)
         db.session.commit()
@@ -108,7 +112,7 @@ class TestCrossUserProjectAccess:
         assert response.status_code == 403
 
         # Verify project still exists
-        assert Project.query.get(project_b.id) is not None
+        assert GradingJob.query.get(project_b.id) is not None
 
 
 class TestSharedProjectPermissionBoundaries:
@@ -128,22 +132,24 @@ class TestSharedProjectPermissionBoundaries:
         db.session.add_all([owner, viewer])
         db.session.commit()
 
-        # Create project
-        project = Project(
-            name='Shared Project',
+        # Create grading job
+        project = GradingJob(
+            job_name='Shared Project',
             owner_id=owner.id,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
+            provider='openrouter',
+            prompt='Test prompt'
         )
         db.session.add(project)
         db.session.commit()
 
         # Share with viewer
-        share = SharedProject(
+        share = ProjectShare(
             project_id=project.id,
-            shared_with_user_id=viewer.id,
-            permission='viewer',
-            shared_by_user_id=owner.id,
-            shared_at=datetime.now(timezone.utc)
+            user_id=viewer.id,
+            permission_level='read',
+            granted_by=owner.id,
+            granted_at=datetime.now(timezone.utc)
         )
         db.session.add(share)
         db.session.commit()
@@ -157,7 +163,7 @@ class TestSharedProjectPermissionBoundaries:
 
         # Should NOT be able to modify
         response = client.put(f'/api/projects/{project.id}', json={
-            'name': 'Modified Name'
+            'job_name': 'Modified Name'
         })
         assert response.status_code == 403
 
@@ -175,22 +181,24 @@ class TestSharedProjectPermissionBoundaries:
         db.session.add_all([owner, editor])
         db.session.commit()
 
-        # Create project
-        project = Project(
-            name='Shared Project',
+        # Create grading job
+        project = GradingJob(
+            job_name='Shared Project',
             owner_id=owner.id,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
+            provider='openrouter',
+            prompt='Test prompt'
         )
         db.session.add(project)
         db.session.commit()
 
         # Share with editor
-        share = SharedProject(
+        share = ProjectShare(
             project_id=project.id,
-            shared_with_user_id=editor.id,
-            permission='editor',
-            shared_by_user_id=owner.id,
-            shared_at=datetime.now(timezone.utc)
+            user_id=editor.id,
+            permission_level='write',
+            granted_by=owner.id,
+            granted_at=datetime.now(timezone.utc)
         )
         db.session.add(share)
         db.session.commit()
@@ -200,7 +208,7 @@ class TestSharedProjectPermissionBoundaries:
 
         # Should be able to modify
         response = client.put(f'/api/projects/{project.id}', json={
-            'name': 'Modified Name'
+            'job_name': 'Modified Name'
         })
         # Either succeeds or endpoint doesn't exist yet
         assert response.status_code in [200, 404]
@@ -219,22 +227,24 @@ class TestSharedProjectPermissionBoundaries:
         db.session.add_all([owner, viewer])
         db.session.commit()
 
-        # Create project
-        project = Project(
-            name='Shared Project',
+        # Create grading job
+        project = GradingJob(
+            job_name='Shared Project',
             owner_id=owner.id,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
+            provider='openrouter',
+            prompt='Test prompt'
         )
         db.session.add(project)
         db.session.commit()
 
         # Share with viewer
-        share = SharedProject(
+        share = ProjectShare(
             project_id=project.id,
-            shared_with_user_id=viewer.id,
-            permission='viewer',
-            shared_by_user_id=owner.id,
-            shared_at=datetime.now(timezone.utc)
+            user_id=viewer.id,
+            permission_level='read',
+            granted_by=owner.id,
+            granted_at=datetime.now(timezone.utc)
         )
         db.session.add(share)
         db.session.commit()
@@ -312,11 +322,13 @@ class TestAdminVsRegularUserDataAccess:
         db.session.add_all([admin, owner])
         db.session.commit()
 
-        # Create project owned by regular user
-        project = Project(
-            name='Owner Project',
+        # Create grading job owned by regular user
+        project = GradingJob(
+            job_name='Owner Project',
             owner_id=owner.id,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
+            provider='openrouter',
+            prompt='Test prompt'
         )
         db.session.add(project)
         db.session.commit()
@@ -414,14 +426,14 @@ class TestUnauthorizedDataModification:
         db.session.add_all([user_a, user_b])
         db.session.commit()
 
-        # Create project and submission for user A
-        project_a = Project(name='Project A', owner_id=user_a.id, created_at=datetime.now(timezone.utc))
+        # Create grading job and submission for user A
+        project_a = GradingJob(job_name='Project A', owner_id=user_a.id, created_at=datetime.now(timezone.utc), provider='openrouter', prompt='Test prompt')
         db.session.add(project_a)
         db.session.commit()
 
         submission_a = Submission(
-            project_id=project_a.id,
-            student_name='Student',
+            job_id=project_a.id,
+            filename='test.txt',
             status='pending'
         )
         db.session.add(submission_a)
@@ -473,11 +485,11 @@ class TestUnauthorizedDataModification:
         auth.login()
 
         # Try SQL injection in query parameters
-        response = client.get("/api/projects?name='; DROP TABLE projects; --")
+        response = client.get("/api/projects?name='; DROP TABLE grading_jobs; --")
         # Should handle safely without error
         assert response.status_code in [200, 400]
 
-        # Verify projects table still exists
-        projects = Project.query.all()
+        # Verify grading_jobs table still exists
+        projects = GradingJob.query.all()
         # Query should work (table not dropped)
         assert projects is not None
