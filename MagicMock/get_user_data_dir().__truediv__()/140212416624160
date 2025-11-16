@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "app_version": "0.1.0",
+  "last_updated": "2025-11-16T21:51:23.730564Z",
+  "ui": {
+    "theme": "system",
+    "start_minimized": false,
+    "show_in_system_tray": true,
+    "window_geometry": {
+      "width": 1280,
+      "height": 800,
+      "x": 100,
+      "y": 100,
+      "maximized": false
+    }
+  },
+  "updates": {
+    "auto_check": true,
+    "check_frequency": "startup",
+    "auto_download": false,
+    "last_check": null,
+    "deferred_version": null
+  },
+  "data": {
+    "database_path": "/home/harry/.local/share/GradingApp/grading.db",
+    "uploads_path": "/home/harry/.local/share/GradingApp/uploads",
+    "backups_enabled": true,
+    "backup_frequency": "daily",
+    "backup_retention_days": 30
+  },
+  "advanced": {
+    "flask_port": null,
+    "log_level": "INFO",
+    "enable_telemetry": false
+  }
+}

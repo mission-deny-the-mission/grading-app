@@ -27,15 +27,6 @@ import threading
 import time
 from pathlib import Path
 
-# Configure logging before importing other modules
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-    ]
-)
-
 logger = logging.getLogger(__name__)
 
 # IMPORTANT: Set DATABASE_URL to SQLite BEFORE importing the app
@@ -73,6 +64,106 @@ from desktop.app_wrapper import configure_app_for_desktop, get_free_port, get_us
 from desktop.task_queue import task_queue
 from desktop.scheduler import start as start_scheduler, stop as stop_scheduler
 from desktop.settings import Settings
+from desktop.crash_reporter import setup_crash_handler, cleanup_old_crash_logs
+
+
+def setup_logging() -> None:
+    """
+    Configure application logging with rotating file handlers.
+
+    Creates log files in user data directory:
+    - app.log: Main application events
+    - flask.log: Flask server and routing
+    - updates.log: Update check and installation
+    - errors.log: Error events only
+
+    Each log file:
+    - Max size: 5MB
+    - Keeps 5 rotations
+    - Rotates daily or by size
+    """
+    from logging.handlers import RotatingFileHandler
+
+    # Get user data directory (inline to avoid import dependencies)
+    if sys.platform == 'win32':
+        user_data_dir = Path(os.getenv('APPDATA')) / 'GradingApp'
+    elif sys.platform == 'darwin':
+        user_data_dir = Path.home() / 'Library' / 'Application Support' / 'GradingApp'
+    else:  # Linux
+        user_data_dir = Path(os.getenv('XDG_DATA_HOME', Path.home() / '.local' / 'share')) / 'GradingApp'
+
+    # Create logs directory
+    log_dir = user_data_dir / 'logs'
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    # Formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # Root logger configuration
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+
+    # Clear existing handlers
+    root_logger.handlers.clear()
+
+    # 1. Console handler (INFO and above)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+
+    # 2. Main app log (DEBUG and above)
+    app_handler = RotatingFileHandler(
+        log_dir / 'app.log',
+        maxBytes=5_000_000,  # 5MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    app_handler.setLevel(logging.DEBUG)
+    app_handler.setFormatter(formatter)
+    root_logger.addHandler(app_handler)
+
+    # 3. Flask log (Flask and Werkzeug only)
+    flask_handler = RotatingFileHandler(
+        log_dir / 'flask.log',
+        maxBytes=5_000_000,  # 5MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    flask_handler.setLevel(logging.DEBUG)
+    flask_handler.setFormatter(formatter)
+
+    # Add to Flask loggers
+    logging.getLogger('werkzeug').addHandler(flask_handler)
+    logging.getLogger('flask').addHandler(flask_handler)
+
+    # 4. Updates log (updater module only)
+    updates_handler = RotatingFileHandler(
+        log_dir / 'updates.log',
+        maxBytes=5_000_000,  # 5MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    updates_handler.setLevel(logging.DEBUG)
+    updates_handler.setFormatter(formatter)
+    logging.getLogger('desktop.updater').addHandler(updates_handler)
+
+    # 5. Errors log (ERROR and above only)
+    error_handler = RotatingFileHandler(
+        log_dir / 'errors.log',
+        maxBytes=5_000_000,  # 5MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(formatter)
+    root_logger.addHandler(error_handler)
+
+    logger.info(f"Logging configured - logs directory: {log_dir}")
+    logger.debug("Log files created: app.log, flask.log, updates.log, errors.log")
 
 
 def check_for_updates_async(settings: Settings) -> None:
@@ -193,41 +284,50 @@ def start_flask(host: str = '127.0.0.1', port: int = 5050, debug: bool = False) 
 
 
 def create_main_window(url: str, title: str = "Grading App",
-                       width: int = 1280, height: int = 800) -> None:
+                       width: int = 1280, height: int = 800,
+                       start_hidden: bool = False) -> 'webview.Window':
     """
-    Create and display the main PyWebView window.
+    Create the main PyWebView window.
 
-    This function will block until the window is closed by the user.
+    This function creates the window but does NOT start the webview event loop.
+    The caller must call webview.start() to begin the event loop.
 
     Args:
         url: URL to display in the window (e.g., 'http://127.0.0.1:5050')
         title: Window title (default: "Grading App")
         width: Initial window width in pixels (default: 1280)
         height: Initial window height in pixels (default: 800)
+        start_hidden: If True, window starts hidden (default: False)
+
+    Returns:
+        webview.Window: The created window instance
 
     Raises:
         ImportError: If PyWebView is not installed
 
     Note:
-        This function blocks until the window is closed.
+        This function creates the window but does not block.
+        Call webview.start() separately to start the event loop.
     """
     try:
         import webview
         logger.info(f"Creating PyWebView window: {title} ({width}x{height})")
+        logger.info(f"Window will start {'hidden' if start_hidden else 'visible'}")
 
         # Wait a moment for Flask to start before opening window
         time.sleep(0.5)
 
-        # Create and start the window (blocks until closed)
-        webview.create_window(
+        # Create window (does not start event loop)
+        window = webview.create_window(
             title=title,
             url=url,
             width=width,
-            height=height
+            height=height,
+            hidden=start_hidden
         )
-        webview.start()
 
-        logger.info("PyWebView window closed")
+        logger.info(f"PyWebView window created")
+        return window
 
     except ImportError as e:
         logger.error(
@@ -240,20 +340,33 @@ def create_main_window(url: str, title: str = "Grading App",
         raise
 
 
-def shutdown_gracefully() -> None:
+def shutdown_gracefully(tray_icon=None) -> None:
     """
     Perform graceful shutdown of the application.
 
     This function:
-    1. Shuts down the task queue (waits for running tasks)
-    2. Stops the periodic task scheduler
-    3. Logs shutdown completion
+    1. Stops the system tray icon (if running)
+    2. Shuts down the task queue (waits for running tasks)
+    3. Stops the periodic task scheduler
+    4. Logs shutdown completion
+
+    Args:
+        tray_icon: Optional pystray.Icon instance to stop
 
     Note:
         Flask server will stop automatically when the main thread exits
         (since it's running in a daemon thread).
     """
     logger.info("Initiating graceful shutdown...")
+
+    try:
+        # Stop system tray icon first
+        if tray_icon:
+            logger.info("Stopping system tray icon...")
+            tray_icon.stop()
+            logger.info("System tray stopped")
+    except Exception as e:
+        logger.error(f"Error stopping system tray: {e}")
 
     try:
         # Shutdown task queue with timeout
@@ -279,21 +392,32 @@ def main() -> int:
     Main entry point for the desktop application.
 
     Workflow:
-        1. Configure Flask app for desktop deployment
-        2. Initialize database
-        3. Start periodic task scheduler
-        4. Get an available port
-        5. Start Flask server in background thread
-        6. Create PyWebView window
-        7. Handle graceful shutdown on exit
+        1. Install crash handler
+        2. Configure Flask app for desktop deployment
+        3. Initialize database
+        4. Start periodic task scheduler
+        5. Get an available port
+        6. Start Flask server in background thread
+        7. Create PyWebView window
+        8. Handle graceful shutdown on exit
 
     Returns:
         int: Exit code (0 for success, non-zero for failure)
     """
+    # Install crash handler first (before any other code)
+    setup_crash_handler()
+
+    # Configure logging system
+    setup_logging()
+
     try:
         logger.info("=" * 60)
         logger.info("Starting Grading App Desktop Application")
+        logger.info(f"Version: {__version__}")
         logger.info("=" * 60)
+
+        # Cleanup old crash logs (keep last 30 days)
+        cleanup_old_crash_logs(days=30)
 
         # Configure Flask app for desktop
         logger.info("Configuring Flask app for desktop deployment...")
@@ -323,6 +447,11 @@ def main() -> int:
         try:
             start_scheduler()
             logger.info("Scheduler started successfully")
+
+            # Schedule automatic backups based on settings
+            from desktop.scheduler import schedule_automatic_backup
+            schedule_automatic_backup()
+            logger.info("Automatic backup scheduling configured")
         except Exception as e:
             logger.error(f"Failed to start scheduler: {e}")
             raise
@@ -358,17 +487,70 @@ def main() -> int:
         flask_url = f'http://{host}:{port}'
         logger.info(f"Flask URL: {flask_url}")
 
-        # Create and show main window (blocks until closed)
+        # Get UI settings
+        start_minimized = settings.get('ui.start_minimized', False)
+        show_tray = settings.get('ui.show_in_system_tray', True)
+
+        # Create main window
         logger.info("Creating main window...")
-        create_main_window(
+        window = create_main_window(
             url=flask_url,
-            title="Grading App",
+            title=f"Grading App v{__version__}",
             width=1280,
-            height=800
+            height=800,
+            start_hidden=start_minimized
         )
 
+        # Create system tray if enabled
+        tray_icon = None
+        if show_tray:
+            logger.info("Creating system tray icon...")
+            try:
+                from desktop.window_manager import create_system_tray
+
+                def on_quit():
+                    """Quit callback for system tray."""
+                    logger.info("Quit requested from system tray")
+                    import sys
+                    sys.exit(0)
+
+                # Build URLs for menu items
+                settings_url = f"{flask_url}/desktop/settings"
+                data_url = f"{flask_url}/desktop/data"
+
+                # Create tray icon (doesn't block - returns icon instance)
+                tray_icon = create_system_tray(
+                    window=window,
+                    on_quit=on_quit,
+                    settings_url=settings_url,
+                    data_url=data_url,
+                    start_hidden=start_minimized
+                )
+
+                if tray_icon:
+                    # Start tray in background thread
+                    tray_thread = threading.Thread(
+                        target=tray_icon.run,
+                        daemon=True,
+                        name="SystemTrayThread"
+                    )
+                    tray_thread.start()
+                    logger.info("System tray icon started in background thread")
+                else:
+                    logger.warning("System tray icon creation failed, continuing without tray")
+
+            except Exception as e:
+                logger.error(f"Failed to create system tray: {e}")
+                logger.warning("Continuing without system tray functionality")
+
+        # Start webview event loop (blocks until window closed)
+        import webview
+        logger.info("Starting PyWebView event loop...")
+        webview.start()
+        logger.info("PyWebView window closed")
+
         # Window closed - perform graceful shutdown
-        shutdown_gracefully()
+        shutdown_gracefully(tray_icon=tray_icon)
 
         logger.info("Application exited successfully")
         return 0

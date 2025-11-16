@@ -14,6 +14,7 @@ AI-powered document grading with support for OpenRouter, Claude API, and LM Stud
 - **Export & Analytics**: Export results in CSV/JSON formats with statistical analysis
 - **Version Control**: Track scheme modifications and maintain historical grading data
 - **Fractional Points**: Support for decimal point precision (e.g., 2.5 points)
+- **Desktop Application**: Standalone application for Windows, macOS, and Linux with automatic updates
 
 ## 🔧 Recent Updates
 
@@ -24,7 +25,74 @@ A comprehensive grading scheme system has been implemented, allowing educators t
 - Track usage statistics and export detailed reports
 - Clone and version schemes for reusability
 
-## 🔧 Setup & Configuration
+## 🖥️ Desktop Application
+
+For a simpler setup, download the standalone desktop application:
+
+### Installation
+
+#### Windows
+1. Download `GradingApp-Setup.exe` from the [latest release](https://github.com/user/grading-app/releases)
+2. Run the installer and follow the prompts
+3. Launch "Grading App" from the Start Menu
+
+#### macOS
+1. Download `GradingApp.dmg` from the [latest release](https://github.com/user/grading-app/releases)
+2. Open the DMG file
+3. Drag "Grading App" to your Applications folder
+4. Launch from Applications (you may need to allow it in System Preferences → Security & Privacy)
+
+#### Linux
+1. Download `GradingApp.AppImage` from the [latest release](https://github.com/user/grading-app/releases)
+2. Make it executable: `chmod +x GradingApp.AppImage`
+3. Run: `./GradingApp.AppImage`
+
+Alternatively, download the `.deb` package for Debian/Ubuntu:
+```bash
+sudo dpkg -i GradingApp.deb
+sudo apt-get install -f  # Install dependencies if needed
+```
+
+### Minimum System Requirements
+- **OS**: Windows 10+, macOS 10.14+, or Linux (any modern distribution)
+- **RAM**: 4GB minimum, 8GB recommended
+- **Disk Space**: 500MB for application + storage for your grading data
+- **Processor**: Intel i3 or equivalent (any modern processor)
+
+### Features
+- **No Installation Required**: All dependencies bundled
+- **Automatic Updates**: Check for updates automatically (optional)
+- **Secure Credential Storage**: API keys stored in your OS keyring
+- **Local Database**: SQLite database in your user data directory
+- **Data Export/Import**: Backup and restore your grading data
+- **Offline Capable**: Grade submissions without internet connection (AI grading requires internet)
+
+### Troubleshooting
+
+**Windows: "Windows protected your PC" warning**
+- Click "More info" → "Run anyway"
+- This happens because the app isn't signed with a Microsoft certificate
+
+**macOS: "App can't be opened because it is from an unidentified developer"**
+- Right-click the app → "Open" → "Open" again
+- Or: System Preferences → Security & Privacy → "Open Anyway"
+
+**Linux: App won't start**
+- Ensure the AppImage is executable: `chmod +x GradingApp.AppImage`
+- Install FUSE if needed: `sudo apt-get install fuse libfuse2`
+
+**Data Location**
+- Windows: `%APPDATA%\GradingApp\`
+- macOS: `~/Library/Application Support/GradingApp/`
+- Linux: `~/.local/share/GradingApp/`
+
+For more details, see the [Desktop Application Documentation](desktop/README.md).
+
+---
+
+## 🔧 Web Application Setup
+
+For developers or server deployments, you can run the web application directly:
 
 ### Quick Start
 

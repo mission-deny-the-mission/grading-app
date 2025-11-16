@@ -114,9 +114,8 @@ class TestCreateSystemTray:
         """Test that create_system_tray creates tray with correct menu items"""
         from desktop.window_manager import create_system_tray
 
-        # Mock callbacks
-        on_show = Mock()
-        on_hide = Mock()
+        # Mock window and callbacks (new signature)
+        mock_window = Mock()
         on_quit = Mock()
 
         # Mock PIL Image - the function will try to open icon or create new
@@ -129,20 +128,31 @@ class TestCreateSystemTray:
         mock_menuitem_class.return_value = mock_menu_item
         mock_menu = Mock()
         mock_menu_class.return_value = mock_menu
+        mock_menu_class.SEPARATOR = Mock()  # Mock separator
         mock_icon = Mock()
         mock_icon_class.return_value = mock_icon
 
-        # Call function
-        create_system_tray(on_show, on_hide, on_quit)
+        # Call function with new signature
+        result = create_system_tray(window=mock_window, on_quit=on_quit)
 
-        # Verify MenuItem was called for each menu item
-        assert mock_menuitem_class.call_count == 3
-        mock_menuitem_class.assert_any_call("Show", on_show)
-        mock_menuitem_class.assert_any_call("Hide", on_hide)
-        mock_menuitem_class.assert_any_call("Quit", on_quit)
+        # Verify result is the icon (new behavior - returns icon instead of running it)
+        assert result == mock_icon
 
-        # Verify Menu was created
-        mock_menu_class.assert_called_once()
+        # Verify MenuItem was called for menu items
+        # New menu has: Toggle, Settings, Data Management, Check for Updates, Help submenu (About, View Logs), Quit
+        # That's at least 8 items (including submenu items)
+        assert mock_menuitem_class.call_count >= 7
+
+        # Check that specific menu items were created
+        menu_item_calls = [str(call) for call in mock_menuitem_class.call_args_list]
+        assert any("Settings" in str(call) for call in menu_item_calls)
+        assert any("Data Management" in str(call) for call in menu_item_calls)
+        assert any("Check for Updates" in str(call) for call in menu_item_calls)
+        assert any("Quit" in str(call) for call in menu_item_calls)
+        assert any("Help" in str(call) for call in menu_item_calls)
+
+        # Verify Menu was created (main menu + Help submenu = at least 2)
+        assert mock_menu_class.call_count >= 2
 
         # Verify Icon was created with correct parameters
         mock_icon_class.assert_called_once()
@@ -152,8 +162,8 @@ class TestCreateSystemTray:
         # Icon image should be either from open() or new()
         assert call_kwargs['icon'] == mock_icon_image
 
-        # Verify icon.run() was called
-        mock_icon.run.assert_called_once()
+        # Verify icon.run() was NOT called (new behavior - caller must call run())
+        mock_icon.run.assert_not_called()
 
     @patch('pathlib.Path')
     @patch('PIL.Image')
@@ -165,9 +175,8 @@ class TestCreateSystemTray:
         """Test that create_system_tray loads icon from resources if file exists"""
         from desktop.window_manager import create_system_tray
 
-        # Mock callbacks
-        on_show = Mock()
-        on_hide = Mock()
+        # Mock window and callback (new signature)
+        mock_window = Mock()
         on_quit = Mock()
 
         # Mock icon path to exist
@@ -192,9 +201,10 @@ class TestCreateSystemTray:
         # Mock pystray components
         mock_icon = Mock()
         mock_icon_class.return_value = mock_icon
+        mock_menu_class.SEPARATOR = Mock()
 
-        # Call function
-        create_system_tray(on_show, on_hide, on_quit)
+        # Call function with new signature
+        create_system_tray(window=mock_window, on_quit=on_quit)
 
         # Verify Image.open was called (icon loaded from file)
         mock_image.open.assert_called_once_with(mock_icon_path)
@@ -208,9 +218,8 @@ class TestCreateSystemTray:
         """Test that create_system_tray creates default icon if file doesn't exist"""
         from desktop.window_manager import create_system_tray
 
-        # Mock callbacks
-        on_show = Mock()
-        on_hide = Mock()
+        # Mock window and callback (new signature)
+        mock_window = Mock()
         on_quit = Mock()
 
         # Mock PIL Image - simulate file not found by raising error on open
@@ -223,9 +232,10 @@ class TestCreateSystemTray:
         # Mock pystray components
         mock_icon = Mock()
         mock_icon_class.return_value = mock_icon
+        mock_menu_class.SEPARATOR = Mock()
 
-        # Call function - should catch FileNotFoundError and create default icon
-        create_system_tray(on_show, on_hide, on_quit)
+        # Call function with new signature - should catch FileNotFoundError and create default icon
+        create_system_tray(window=mock_window, on_quit=on_quit)
 
         # Verify Image.new was called (default icon created)
         # Note: This might not be called if path.exists() returns False first
@@ -266,12 +276,13 @@ class TestCreateSystemTray:
 
         mock_icon = Mock()
         mock_icon_class.return_value = mock_icon
+        mock_menu_class.SEPARATOR = Mock()
 
-        on_show = Mock()
-        on_hide = Mock()
+        # Mock window and callback (new signature)
+        mock_window = Mock()
         on_quit = Mock()
 
-        create_system_tray(on_show, on_hide, on_quit)
+        create_system_tray(window=mock_window, on_quit=on_quit)
 
         # Check that logging occurred
         assert mock_logger.info.call_count >= 1

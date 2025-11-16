@@ -4,8 +4,11 @@ Handles configuration of AI provider credentials with secure storage.
 """
 
 from flask import Blueprint, jsonify, render_template, request
-from desktop import credentials
+from desktop import credentials, __version__
+from desktop.app_wrapper import get_user_data_dir
 import logging
+import subprocess
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +110,8 @@ def show_settings():
         return render_template(
             "desktop_settings.html",
             providers=providers_with_keys,
-            backend_info=backend_info
+            backend_info=backend_info,
+            app_version=__version__
         )
     except Exception as e:
         logger.error(f"Error loading desktop settings: {e}")
@@ -115,7 +119,8 @@ def show_settings():
             "desktop_settings.html",
             providers=SUPPORTED_PROVIDERS,
             backend_info={"backend": "Unknown", "type": "unknown", "secure": False},
-            error="Failed to load current settings"
+            error="Failed to load current settings",
+            app_version=__version__
         )
 
 
@@ -237,4 +242,45 @@ def delete_api_key_route(provider):
         return jsonify({
             "success": False,
             "message": f"Failed to delete API key: {str(e)}"
+        }), 500
+
+
+@desktop_settings_bp.route("/desktop/logs/open", methods=["POST"])
+def open_logs_folder():
+    """
+    Open logs folder in system file explorer.
+
+    Returns:
+        JSON response with success status
+    """
+    try:
+        logs_dir = get_user_data_dir() / "logs"
+
+        # Ensure logs directory exists
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Open folder in file explorer
+        if sys.platform == 'win32':
+            # Windows: explorer
+            subprocess.Popen(['explorer', str(logs_dir)])
+        elif sys.platform == 'darwin':
+            # macOS: Finder
+            subprocess.Popen(['open', str(logs_dir)])
+        else:
+            # Linux: xdg-open
+            subprocess.Popen(['xdg-open', str(logs_dir)])
+
+        logger.info(f"Opened logs folder: {logs_dir}")
+
+        return jsonify({
+            "success": True,
+            "message": "Logs folder opened",
+            "path": str(logs_dir)
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to open logs folder: {e}")
+        return jsonify({
+            "success": False,
+            "message": f"Failed to open logs folder: {str(e)}"
         }), 500

@@ -1,452 +1,610 @@
-# Desktop Application
+# Desktop Application Architecture
 
-This directory contains the desktop application wrapper for the Grading App, which packages the Flask web application into a standalone executable for Windows, macOS, and Linux.
+This document describes the architecture, design decisions, and development workflow for the Grading App desktop application.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Directory Structure](#directory-structure)
+- [Module Descriptions](#module-descriptions)
+- [Development Guide](#development-guide)
+- [Building](#building)
+- [Testing](#testing)
+- [Distribution](#distribution)
+
+---
+
+## Overview
+
+The Grading App desktop application is a standalone, single-user version of the web application, packaged using PyInstaller. It provides:
+
+- **Zero-configuration startup**: No server setup required
+- **Offline capability**: Works without internet (except for AI grading)
+- **Secure credential storage**: API keys stored in OS keyring
+- **Automatic updates**: Built-in update checker and installer
+- **Data portability**: Export/import capabilities for backups
+- **Cross-platform**: Windows, macOS, and Linux support
+
+### Key Design Decisions
+
+1. **SQLite instead of PostgreSQL/Redis**: Single-user desktop apps don't need multi-user database systems
+2. **Thread-based task queue**: Replaces Celery for background tasks (no Redis dependency)
+3. **OS keyring integration**: More secure than storing keys in local files
+4. **PyWebView for GUI**: Embeds Flask app in native window without browser chrome
+5. **PyInstaller packaging**: Bundles Python interpreter and dependencies into single executable
+
+---
 
 ## Architecture
 
-The desktop application uses:
-- **PyWebView**: Lightweight desktop window (uses system browser engine)
-- **PyInstaller**: Python application bundler
-- **Flask**: Existing web application (runs on localhost)
-- **SQLite**: Local database (replacing PostgreSQL for single-user desktop)
-- **ThreadPoolExecutor**: Async task processing (replacing Celery/Redis)
+### Component Diagram
 
-## Quick Start
-
-### Prerequisites
-
-- Python 3.13.7 or compatible version (>=3.9,<4.0)
-- pip package manager
-- Operating system: Windows 10+, macOS 11+, or Ubuntu 20.04+
-
-### Installation
-
-1. Install desktop dependencies:
-```bash
-pip install -r requirements.txt
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Desktop Application                       │
+├─────────────────────────────────────────────────────────────┤
+│  desktop/main.py (Entry Point)                              │
+│    │                                                          │
+│    ├──> Flask App (app.py)                                  │
+│    │      └──> Routes, Templates, Models                    │
+│    │                                                          │
+│    ├──> PyWebView Window (window_manager.py)               │
+│    │      └──> Native OS window displaying Flask UI         │
+│    │                                                          │
+│    ├──> Background Services                                 │
+│    │      ├──> Task Queue (task_queue.py)                   │
+│    │      ├──> Scheduler (scheduler.py)                     │
+│    │      └──> Updater (updater.py)                        │
+│    │                                                          │
+│    ├──> Data Layer                                          │
+│    │      ├──> SQLite Database (app_wrapper.py)            │
+│    │      ├──> OS Keyring (credentials.py)                 │
+│    │      └──> Settings File (settings.py)                 │
+│    │                                                          │
+│    └──> Utilities                                           │
+│           ├──> Data Export/Import (data_export.py)         │
+│           ├──> Crash Reporter (crash_reporter.py)          │
+│           └──> Logging (main.py)                           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-This includes:
-- `pywebview>=4.0.0` - Desktop window framework
-- `pyinstaller>=5.13.0` - Application bundler
-- `keyring>=25.6.0` - OS credential storage
-- `keyrings.cryptfile>=1.3.9` - Encrypted file fallback for credentials
-- `apscheduler>=3.10.0` - Periodic task scheduler
+### Application Startup Sequence
 
-## Running the Application
+1. **Crash Handler Setup** (`crash_reporter.py`)
+   - Install global exception handler for crash reporting
 
-### Development Mode
+2. **Logging Configuration** (`main.py:setup_logging()`)
+   - Create rotating log files in user data directory
+   - Configure console and file handlers
 
-Run the application directly from source (fastest iteration):
+3. **Database Configuration** (`app_wrapper.py`)
+   - Set DATABASE_URL to SQLite path in user data directory
+   - Import Flask app (triggers database initialization)
 
-```bash
-# From project root
-python desktop/main.py
+4. **Desktop Configuration** (`app_wrapper.py:configure_app_for_desktop()`)
+   - Initialize OS keyring for credentials
+   - Load API keys from keyring to environment
+   - Configure directories (database, uploads, backups)
+   - Set up SQLite performance pragmas
+
+5. **Database Initialization** (`models.py`)
+   - Create all tables if they don't exist
+
+6. **Settings Initialization** (`settings.py`)
+   - Load or create default settings file
+
+7. **Scheduler Start** (`scheduler.py`)
+   - Start background task scheduler
+   - Schedule automatic backups
+
+8. **Update Check** (`updater.py`, background thread)
+   - Check for application updates (if enabled)
+
+9. **Flask Server Start** (background thread)
+   - Start Flask on localhost with random free port
+
+10. **PyWebView Window** (`window_manager.py`)
+    - Create native OS window
+    - Load Flask URL
+    - Start event loop (blocks until window closed)
+
+11. **Graceful Shutdown** (`main.py:shutdown_gracefully()`)
+    - Shutdown task queue (wait for running tasks)
+    - Stop scheduler
+    - Exit application
+
+---
+
+## Directory Structure
+
+```
+desktop/
+├── __init__.py           # Package initialization, version info
+├── main.py               # Application entry point
+├── app_wrapper.py        # Flask configuration for desktop
+├── window_manager.py     # PyWebView window creation
+├── task_queue.py         # Thread-based background tasks
+├── scheduler.py          # Periodic task scheduling
+├── credentials.py        # OS keyring integration
+├── settings.py           # User preferences/settings
+├── updater.py            # Automatic update system
+├── data_export.py        # Data backup/restore
+├── crash_reporter.py     # Crash logging and reporting
+├── loading.py            # Startup loading screen
+│
+├── installer/            # Installer scripts
+│   ├── build-all.sh      # Build all platform installers
+│   ├── verify-build.sh   # Verify PyInstaller output
+│   ├── analyze-bundle.sh # Bundle size analysis
+│   ├── windows/          # Windows installer (Inno Setup)
+│   ├── macos/            # macOS DMG creation
+│   └── linux/            # Linux AppImage/DEB
+│
+├── resources/            # Application resources
+│   └── icon.png          # Application icon
+│
+├── performance_test.py   # Performance testing script
+└── large_db_test.py      # Large database stress test
 ```
 
-**When to use:**
-- During active development
-- Testing code changes quickly
-- Debugging with full stack traces
+---
 
-**Limitations:**
-- Doesn't test packaging issues
-- May behave differently than packaged app
-- Requires Python environment
+## Module Descriptions
 
-### Production Build
+### Core Modules
 
-Package the application into a standalone executable:
+#### `main.py`
+**Application Entry Point**
 
-```bash
-# From project root
-pyinstaller grading-app.spec
-
-# Run the packaged application
-./dist/GradingApp/GradingApp          # Linux/macOS
-.\dist\GradingApp\GradingApp.exe      # Windows
-```
-
-**When to use:**
-- Before committing changes to ensure packaging works
-- Testing platform-specific behavior
-- Validating performance metrics (startup time, memory usage, installer size)
-- Preparing for distribution
-
-**Performance Targets:**
-- Startup time: <10 seconds (typically 1-3s)
-- Memory usage (idle): <500MB (typically 150-300MB)
-- Installer size: ~100-130MB
-
-## Building for Distribution
-
-### Platform-Specific Builds
-
-PyInstaller must be run on the target platform (cross-compilation is not supported).
-
-#### Windows
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Build executable
-pyinstaller grading-app.spec
-
-# Output location
-dist\GradingApp\GradingApp.exe
-```
-
-**Installer creation**:
-```powershell
-# Install Inno Setup from: https://jrsoftware.org/isinfo.php
-# Then compile the installer script:
-iscc desktop\installer\windows\installer.iss
-
-# Output: desktop\installer\windows\Output\GradingApp-Setup.exe
-```
-
-For detailed instructions, see `desktop/installer/windows/README.md`
-
-#### macOS
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Build executable
-pyinstaller grading-app.spec
-
-# Output location
-dist/GradingApp/GradingApp
-```
-
-**DMG creation**:
-```bash
-# Install create-dmg: npm install -g create-dmg
-# Create DMG installer:
-bash desktop/installer/macos/create-dmg.sh
-
-# Output: desktop/installer/macos/GradingApp-1.0.0.dmg
-```
-
-**Note**: For DMG creation, uncomment the BUNDLE section in `grading-app.spec` to create `dist/GradingApp.app`
-
-For detailed instructions including code signing and notarization, see `desktop/installer/macos/README.md`
-
-#### Linux
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Build executable
-pyinstaller grading-app.spec
-
-# Output location
-dist/GradingApp/GradingApp
-```
-
-**AppImage creation** (portable, recommended):
-```bash
-# Create AppImage (auto-downloads tools if needed):
-bash desktop/installer/linux/create-appimage.sh
-
-# Output: desktop/installer/linux/GradingApp-1.0.0-x86_64.AppImage
-```
-
-**DEB package** (for Debian/Ubuntu):
-```bash
-# Install fpm: sudo gem install fpm
-# Create DEB package:
-bash desktop/installer/linux/create-deb.sh
-
-# Output: desktop/installer/linux/grading-app_1.0.0_amd64.deb
-```
-
-For detailed instructions including RPM and Flatpak, see `desktop/installer/linux/README.md`
-
-### Build All Installers
-
-To build installers for all platforms at once (or for the current platform):
-
-```bash
-# Verify PyInstaller build is ready
-bash desktop/installer/verify-build.sh
-
-# Build installers for current platform
-bash desktop/installer/build-all.sh
-
-# Or specify a platform
-bash desktop/installer/build-all.sh windows  # Windows only
-bash desktop/installer/build-all.sh macos    # macOS only
-bash desktop/installer/build-all.sh linux    # Linux only
-bash desktop/installer/build-all.sh all      # All platforms (cross-platform not supported)
-```
-
-**Note**: Cross-compilation is not supported. Windows installers must be built on Windows, macOS on macOS, and Linux on Linux.
-
-### Automated Builds with GitHub Actions
-
-For continuous integration, use GitHub Actions to build for all platforms:
-
-```yaml
-# .github/workflows/build.yml
-name: Build Desktop App
-
-on: [push, pull_request]
-
-jobs:
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-      - run: pip install -r requirements.txt
-      - run: pyinstaller grading-app.spec
-      - uses: actions/upload-artifact@v3
-        with:
-          name: GradingApp-Windows
-          path: dist/GradingApp/
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-      - run: pip install -r requirements.txt
-      - run: pyinstaller grading-app.spec
-      - uses: actions/upload-artifact@v3
-        with:
-          name: GradingApp-macOS
-          path: dist/GradingApp/
-
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-      - run: pip install -r requirements.txt
-      - run: pyinstaller grading-app.spec
-      - uses: actions/upload-artifact@v3
-        with:
-          name: GradingApp-Linux
-          path: dist/GradingApp/
-```
-
-## Configuration
-
-### PyInstaller Spec File
-
-The `grading-app.spec` file controls the bundling process. Key sections:
-
-**Hidden Imports** (lines 13-28):
-```python
-hiddenimports = [
-    'sqlalchemy.sql.default_comparator',
-    'sqlalchemy.dialects.sqlite',
-    'sqlalchemy.dialects.postgresql',
-    'flask_sqlalchemy',
-    'flask_migrate',
-    'celery',  # Will be removed in future phases
-]
-```
-
-Add any dynamically imported modules here if you encounter `ModuleNotFoundError` at runtime.
-
-**Data Files** (lines 34-38):
-```python
-datas=[
-    ('templates', 'templates'),  # Flask templates
-    ('static', 'static'),        # Static assets
-]
-```
-
-User data (uploads, database) is stored separately and NOT bundled with the application.
-
-**Console Mode** (line 65):
-```python
-console=False  # No console window (GUI mode)
-```
-
-Set to `True` for debugging to see Python error messages in a console window.
-
-### User Data Directory
-
-User data is stored in platform-specific locations (survives application updates):
-
-- **Windows**: `%APPDATA%\GradingApp\`
-- **macOS**: `~/Library/Application Support/GradingApp/`
-- **Linux**: `~/.local/share/GradingApp/`
-
-Contents:
-- `grading.db` - SQLite database
-- `uploads/` - Uploaded files
-- `settings.json` - User settings
-- `backups/` - Automatic backups
-
-## Troubleshooting
-
-### PyInstaller Missing Imports
-
-**Symptom**: Application crashes with `ModuleNotFoundError` at runtime
-
-**Solution**: Add missing module to `hiddenimports` in `grading-app.spec`:
-```python
-hiddenimports = [
-    # ... existing imports ...
-    'your.missing.module',
-]
-```
-
-Then rebuild:
-```bash
-pyinstaller grading-app.spec
-```
-
-### Templates Not Found
-
-**Symptom**: Flask returns "Template not found" errors
-
-**Solution**: Ensure templates are included in `datas` in `grading-app.spec`:
-```python
-datas=[
-    ('templates', 'templates'),
-    ('static', 'static'),
-]
-```
-
-### Port Already in Use
-
-**Symptom**: Flask fails to start with "Address already in use"
-
-**Solution**: The application automatically selects an available port. If this fails, check `desktop/main.py` for the `get_free_port()` function.
-
-### Large Installer Size
-
-**Symptom**: Distribution exceeds 150MB
-
-**Solutions**:
-1. Exclude unnecessary dependencies in `grading-app.spec`:
-   ```python
-   excludes=['matplotlib', 'pandas', 'numpy']  # If not used
-   ```
-
-2. Enable UPX compression (already enabled in spec file)
-
-3. Consider Nuitka instead of PyInstaller for 20-30% size reduction:
-   ```bash
-   pip install nuitka
-   python -m nuitka --standalone --onefile desktop/main.py
-   ```
-
-### Slow Startup Time
-
-**Symptom**: Application takes >10 seconds to start
-
-**Solutions**:
-1. Use `--onedir` mode instead of `--onefile` (already configured)
-2. Lazy import heavy modules in `desktop/main.py`
-3. Profile startup with:
-   ```bash
-   python -X importtime desktop/main.py
-   ```
-
-### Keyring Not Available (Linux)
-
-**Symptom**: `RuntimeError: No keyring backend available`
-
-**Solution 1** - Install system keyring:
-```bash
-sudo apt-get install gnome-keyring dbus-x11
-```
-
-**Solution 2** - Fallback is automatic (keyrings.cryptfile), no action needed
-
-## Module Reference
-
-### `app_wrapper.py`
-Configures Flask application for desktop deployment:
-- Loads API keys from OS credential manager
-- Configures SQLite database path
-- Sets up user data directory
-
-### `credentials.py`
-Manages API key storage using OS credential manager:
-- `set_api_key(provider, key)` - Store API key
-- `get_api_key(provider)` - Retrieve API key
-- `delete_api_key(provider)` - Delete API key
-
-### `task_queue.py`
-ThreadPoolExecutor-based task queue (replaces Celery):
-- `submit(func, *args, **kwargs)` - Queue task for execution
-- `get_status(task_id)` - Check task status
-- Automatic retry with exponential backoff
-
-### `settings.py`
-User settings management:
-- Load/save settings from user data directory
-- Validate settings schema
-- Apply settings on startup
-
-### `main.py` (to be created in Phase 0)
-Application entry point:
+- Orchestrates startup sequence
+- Configures logging with rotating file handlers
 - Starts Flask server in background thread
 - Creates PyWebView window
 - Handles graceful shutdown
 
-## Development Status
+Key functions:
+- `setup_logging()`: Configure application logging
+- `start_flask()`: Run Flask server (background thread)
+- `create_main_window()`: Create PyWebView window
+- `shutdown_gracefully()`: Clean shutdown of all services
+- `main()`: Entry point
 
-**Current Phase**: Phase 0 - Foundation (Week 1-2)
+#### `app_wrapper.py`
+**Flask Desktop Configuration**
 
-**Completed:**
-- ✅ PyInstaller spec file created
-- ✅ Desktop module structure
-- ✅ Credential storage implementation
-- ✅ Task queue implementation
+- Configures Flask app for desktop deployment
+- Manages SQLite database path and pragmas
+- Initializes OS keyring for credentials
+- Sets up directory structure
 
-**Next Steps:**
-1. Create `desktop/main.py` (entry point)
-2. Test basic packaging on primary development platform
-3. Address platform-specific packaging issues
-4. Validate performance metrics
+Key functions:
+- `get_user_data_dir()`: Platform-specific user data directory
+- `get_free_port()`: Find available port for Flask
+- `configure_app_for_desktop()`: Main configuration function
+- `set_sqlite_pragmas()`: Optimize SQLite performance
 
-For detailed implementation plan, see:
-- `/specs/004-desktop-app/quickstart.md`
-- `/specs/004-desktop-app/research.md`
-- `/specs/004-desktop-app/plan.md`
+#### `window_manager.py`
+**PyWebView Integration**
+
+- Creates native OS window for Flask UI
+- Manages system tray icon (optional)
+- Displays update notifications
+
+Key functions:
+- `create_main_window()`: Create PyWebView window
+- `create_system_tray()`: System tray icon with menu
+- `show_update_notification()`: Update notification dialog
+
+### Background Services
+
+#### `task_queue.py`
+**Thread-Based Task Queue**
+
+Replacement for Celery in desktop mode. Provides:
+- Background task execution using threading
+- Task priority management
+- Graceful shutdown with timeout
+- Error handling and retry logic
+
+Key classes:
+- `DesktopTaskQueue`: Main queue implementation
+- Methods: `submit()`, `submit_batch()`, `shutdown()`
+
+#### `scheduler.py`
+**Periodic Task Scheduler**
+
+Uses APScheduler for recurring tasks:
+- Automatic database backups
+- Log file rotation
+- Update checks (if enabled)
+
+Key functions:
+- `start()`: Initialize and start scheduler
+- `stop()`: Shutdown scheduler
+- `schedule_automatic_backup()`: Configure backup schedule
+
+### Data Management
+
+#### `credentials.py`
+**Secure Credential Storage**
+
+Integrates with OS keyring for API key storage:
+- **Windows**: Windows Credential Manager
+- **macOS**: Keychain
+- **Linux**: Secret Service API (gnome-keyring, KWallet)
+- **Fallback**: Encrypted file storage
+
+Key functions:
+- `initialize_keyring()`: Set up keyring backend
+- `get_api_key()`: Retrieve API key
+- `set_api_key()`: Store API key
+- `delete_api_key()`: Remove API key
+- `detect_keyring_backend()`: Detect active keyring
+
+#### `settings.py`
+**User Settings Management**
+
+JSON-based settings file with validation:
+- Application preferences
+- Update settings
+- Backup configuration
+- Window geometry
+
+Key class:
+- `Settings`: Settings manager with get/set/save/validate
+
+#### `data_export.py`
+**Data Backup and Restore**
+
+Export/import functionality for user data:
+- Database export to ZIP with JSON metadata
+- Automatic backup creation
+- Backup retention management
+- Import validation
+
+Key class:
+- `DataExporter`: Export/import manager
+
+### Utilities
+
+#### `updater.py`
+**Automatic Update System**
+
+Uses TUFUP (The Update Framework for PyInstaller) for secure updates:
+- Check for updates from GitHub releases
+- Download and verify updates
+- Install updates with rollback capability
+- Pre-update data backup
+
+Key class:
+- `DesktopUpdater`: Update manager
+
+#### `crash_reporter.py`
+**Crash Reporting**
+
+Opt-in crash reporting system:
+- Global exception handler
+- Crash log generation
+- Data obfuscation for privacy
+- User prompt for reporting
+
+Key functions:
+- `setup_crash_handler()`: Install exception handler
+- `save_crash_log()`: Save crash to disk
+- `obfuscate_sensitive_data()`: Remove sensitive info
+
+---
+
+## Development Guide
+
+### Prerequisites
+
+```bash
+# Install development dependencies
+pip install -r requirements.txt
+
+# Install desktop-specific dependencies
+pip install pyinstaller>=5.13.0
+pip install pywebview>=4.0.0
+pip install keyring>=24.0.0
+pip install apscheduler>=3.10.0
+pip install tufup>=0.5.0
+
+# Optional: For testing
+pip install pytest-cov
+pip install psutil  # For memory usage testing
+```
+
+### Running in Development
+
+```bash
+# Run desktop app directly
+python desktop/main.py
+
+# Run with debug logging
+LOGLEVEL=DEBUG python desktop/main.py
+```
+
+### Code Style
+
+- Follow PEP 8
+- Use type hints where appropriate
+- Document all public functions/classes
+- Maximum line length: 100 characters
+
+### Adding a New Desktop Feature
+
+1. **Create module in `desktop/`**
+   ```python
+   # desktop/my_feature.py
+   """
+   Brief description of what this module does.
+   """
+   import logging
+
+   logger = logging.getLogger(__name__)
+
+   def my_function():
+       """Docstring explaining function."""
+       pass
+   ```
+
+2. **Integrate with main.py**
+   ```python
+   from desktop.my_feature import my_function
+
+   # Call during startup or as needed
+   my_function()
+   ```
+
+3. **Add tests**
+   ```python
+   # tests/desktop/test_my_feature.py
+   import pytest
+   from desktop.my_feature import my_function
+
+   def test_my_function():
+       result = my_function()
+       assert result == expected
+   ```
+
+4. **Update documentation**
+   - Add to this README if significant
+   - Update docstrings
+
+---
+
+## Building
+
+### Build Process
+
+```bash
+# Clean previous builds
+rm -rf build/ dist/
+
+# Build with PyInstaller
+pyinstaller grading-app.spec
+
+# Verify build
+bash desktop/installer/verify-build.sh
+
+# Analyze bundle size (optional)
+bash desktop/installer/analyze-bundle.sh
+```
+
+### Build Output
+
+- **Directory**: `dist/GradingApp/`
+- **Executable**: `dist/GradingApp/GradingApp` (or `.exe` on Windows)
+- **Size**: ~100-150MB (includes Python, Flask, dependencies)
+- **Startup Time**: <10 seconds (target)
+
+### Platform-Specific Builds
+
+#### Windows
+```bash
+pyinstaller grading-app.spec
+bash desktop/installer/build-all.sh windows
+# Output: dist/installers/GradingApp-Setup.exe
+```
+
+#### macOS
+```bash
+pyinstaller grading-app.spec
+bash desktop/installer/build-all.sh macos
+# Output: dist/installers/GradingApp.dmg
+```
+
+#### Linux
+```bash
+pyinstaller grading-app.spec
+bash desktop/installer/build-all.sh linux
+# Output: dist/installers/GradingApp.AppImage
+#         dist/installers/GradingApp.deb
+```
+
+---
+
+## Testing
+
+### Unit Tests
+
+```bash
+# Run all desktop tests
+pytest tests/desktop/
+
+# Run with coverage
+pytest --cov=desktop --cov-report=html tests/desktop/
+
+# View coverage report
+open htmlcov/index.html
+```
+
+### Integration Tests
+
+```bash
+# Test full startup sequence
+pytest tests/desktop/integration/test_startup.py
+
+# Test offline functionality
+pytest tests/desktop/integration/test_offline.py
+
+# Test update workflow
+pytest tests/desktop/integration/test_update_workflow.py
+```
+
+### Performance Tests
+
+```bash
+# Test startup performance
+python desktop/performance_test.py
+
+# Test with large database
+python desktop/large_db_test.py
+```
+
+### Manual Testing Checklist
+
+- [ ] First launch (database creation)
+- [ ] Settings persistence
+- [ ] API key storage/retrieval
+- [ ] Create marking scheme
+- [ ] Upload submission
+- [ ] Grade submission
+- [ ] Export data
+- [ ] Import data
+- [ ] Check for updates
+- [ ] View logs
+- [ ] Application shutdown
+
+---
+
+## Distribution
+
+### Release Process
+
+1. **Update version** in `desktop/__init__.py`:
+   ```python
+   __version__ = "1.1.0"
+   ```
+
+2. **Build for all platforms**:
+   ```bash
+   bash desktop/installer/build-all.sh
+   ```
+
+3. **Test installers** on target platforms
+
+4. **Create GitHub release**:
+   - Tag: `v1.1.0`
+   - Upload installers from `dist/installers/`
+   - Add release notes
+
+5. **Update repository** is automatically checked by updater
+
+### Installer Formats
+
+- **Windows**: Inno Setup (`.exe`)
+  - Creates Start Menu shortcut
+  - Adds to Programs & Features
+  - Optional desktop shortcut
+
+- **macOS**: DMG disk image
+  - Drag-to-Applications installation
+  - Code signing (optional, requires Apple Developer account)
+
+- **Linux**:
+  - AppImage (universal, no installation)
+  - DEB package (Debian/Ubuntu)
+
+### Update Distribution
+
+Updates are distributed via GitHub Releases. The updater:
+1. Checks GitHub releases for newer versions
+2. Downloads and verifies update
+3. Creates backup of user data
+4. Installs update
+5. Restarts application
+
+---
+
+## Performance Targets
+
+From SC-004 requirements:
+
+- **Startup Time**: <10 seconds
+- **Idle RAM**: <500MB
+- **Active RAM**: <1GB
+- **Bundle Size**: <150MB (target)
+
+### Optimization Strategies
+
+1. **Lazy imports**: Import heavy modules only when needed
+2. **UPX compression**: Compress executable (enabled in spec file)
+3. **Exclude unused modules**: See `grading-app.spec` excludes list
+4. **SQLite pragmas**: Performance optimizations for database
+5. **Rotating logs**: Prevent log files from growing too large
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**Import errors when running desktop/main.py**
+- Ensure you're running from repository root
+- Check sys.path includes parent directory
+
+**PyWebView window doesn't appear**
+- Check if pywebview is installed
+- Verify OS supports PyWebView (may need additional packages on Linux)
+
+**Keyring errors on Linux**
+- Install gnome-keyring or kwallet
+- Or use encrypted file fallback (automatic)
+
+**Build fails with PyInstaller**
+- Clean build/dist directories
+- Check hidden imports in spec file
+- Verify all dependencies installed
+
+**Application crashes on startup**
+- Check logs in user data directory
+- Run with DEBUG logging: `LOGLEVEL=DEBUG python desktop/main.py`
+- Check crash logs in user data directory
+
+---
 
 ## Contributing
 
-When making changes to desktop packaging:
+### Development Workflow
 
-1. **Test in development mode first**:
-   ```bash
-   python desktop/main.py
-   ```
+1. Create feature branch
+2. Make changes
+3. Add tests
+4. Run test suite
+5. Update documentation
+6. Submit pull request
 
-2. **Test packaging before committing**:
-   ```bash
-   pyinstaller grading-app.spec
-   ./dist/GradingApp/GradingApp
-   ```
+### Testing Requirements
 
-3. **Verify performance targets**:
-   - Startup time: `time ./dist/GradingApp/GradingApp`
-   - Memory usage: `htop` or Task Manager
-   - Installer size: `du -sh dist/GradingApp`
+- All new code must have tests
+- Maintain >80% coverage for desktop modules
+- Integration tests for user-facing features
 
-4. **Update this README** if you change:
-   - Build process
-   - Configuration options
-   - Platform-specific requirements
+---
+
+## Additional Resources
+
+- [PyInstaller Documentation](https://pyinstaller.org/en/stable/)
+- [PyWebView Documentation](https://pywebview.flowrl.com/)
+- [Keyring Documentation](https://keyring.readthedocs.io/)
+- [APScheduler Documentation](https://apscheduler.readthedocs.io/)
+- [TUFUP Documentation](https://pypi.org/project/tufup/)
+
+---
 
 ## License
 
-Same as main Grading App project.
+MIT License - See LICENSE file for details

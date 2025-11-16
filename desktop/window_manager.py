@@ -66,48 +66,66 @@ def create_main_window(
 
 
 def create_system_tray(
-    on_show: Callable[[], None],
-    on_hide: Callable[[], None],
-    on_quit: Callable[[], None]
-) -> None:
+    window: Optional['webview.Window'] = None,
+    on_quit: Optional[Callable[[], None]] = None,
+    settings_url: str = "http://127.0.0.1:5050/desktop/settings",
+    data_url: str = "http://127.0.0.1:5050/desktop/data",
+    start_hidden: bool = False
+) -> Optional['pystray.Icon']:
     """
-    Create system tray icon with menu items.
+    Create system tray icon with comprehensive menu.
 
     This function creates a system tray icon with a menu containing:
-    - Show: Callback to show the main window
-    - Hide: Callback to hide the main window
-    - Quit: Callback to quit the application
+    - Show Window / Hide Window (toggle based on window visibility)
+    - Settings (opens settings page)
+    - Data Management (opens data export/backup page)
+    - Check for Updates (triggers update check)
+    - Help submenu (About, View Logs)
+    - Quit (exits application)
 
     Args:
-        on_show: Callback function to show the window
-        on_hide: Callback function to hide the window
+        window: PyWebView window instance for show/hide functionality
         on_quit: Callback function to quit the application
+        settings_url: URL to settings page (default: /desktop/settings)
+        data_url: URL to data management page (default: /desktop/data)
+        start_hidden: If True, window starts hidden (default: False)
+
+    Returns:
+        pystray.Icon instance if successful, None if creation fails
 
     Note:
         This function blocks until the tray icon is removed.
         Run in a separate thread if needed.
 
     Example:
-        >>> def show():
-        ...     print("Showing window")
-        >>> def hide():
-        ...     print("Hiding window")
+        >>> import webview
+        >>> import threading
+        >>>
+        >>> window = webview.create_window('App', 'http://localhost:5050')
+        >>>
         >>> def quit_app():
         ...     print("Quitting")
-        >>> # Run in separate thread
-        >>> thread = threading.Thread(
+        ...     sys.exit(0)
+        >>>
+        >>> # Run tray in separate thread
+        >>> tray_thread = threading.Thread(
         ...     target=create_system_tray,
-        ...     args=(show, hide, quit_app),
+        ...     args=(window, quit_app),
         ...     daemon=True
         ... )
-        >>> thread.start()
+        >>> tray_thread.start()
+        >>> webview.start()
     """
     try:
         import pystray
         from PIL import Image
         from pathlib import Path
+        import webbrowser
 
         logger.info("Creating system tray icon")
+
+        # Track window visibility state
+        window_visible = not start_hidden
 
         # Try to load icon from resources, fall back to creating a default one
         icon_path = Path(__file__).parent / 'resources' / 'icon.png'
@@ -120,34 +138,197 @@ def create_system_tray(
             # Create a simple default icon (64x64 white square with "GA" text)
             icon_image = Image.new('RGB', (64, 64), color='white')
 
-        # Create menu items
-        menu_items = [
-            pystray.MenuItem("Show", on_show),
-            pystray.MenuItem("Hide", on_hide),
-            pystray.MenuItem("Quit", on_quit)
-        ]
+        # Define menu callbacks
+        def on_show_window(icon_obj, item):
+            """Show the main window."""
+            nonlocal window_visible
+            if window:
+                try:
+                    window.show()
+                    window_visible = True
+                    logger.info("Window shown via system tray")
+                except Exception as e:
+                    logger.error(f"Failed to show window: {e}")
+            else:
+                logger.warning("No window instance available")
+
+        def on_hide_window(icon_obj, item):
+            """Hide the main window."""
+            nonlocal window_visible
+            if window:
+                try:
+                    window.hide()
+                    window_visible = False
+                    logger.info("Window hidden via system tray")
+                except Exception as e:
+                    logger.error(f"Failed to hide window: {e}")
+            else:
+                logger.warning("No window instance available")
+
+        def on_toggle_window(icon_obj, item):
+            """Toggle window visibility."""
+            if window_visible:
+                on_hide_window(icon_obj, item)
+            else:
+                on_show_window(icon_obj, item)
+
+        def on_settings(icon_obj, item):
+            """Open settings page in the window."""
+            if window:
+                try:
+                    # Ensure window is visible
+                    if not window_visible:
+                        on_show_window(icon_obj, item)
+                    # Navigate to settings (if pywebview supports it)
+                    # For now, user can click settings in the app
+                    logger.info("Settings menu item clicked")
+                    # Alternative: open in default browser
+                    # webbrowser.open(settings_url)
+                except Exception as e:
+                    logger.error(f"Failed to open settings: {e}")
+            else:
+                # Fallback: open in browser
+                webbrowser.open(settings_url)
+
+        def on_data_management(icon_obj, item):
+            """Open data management page in the window."""
+            if window:
+                try:
+                    # Ensure window is visible
+                    if not window_visible:
+                        on_show_window(icon_obj, item)
+                    logger.info("Data Management menu item clicked")
+                except Exception as e:
+                    logger.error(f"Failed to open data management: {e}")
+            else:
+                # Fallback: open in browser
+                webbrowser.open(data_url)
+
+        def on_check_updates(icon_obj, item):
+            """Trigger update check."""
+            logger.info("Check for Updates triggered from system tray")
+            # Import here to avoid circular dependency
+            try:
+                from desktop.updater import DesktopUpdater
+                from desktop.main import __version__
+
+                updater = DesktopUpdater(
+                    app_name="grading-app",
+                    current_version=__version__,
+                    update_url="https://github.com/user/grading-app"
+                )
+                update_info = updater.check_for_updates()
+
+                if update_info.get('available'):
+                    logger.info(f"Update available: {update_info.get('version')}")
+                    # Show notification
+                    show_update_notification(update_info)
+                else:
+                    logger.info("No updates available")
+                    # Could show a "No updates" notification here
+            except Exception as e:
+                logger.error(f"Update check failed: {e}")
+
+        def on_about(icon_obj, item):
+            """Show about information."""
+            logger.info("About menu item clicked")
+            # Import version here
+            try:
+                from desktop.main import __version__
+                about_msg = f"Grading App Desktop\nVersion: {__version__}\n\nA desktop application for grading assignments."
+                logger.info(about_msg)
+                # In a real implementation, this would show a dialog
+                # For now, just log it
+            except Exception as e:
+                logger.error(f"Failed to show about: {e}")
+
+        def on_view_logs(icon_obj, item):
+            """Open logs directory."""
+            logger.info("View Logs menu item clicked")
+            try:
+                from desktop.app_wrapper import get_user_data_dir
+                import subprocess
+                import sys
+
+                user_data_dir = get_user_data_dir()
+                logs_dir = user_data_dir / 'logs'
+
+                # Create logs directory if it doesn't exist
+                logs_dir.mkdir(parents=True, exist_ok=True)
+
+                # Open directory in file manager
+                if sys.platform == 'win32':
+                    subprocess.run(['explorer', str(logs_dir)])
+                elif sys.platform == 'darwin':
+                    subprocess.run(['open', str(logs_dir)])
+                else:  # Linux
+                    subprocess.run(['xdg-open', str(logs_dir)])
+
+                logger.info(f"Opened logs directory: {logs_dir}")
+            except Exception as e:
+                logger.error(f"Failed to open logs: {e}")
+
+        def on_quit_app(icon_obj, item):
+            """Quit the application."""
+            logger.info("Quit triggered from system tray")
+            if on_quit:
+                on_quit()
+            else:
+                # Default quit behavior
+                import sys
+                icon_obj.stop()
+                sys.exit(0)
+
+        def get_toggle_text(item):
+            """Dynamic text for toggle menu item."""
+            return "Hide Window" if window_visible else "Show Window"
+
+        # Create menu structure
+        menu = pystray.Menu(
+            pystray.MenuItem(
+                get_toggle_text,
+                on_toggle_window,
+                default=True  # Default action on icon click
+            ),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem('Settings', on_settings),
+            pystray.MenuItem('Data Management', on_data_management),
+            pystray.MenuItem('Check for Updates', on_check_updates),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                'Help',
+                pystray.Menu(
+                    pystray.MenuItem('About', on_about),
+                    pystray.MenuItem('View Logs', on_view_logs),
+                )
+            ),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem('Quit', on_quit_app)
+        )
 
         # Create tray icon
         icon = pystray.Icon(
             name="Grading App",
             icon=icon_image,
             title="Grading App",
-            menu=pystray.Menu(*menu_items)
+            menu=menu
         )
 
         logger.info("System tray icon created, starting...")
-        # This blocks until icon.stop() is called
-        icon.run()
+
+        # Return icon so it can be controlled externally
+        # Note: Caller needs to call icon.run() to start the tray
+        return icon
 
     except ImportError as e:
         logger.error(f"pystray library not available: {e}")
         logger.warning("System tray functionality will not be available")
         logger.info("Install with: pip install pystray>=0.19.0")
-        raise RuntimeError("pystray library not installed") from e
+        return None
 
     except Exception as e:
         logger.error(f"Failed to create system tray: {e}")
-        raise RuntimeError(f"System tray creation failed: {e}") from e
+        return None
 
 
 def show_update_notification(update_info: Dict[str, Any]) -> bool:

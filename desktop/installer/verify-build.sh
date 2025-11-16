@@ -163,10 +163,21 @@ if [ "$BUILD_FOUND" = true ]; then
 
     if [ "$PLATFORM" = "macos" ] && [ -d "$BUILD_DIR_APP" ]; then
         SIZE=$(du -sh "$BUILD_DIR_APP" 2>/dev/null | cut -f1)
-        echo "Build size: $SIZE"
+        SIZE_MB=$(du -sm "$BUILD_DIR_APP" 2>/dev/null | cut -f1)
+        echo "Build size: $SIZE ($SIZE_MB MB)"
     else
         SIZE=$(du -sh "$BUILD_DIR" 2>/dev/null | cut -f1)
-        echo "Build size: $SIZE"
+        SIZE_MB=$(du -sm "$BUILD_DIR" 2>/dev/null | cut -f1)
+        echo "Build size: $SIZE ($SIZE_MB MB)"
+    fi
+
+    # Check against target size
+    TARGET_SIZE_MB=150
+    if [ "$SIZE_MB" -gt "$TARGET_SIZE_MB" ]; then
+        echo -e "${YELLOW}⚠${NC} Bundle size exceeds target ($TARGET_SIZE_MB MB)"
+        echo "  Consider running: bash desktop/installer/analyze-bundle.sh"
+    else
+        echo -e "${GREEN}✓${NC} Bundle size is within target ($TARGET_SIZE_MB MB)"
     fi
 
     echo ""

@@ -48,7 +48,33 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        # Exclude test frameworks (not needed at runtime)
+        'pytest',
+        'unittest',
+        '_pytest',
+
+        # Exclude development tools
+        'setuptools',
+        'pip',
+        'wheel',
+
+        # Exclude documentation parsers
+        'docutils',
+        'sphinx',
+
+        # Exclude unused GUI toolkits
+        'tkinter',
+        'PyQt5',
+        'PyQt6',
+        'PySide2',
+        'PySide6',
+
+        # Exclude unused data science libraries (if not used)
+        'matplotlib',
+        'pandas',
+        'scipy',
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=None,

@@ -12,6 +12,9 @@
             <p class="lead text-muted">
                 Configure AI provider API keys with secure OS credential storage
             </p>
+            <p class="text-muted">
+                <small><i class="fas fa-info-circle me-1"></i>Grading App v{{ app_version }}</small>
+            </p>
         </div>
 
         {% if error %}
@@ -154,10 +157,18 @@
                 </div>
                 {% endfor %}
 
-                <div class="mt-4 pt-3 border-top">
+                <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
                     <a href="/" class="btn btn-outline-primary">
                         <i class="fas fa-arrow-left me-2"></i>Back to Application
                     </a>
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        onclick="openLogsFolder()"
+                        title="Open logs directory (Ctrl+L / Cmd+L)"
+                    >
+                        <i class="fas fa-folder-open me-2"></i>View Logs
+                    </button>
                 </div>
             </div>
         </div>
@@ -274,5 +285,31 @@ function deleteApiKey(providerKey, providerName) {
         deleteBtn.innerHTML = originalText;
     });
 }
+
+function openLogsFolder() {
+    fetch('/desktop/logs/open', {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Logs folder opened', 'success');
+        } else {
+            showMessage(data.message || 'Failed to open logs folder', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Failed to open logs folder: ' + error.message, 'error');
+    });
+}
+
+// Keyboard shortcut: Ctrl+L or Cmd+L to open logs
+document.addEventListener('keydown', function(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'l') {
+        event.preventDefault();
+        openLogsFolder();
+    }
+});
 </script>
 {% endblock %}
