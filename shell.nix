@@ -17,6 +17,13 @@ let
     psycopg2-binary
     beautifulsoup4
 
+    # Desktop dependencies
+    pywebview
+    pystray
+    apscheduler
+    keyring
+    pillow
+
     # Development dependencies
     black
     flake8
@@ -38,6 +45,11 @@ pkgs.mkShell {
     pythonEnv
     redis
     postgresql
+
+    # Desktop app dependencies
+    gtk3
+    gobject-introspection
+    wrapGAppsHook
 
     # Additional useful tools
     git

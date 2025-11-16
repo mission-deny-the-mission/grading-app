@@ -3,7 +3,6 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 
-from celery import Celery
 from dotenv import load_dotenv
 
 from desktop.task_queue import task_queue
@@ -32,7 +31,7 @@ anthropic = None  # Keep for compatibility, though not directly used now
 load_dotenv()
 
 
-# Create Flask app for Celery
+# Create Flask app for background tasks
 def create_app():
     """Return the main Flask app to share DB/session/config with web routes and tests."""
     # Import here to avoid circular import at module load time
@@ -59,11 +58,6 @@ def create_app():
             spec.loader.exec_module(app_module)
             flask_app = app_module.app
     return flask_app
-
-
-# Initialize Celery
-celery_app = Celery("grading_tasks")
-celery_app.config_from_object("celeryconfig")
 
 
 def process_job(job_id):
