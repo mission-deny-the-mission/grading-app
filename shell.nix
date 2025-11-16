@@ -49,7 +49,7 @@ pkgs.mkShell {
     # Desktop app dependencies
     gtk3
     gobject-introspection
-    wrapGAppsHook
+    wrapGAppsHook3
 
     # Additional useful tools
     git
