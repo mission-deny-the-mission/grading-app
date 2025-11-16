@@ -14,6 +14,11 @@ missing = []
 try:
     import keyring
     print('  ✓ keyring')
+    try:
+        import keyrings.alt
+        print('  ✓ keyrings.alt (optional fallback)')
+    except ImportError:
+        print('  ⚠ keyrings.alt (optional, using system keyring)')
 except ImportError:
     print('  ✗ keyring')
     missing.append('keyring')

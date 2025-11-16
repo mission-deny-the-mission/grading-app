@@ -22,6 +22,7 @@ let
     pystray
     apscheduler
     keyring
+    keyrings-alt  # Provides keyrings.cryptfile
     pillow
 
     # Development dependencies

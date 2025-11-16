@@ -42,6 +42,7 @@
           pystray
           apscheduler
           keyring
+          keyrings-alt  # Provides keyrings.cryptfile
           pygobject3
 
           # Development dependencies

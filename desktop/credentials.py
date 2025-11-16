@@ -16,7 +16,6 @@ Supported provider keys:
 """
 
 import keyring
-from keyrings.cryptfile.cryptfile import CryptFileKeyring
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,8 +30,14 @@ def initialize_keyring():
         logger.info(f"Using keyring backend: {keyring.get_keyring().__class__.__name__}")
     except Exception as e:
         logger.warning(f"System keyring unavailable: {e}")
-        logger.info("Falling back to encrypted file storage")
-        keyring.set_keyring(CryptFileKeyring())
+        logger.info("Attempting to use encrypted file storage fallback")
+        try:
+            from keyrings.cryptfile.cryptfile import CryptFileKeyring
+            keyring.set_keyring(CryptFileKeyring())
+            logger.info("Using CryptFileKeyring fallback")
+        except ImportError:
+            logger.warning("keyrings.cryptfile not available, using default keyring")
+            # keyring will use its default backend
 
 
 def set_api_key(provider_key: str, api_key: str) -> bool:
