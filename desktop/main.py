@@ -62,7 +62,12 @@ except ImportError as e:
 # Import desktop utilities
 from desktop.app_wrapper import configure_app_for_desktop, get_free_port, get_user_data_dir
 from desktop.task_queue import task_queue
-from desktop.scheduler import start as start_scheduler, stop as stop_scheduler
+from desktop.scheduler import (
+    initialize_scheduler,
+    start as start_scheduler,
+    stop as stop_scheduler,
+    schedule_automatic_backup
+)
 from desktop.settings import Settings
 from desktop.crash_reporter import setup_crash_handler, cleanup_old_crash_logs
 
@@ -445,11 +450,16 @@ def main() -> int:
         # Start the periodic task scheduler
         logger.info("Starting periodic task scheduler...")
         try:
+            # T091: Initialize scheduler with periodic cleanup jobs
+            logger.info("Initializing scheduler jobs...")
+            initialize_scheduler()
+            logger.info("Scheduler jobs initialized (cleanup_old_files, cleanup_completed_batches)")
+
+            # T092: Start the scheduler
             start_scheduler()
             logger.info("Scheduler started successfully")
 
             # Schedule automatic backups based on settings
-            from desktop.scheduler import schedule_automatic_backup
             schedule_automatic_backup()
             logger.info("Automatic backup scheduling configured")
         except Exception as e:
