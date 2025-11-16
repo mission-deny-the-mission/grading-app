@@ -26,14 +26,14 @@
 
 **Purpose**: Project initialization and desktop module structure
 
-- [ ] T001 Create desktop/ directory structure: main.py, app_wrapper.py, window_manager.py, task_queue.py, credentials.py, updater.py, data_export.py, settings.py
-- [ ] T002 [P] Create desktop/installer/ subdirectories: windows/, macos/, linux/
-- [ ] T003 [P] Create desktop/resources/ directory for icons and assets
-- [ ] T004 [P] Create tests/desktop/ structure: test_wrapper.py, test_task_queue.py, test_credentials.py, test_updater.py, test_export.py, test_settings.py
+- [X] T001 Create desktop/ directory structure: main.py, app_wrapper.py, window_manager.py, task_queue.py, credentials.py, updater.py, data_export.py, settings.py
+- [X] T002 [P] Create desktop/installer/ subdirectories: windows/, macos/, linux/
+- [X] T003 [P] Create desktop/resources/ directory for icons and assets
+- [X] T004 [P] Create tests/desktop/ structure: test_wrapper.py, test_task_queue.py, test_credentials.py, test_updater.py, test_export.py, test_settings.py
 - [ ] T005 Install PyInstaller>=5.13.0, pywebview>=4.0.0, keyring>=25.6.0, keyrings.cryptfile>=1.3.9, pystray>=0.19.0, apscheduler>=3.10.0, tufup>=0.5.0
-- [ ] T006 [P] Create grading-app.spec PyInstaller configuration file with hiddenimports for SQLAlchemy
+- [X] T006 [P] Create grading-app.spec PyInstaller configuration file with hiddenimports for SQLAlchemy
 - [ ] T007 [P] Add desktop/ and tests/desktop/ to Python path configuration
-- [ ] T008 [P] Create .gitignore entries for dist/, build/, *.spec build artifacts
+- [X] T008 [P] Create .gitignore entries for dist/, build/, *.spec build artifacts
 
 **Checkpoint**: Desktop module structure ready for implementation
 
@@ -45,14 +45,14 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T009 Implement get_user_data_dir() in desktop/app_wrapper.py for platform-specific data paths (Windows: %APPDATA%/GradingApp, macOS: ~/Library/Application Support/GradingApp, Linux: ~/.local/share/GradingApp)
-- [ ] T010 [P] Implement DesktopTaskQueue class in desktop/task_queue.py with ThreadPoolExecutor, submit(), get_status(), shutdown(), retry logic with exponential backoff
-- [ ] T011 [P] Implement initialize_keyring(), set_api_key(), get_api_key(), delete_api_key() in desktop/credentials.py using keyring library
-- [ ] T012 Create global task_queue instance in desktop/task_queue.py
-- [ ] T013 Implement configure_app_for_desktop() in desktop/app_wrapper.py: initialize keyring, load API keys to env vars, configure SQLite database path, create user data directories
-- [ ] T014 [P] Implement SQLite pragma configuration in desktop/app_wrapper.py (WAL mode, foreign keys, cache size)
-- [ ] T015 [P] Create Settings class in desktop/settings.py for loading/saving settings.json (schema from data-model.md)
-- [ ] T016 Implement get_free_port() helper in desktop/app_wrapper.py to auto-select available Flask port
+- [X] T009 Implement get_user_data_dir() in desktop/app_wrapper.py for platform-specific data paths (Windows: %APPDATA%/GradingApp, macOS: ~/Library/Application Support/GradingApp, Linux: ~/.local/share/GradingApp)
+- [X] T010 [P] Implement DesktopTaskQueue class in desktop/task_queue.py with ThreadPoolExecutor, submit(), get_status(), shutdown(), retry logic with exponential backoff
+- [X] T011 [P] Implement initialize_keyring(), set_api_key(), get_api_key(), delete_api_key() in desktop/credentials.py using keyring library
+- [X] T012 Create global task_queue instance in desktop/task_queue.py
+- [X] T013 Implement configure_app_for_desktop() in desktop/app_wrapper.py: initialize keyring, load API keys to env vars, configure SQLite database path, create user data directories
+- [X] T014 [P] Implement SQLite pragma configuration in desktop/app_wrapper.py (WAL mode, foreign keys, cache size)
+- [X] T015 [P] Create Settings class in desktop/settings.py for loading/saving settings.json (schema from data-model.md)
+- [X] T016 Implement get_free_port() helper in desktop/app_wrapper.py to auto-select available Flask port
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -76,16 +76,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T022 [P] [US1] Implement desktop/main.py: start_flask() function to launch Flask server in background thread
-- [ ] T023 [P] [US1] Implement create_main_window() in desktop/window_manager.py using PyWebView to display Flask URL
-- [ ] T024 [US1] Integrate start_flask() and create_main_window() in desktop/main.py __main__ block
-- [ ] T025 [US1] Configure grading-app.spec to include templates/, static/, and uploads/ directories in datas
-- [ ] T026 [US1] Add SQLAlchemy hidden imports to grading-app.spec: sqlalchemy.sql.default_comparator, sqlalchemy.dialects.sqlite, flask_sqlalchemy, flask_migrate
+- [X] T022 [P] [US1] Implement desktop/main.py: start_flask() function to launch Flask server in background thread
+- [X] T023 [P] [US1] Implement create_main_window() in desktop/window_manager.py using PyWebView to display Flask URL
+- [X] T024 [US1] Integrate start_flask() and create_main_window() in desktop/main.py __main__ block
+- [X] T025 [US1] Configure grading-app.spec to include templates/, static/, and uploads/ directories in datas
+- [X] T026 [US1] Add SQLAlchemy hidden imports to grading-app.spec: sqlalchemy.sql.default_comparator, sqlalchemy.dialects.sqlite, flask_sqlalchemy, flask_migrate
 - [ ] T027 [US1] Test PyInstaller build: pyinstaller grading-app.spec and verify executable runs
 - [ ] T028 [US1] Verify startup time <10s and memory usage <500MB idle
 - [ ] T029 [US1] Test existing grading features work in desktop app (upload submission, view schemes)
 - [ ] T030 [P] [US1] Create loading screen component for desktop/main.py to display during Flask startup
-- [ ] T031 [US1] Add graceful shutdown handling in desktop/main.py (cleanup task queue, close Flask server)
+- [X] T031 [US1] Add graceful shutdown handling in desktop/main.py (cleanup task queue, close Flask server)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can install and use the desktop app with all existing grading features
 
@@ -212,12 +212,12 @@
 
 **Purpose**: Replace Celery Beat with APScheduler for periodic tasks
 
-- [ ] T088 Create desktop/scheduler.py with APScheduler BackgroundScheduler
-- [ ] T089 [P] Migrate cleanup_old_files task from tasks.py to desktop/scheduler.py (24-hour interval)
-- [ ] T090 [P] Migrate cleanup_completed_batches task from tasks.py to desktop/scheduler.py (6-hour interval)
+- [X] T088 Create desktop/scheduler.py with APScheduler BackgroundScheduler
+- [X] T089 [P] Migrate cleanup_old_files task from tasks.py to desktop/scheduler.py (24-hour interval)
+- [X] T090 [P] Migrate cleanup_completed_batches task from tasks.py to desktop/scheduler.py (6-hour interval)
 - [ ] T091 Start scheduler in desktop/main.py on app startup
 - [ ] T092 Stop scheduler gracefully in desktop/main.py shutdown handler
-- [ ] T093 [P] Test periodic task execution (mock time advancement)
+- [X] T093 [P] Test periodic task execution (mock time advancement)
 
 ---
 

@@ -20,3 +20,5 @@ azure-cognitiveservices-vision-computervision
 msrest
 python-magic
 Pillow
+keyring>=25.6.0
+keyrings.cryptfile>=1.3.9
