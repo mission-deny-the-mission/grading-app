@@ -11,7 +11,7 @@ import pytest
 class TestRegistrationAuthorization:
     """Test that only admins can register new users."""
 
-    def test_registration_requires_authentication(self, client):
+    def test_registration_requires_authentication(self, client, multi_user_mode):
         """Test that registration endpoint requires authentication."""
         response = client.post('/api/auth/register', json={
             'email': 'newuser@example.com',
@@ -71,7 +71,7 @@ class TestRegistrationAuthorization:
         # Should be blocked at authorization check (403)
         assert response.status_code == 403, "Regular users should not reach user creation logic"
 
-    def test_unauthenticated_admin_creation_attempt(self, client):
+    def test_unauthenticated_admin_creation_attempt(self, client, multi_user_mode):
         """Test that unauthenticated requests cannot create admin accounts."""
         response = client.post('/api/auth/register', json={
             'email': 'malicious@example.com',
@@ -99,10 +99,10 @@ class TestRegistrationAuthorization:
         assert data['success'] is True
         assert data['user']['is_admin'] is False
 
-    def test_single_user_mode_registration_disabled(self, client, admin_headers, mocker):
+    def test_single_user_mode_registration_disabled(self, client, admin_headers, monkeypatch):
         """Test that registration is disabled in single-user mode."""
         # Mock single-user mode
-        mocker.patch('services.deployment_service.DeploymentService.is_single_user_mode', return_value=True)
+        monkeypatch.setattr('services.deployment_service.DeploymentService.is_single_user_mode', lambda: True)
 
         response = client.post('/api/auth/register',
             json={
