@@ -82,6 +82,21 @@ Backups are created automatically (configurable):
 
 ### To Get Full Desktop Experience
 
+**For Nix users** (recommended):
+
+1. Exit and reload your Nix shell to get the new dependencies:
+```bash
+exit  # Exit current shell
+nix-shell  # Re-enter with updated dependencies
+```
+
+2. Then run the desktop app:
+```bash
+python desktop/main.py
+```
+
+**For pip users**:
+
 Install the missing dependencies:
 
 ```bash
@@ -94,6 +109,15 @@ python desktop/main.py
 ```
 
 This will open an actual desktop window instead of requiring a browser.
+
+**Note**: PyWebView requires GTK3 on Linux. If you get errors, install:
+```bash
+# On Ubuntu/Debian
+sudo apt-get install python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.0
+
+# On Fedora
+sudo dnf install python3-gobject gtk3 webkit2gtk3
+```
 
 ### To Build an Executable
 
