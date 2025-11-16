@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+
+{% block title %}Usage Dashboard - Document Grading App{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-chart-line me-2"></i>Usage Dashboard</h2>
+        <p class="text-muted">Monitor your AI token usage and quotas</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary" onclick="exportUsage()">
+            <i class="fas fa-download me-2"></i>Export CSV
+        </button>
+    </div>
+</div>
+
+<!-- Quota Cards -->
+<div class="row mb-4" id="quota-cards">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="text-muted mb-0">OpenAI Tokens</h6>
+                    <i class="fas fa-robot fa-2x text-primary"></i>
+                </div>
+                <h3 id="openai-used">-</h3>
+                <small class="text-muted">of <span id="openai-quota">-</span> monthly</small>
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar" id="openai-progress" role="progressbar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="text-muted mb-0">Claude Tokens</h6>
+                    <i class="fas fa-brain fa-2x text-success"></i>
+                </div>
+                <h3 id="claude-used">-</h3>
+                <small class="text-muted">of <span id="claude-quota">-</span> monthly</small>
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar" id="claude-progress" role="progressbar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="text-muted mb-0">Total Usage</h6>
+                    <i class="fas fa-chart-pie fa-2x text-warning"></i>
+                </div>
+                <h3 id="total-used">-</h3>
+                <small class="text-muted">this month</small>
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar bg-warning" id="total-progress" role="progressbar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Usage Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-day fa-2x text-primary mb-2"></i>
+                <h6 class="text-muted mb-1">Today</h6>
+                <h4 id="today-usage">-</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-week fa-2x text-success mb-2"></i>
+                <h6 class="text-muted mb-1">This Week</h6>
+                <h4 id="week-usage">-</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
+                <h6 class="text-muted mb-1">Daily Average</h6>
+                <h4 id="avg-usage">-</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-fire fa-2x text-danger mb-2"></i>
+                <h6 class="text-muted mb-1">Peak Day</h6>
+                <h4 id="peak-usage">-</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Usage Trend Chart -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-chart-area me-2"></i>7-Day Usage Trend</h5>
+    </div>
+    <div class="card-body">
+        <canvas id="usageChart" height="80"></canvas>
+    </div>
+</div>
+
+<!-- Usage History Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Usage History</h5>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group btn-group-sm">
+                    <input type="date" class="form-control form-control-sm" id="start-date">
+                    <input type="date" class="form-control form-control-sm" id="end-date">
+                    <button class="btn btn-outline-secondary" onclick="filterHistory()">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="history-table-container">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/usageClient.js') }}"></script>
+<script>
+let usageChart;
+
+async function loadUsageSummary() {
+    try {
+        const summary = await UsageClient.getUsageSummary();
+
+        // Update OpenAI quota
+        const openaiUsed = summary.usage.openai || 0;
+        const openaiQuota = summary.quotas.openai || 0;
+        const openaiPct = UsageClient.calculateQuotaPercentage(openaiUsed, openaiQuota);
+        document.getElementById('openai-used').textContent = UsageClient.formatTokens(openaiUsed);
+        document.getElementById('openai-quota').textContent = UsageClient.formatTokens(openaiQuota);
+        const openaiProgress = document.getElementById('openai-progress');
+        openaiProgress.style.width = openaiPct + '%';
+        openaiProgress.className = `progress-bar bg-${UsageClient.getQuotaColor(openaiPct)}`;
+
+        // Update Claude quota
+        const claudeUsed = summary.usage.claude || 0;
+        const claudeQuota = summary.quotas.claude || 0;
+        const claudePct = UsageClient.calculateQuotaPercentage(claudeUsed, claudeQuota);
+        document.getElementById('claude-used').textContent = UsageClient.formatTokens(claudeUsed);
+        document.getElementById('claude-quota').textContent = UsageClient.formatTokens(claudeQuota);
+        const claudeProgress = document.getElementById('claude-progress');
+        claudeProgress.style.width = claudePct + '%';
+        claudeProgress.className = `progress-bar bg-${UsageClient.getQuotaColor(claudePct)}`;
+
+        // Update total
+        const totalUsed = openaiUsed + claudeUsed;
+        document.getElementById('total-used').textContent = UsageClient.formatTokens(totalUsed);
+        const totalProgress = document.getElementById('total-progress');
+        totalProgress.style.width = Math.min(100, (totalUsed / (openaiQuota + claudeQuota)) * 100) + '%';
+
+        // Update stats
+        document.getElementById('today-usage').textContent = UsageClient.formatTokens(summary.stats.today || 0);
+        document.getElementById('week-usage').textContent = UsageClient.formatTokens(summary.stats.week || 0);
+        document.getElementById('avg-usage').textContent = UsageClient.formatTokens(summary.stats.avg_daily || 0);
+        document.getElementById('peak-usage').textContent = UsageClient.formatTokens(summary.stats.peak_day || 0);
+
+    } catch (error) {
+        console.error('Failed to load usage summary:', error);
+    }
+}
+
+async function loadUsageTrends() {
+    try {
+        const trends = await UsageClient.getUsageTrends();
+
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        if (usageChart) usageChart.destroy();
+
+        usageChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trends.dates,
+                datasets: [
+                    {
+                        label: 'OpenAI',
+                        data: trends.openai,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Claude',
+                        data: trends.claude,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return UsageClient.formatTokens(value);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Failed to load usage trends:', error);
+    }
+}
+
+async function loadUsageHistory(page = 1) {
+    try {
+        const params = { page, per_page: 20 };
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+
+        const history = await UsageClient.getUsageHistory(params);
+        const container = document.getElementById('history-table-container');
+
+        if (history.items.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">No usage history found</p>';
+            return;
+        }
+
+        container.innerHTML = `
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Operation</th>
+                        <th>Provider</th>
+                        <th>Tokens</th>
+                        <th>Project</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${history.items.map(item => `
+                        <tr>
+                            <td>${new Date(item.timestamp).toLocaleString()}</td>
+                            <td>${item.operation}</td>
+                            <td>
+                                <span class="badge bg-${item.provider === 'openai' ? 'primary' : 'success'}">
+                                    ${item.provider}
+                                </span>
+                            </td>
+                            <td>${UsageClient.formatTokens(item.tokens)}</td>
+                            <td>${item.project || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (error) {
+        console.error('Failed to load usage history:', error);
+    }
+}
+
+async function filterHistory() {
+    await loadUsageHistory(1);
+}
+
+async function exportUsage() {
+    try {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const params = {};
+        if (startDate) params.start_date = startDate;
+        if (endDate) params.end_date = endDate;
+
+        const blob = await UsageClient.exportUsageCSV(params);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `usage_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    } catch (error) {
+        alert('Export failed: ' + error.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsageSummary();
+    loadUsageTrends();
+    loadUsageHistory();
+
+    // Set default date range (last 30 days)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+    document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+});
+</script>
+{% endblock %}

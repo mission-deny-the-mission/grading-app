@@ -13,7 +13,10 @@
 
         pythonEnv = pkgs.python3.withPackages (ps: with ps; [
           flask
+          flask-login
           flask-migrate
+          flask-limiter
+          flask-wtf
           python-docx
           pypdf2
           requests
@@ -29,6 +32,7 @@
           psycopg2-binary
           beautifulsoup4
           cryptography
+          email-validator
 
           # Image processing dependencies
           pillow
