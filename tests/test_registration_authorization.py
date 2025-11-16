@@ -99,10 +99,10 @@ class TestRegistrationAuthorization:
         assert data['success'] is True
         assert data['user']['is_admin'] is False
 
-    def test_single_user_mode_registration_disabled(self, client, admin_headers, mocker):
+    def test_single_user_mode_registration_disabled(self, client, admin_headers, monkeypatch):
         """Test that registration is disabled in single-user mode."""
         # Mock single-user mode
-        mocker.patch('services.deployment_service.DeploymentService.is_single_user_mode', return_value=True)
+        monkeypatch.setattr('services.deployment_service.DeploymentService.is_single_user_mode', lambda: True)
 
         response = client.post('/api/auth/register',
             json={
