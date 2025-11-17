@@ -5,12 +5,54 @@ Handles marking scheme export to JSON and import from JSON files.
 Implements User Story 1 (Export) and User Story 2 (Import).
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_login import login_required, current_user
 import json
+import os
+import uuid
+import tempfile
+import logging
 from datetime import datetime
+from werkzeug.utils import secure_filename
+
+from models import MarkingScheme, db
+from services.scheme_serializer import MarkingSchemeSerializer
+
+logger = logging.getLogger(__name__)
 
 scheme_export_bp = Blueprint('scheme_export', __name__, url_prefix='/api/schemes')
+
+
+def sanitize_filename(name):
+    """
+    Sanitize a name for use in filenames.
+
+    Args:
+        name: The name to sanitize
+
+    Returns:
+        str: Sanitized filename-safe string
+    """
+    # Remove or replace invalid characters
+    safe_name = secure_filename(name)
+    # If the result is empty after sanitization, use a default
+    if not safe_name:
+        safe_name = "scheme"
+    return safe_name
+
+
+def get_exports_dir():
+    """
+    Get or create the exports directory.
+
+    Returns:
+        str: Path to the exports directory
+    """
+    # Use app instance path for exports
+    exports_dir = os.path.join(current_app.instance_path, 'exports')
+    if not os.path.exists(exports_dir):
+        os.makedirs(exports_dir, exist_ok=True)
+    return exports_dir
 
 
 @scheme_export_bp.route('/<scheme_id>/export', methods=['POST'])
@@ -27,13 +69,98 @@ def export_scheme(scheme_id):
     - Return response with file_url, file_name, export_date
 
     Response:
-        200: {file_url, file_name, export_date}
+        200: {file_url, file_name, export_date, criteria_count, scheme_id}
         404: scheme not found
         403: unauthorized
         500: serialization failure
     """
-    # TODO: Implement export endpoint (T038, T039)
-    pass
+    try:
+        # Get scheme by ID from database
+        scheme = MarkingScheme.query.get(scheme_id)
+
+        if not scheme:
+            return jsonify({
+                "error": "Scheme not found",
+                "message": f"No marking scheme found with ID {scheme_id}"
+            }), 404
+
+        # Authorization check (if owner_id field exists)
+        # Note: MarkingScheme model currently doesn't have owner_id field
+        # This check is prepared for future multi-user support
+        if hasattr(scheme, 'owner_id') and scheme.owner_id:
+            if not current_user or not current_user.is_authenticated:
+                return jsonify({
+                    "error": "Unauthorized",
+                    "message": "Authentication required"
+                }), 403
+            if scheme.owner_id != current_user.id:
+                return jsonify({
+                    "error": "Forbidden",
+                    "message": "You do not have permission to export this scheme"
+                }), 403
+
+        # Use MarkingSchemeSerializer to convert scheme to JSON
+        serializer = MarkingSchemeSerializer()
+        try:
+            scheme_dict = serializer.to_dict(scheme)
+            json_content = serializer.to_json_string(scheme, pretty=True)
+        except Exception as e:
+            logger.error(f"Failed to serialize scheme {scheme_id}: {str(e)}")
+            return jsonify({
+                "error": "Serialization failed",
+                "message": f"Failed to convert scheme to JSON: {str(e)}"
+            }), 500
+
+        # Generate filename: scheme_name_YYYY-MM-DD.json (sanitized)
+        safe_name = sanitize_filename(scheme.name)
+        date_str = datetime.utcnow().strftime("%Y-%m-%d")
+        base_filename = f"{safe_name}_{date_str}.json"
+
+        # Get exports directory
+        exports_dir = get_exports_dir()
+        file_path = os.path.join(exports_dir, base_filename)
+
+        # Generate unique file name using UUID if file already exists
+        if os.path.exists(file_path):
+            unique_id = str(uuid.uuid4())[:8]
+            base_filename = f"{safe_name}_{date_str}_{unique_id}.json"
+            file_path = os.path.join(exports_dir, base_filename)
+
+        # Save JSON to file
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(json_content)
+            logger.info(f"Exported scheme {scheme_id} to {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to write export file for scheme {scheme_id}: {str(e)}")
+            return jsonify({
+                "error": "File write failed",
+                "message": f"Failed to save export file: {str(e)}"
+            }), 500
+
+        # Count criteria
+        criteria_count = 0
+        if scheme_dict and 'criteria' in scheme_dict:
+            criteria_count = len(scheme_dict.get('criteria', []))
+
+        # Generate file URL for download
+        file_url = f"/api/schemes/{scheme_id}/download"
+
+        # Return success response
+        return jsonify({
+            "file_url": file_url,
+            "file_name": base_filename,
+            "export_date": datetime.utcnow().isoformat(),
+            "criteria_count": criteria_count,
+            "scheme_id": scheme_id
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Unexpected error exporting scheme {scheme_id}: {str(e)}")
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
 
 
 @scheme_export_bp.route('/<scheme_id>/download', methods=['GET'])
@@ -51,8 +178,67 @@ def download_scheme(scheme_id):
         404: file not found
         403: access denied
     """
-    # TODO: Implement download endpoint (T039)
-    pass
+    try:
+        # Get scheme by ID from database
+        scheme = MarkingScheme.query.get(scheme_id)
+
+        if not scheme:
+            return jsonify({
+                "error": "Scheme not found",
+                "message": f"No marking scheme found with ID {scheme_id}"
+            }), 404
+
+        # Authorization check (if owner_id field exists)
+        # Note: MarkingScheme model currently doesn't have owner_id field
+        # This check is prepared for future multi-user support
+        if hasattr(scheme, 'owner_id') and scheme.owner_id:
+            if not current_user or not current_user.is_authenticated:
+                return jsonify({
+                    "error": "Unauthorized",
+                    "message": "Authentication required"
+                }), 403
+            if scheme.owner_id != current_user.id:
+                return jsonify({
+                    "error": "Forbidden",
+                    "message": "You do not have permission to download this scheme"
+                }), 403
+
+        # Generate the export on-the-fly since we don't persist export files
+        # This ensures we always have the latest version
+        serializer = MarkingSchemeSerializer()
+        try:
+            json_content = serializer.to_json_string(scheme, pretty=True)
+        except Exception as e:
+            logger.error(f"Failed to serialize scheme {scheme_id} for download: {str(e)}")
+            return jsonify({
+                "error": "Serialization failed",
+                "message": f"Failed to convert scheme to JSON: {str(e)}"
+            }), 500
+
+        # Generate filename for download
+        safe_name = sanitize_filename(scheme.name)
+        download_filename = f"{safe_name}.json"
+
+        # Create a temporary file for sending
+        # We use BytesIO to avoid filesystem operations
+        from io import BytesIO
+        file_obj = BytesIO(json_content.encode('utf-8'))
+        file_obj.seek(0)
+
+        # Return file with proper headers
+        return send_file(
+            file_obj,
+            mimetype='application/json',
+            as_attachment=True,
+            download_name=download_filename
+        )
+
+    except Exception as e:
+        logger.error(f"Unexpected error downloading scheme {scheme_id}: {str(e)}")
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
 
 
 @scheme_export_bp.route('/import', methods=['POST'])

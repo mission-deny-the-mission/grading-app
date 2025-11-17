@@ -2338,17 +2338,17 @@ class SchemeShare(db.Model):
     scheme_id = db.Column(db.String(36), db.ForeignKey('marking_schemes.id', ondelete='CASCADE'), nullable=False)
 
     # Recipients (one of user_id or group_id, not both)
-    user_id = db.Column(db.String(36), db.ForeignKey('user.id', ondelete='CASCADE'), nullable=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True)
     group_id = db.Column(db.String(36), nullable=True)  # Will add FK when UserGroup exists
 
     # Permission level
     permission = db.Column(db.String(20), nullable=False)  # VIEW_ONLY, EDITABLE, COPY
 
     # Audit trail
-    shared_by_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    shared_by_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     shared_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     revoked_at = db.Column(db.DateTime, nullable=True)
-    revoked_by_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=True)
+    revoked_by_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=True)
 
     # Metadata
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -2393,7 +2393,7 @@ class DocumentUploadLog(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # User who uploaded
-    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
 
     # File information
     file_name = db.Column(db.String(500), nullable=False)
