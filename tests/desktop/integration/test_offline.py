@@ -473,8 +473,9 @@ class TestOfflineAIAPIGracefulFailure:
             # Manual grading (no AI needed)
             grade = GradeResult(
                 submission_id=submission.id,
-                grade_value='85',
-                comments='Good work! (graded manually offline)',
+                grade='85',
+                provider='manual',
+                model='manual',
                 status='completed'
             )
             db.session.add(grade)
@@ -482,7 +483,7 @@ class TestOfflineAIAPIGracefulFailure:
 
             # Verify manual grading worked
             assert grade.id is not None
-            assert grade.grade_value == '85'
+            assert grade.grade == '85'
 
 
 class TestOfflineFileOperations:

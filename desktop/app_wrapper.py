@@ -165,9 +165,12 @@ def configure_app_for_desktop(app):
     app.config['UPLOAD_FOLDER'] = str(user_data_dir / 'uploads')
     logger.info(f"Upload folder: {app.config['UPLOAD_FOLDER']}")
     
-    # Set up SQLite pragma event listener
+    # Set up SQLite pragma event listener only if using SQLite
     # This will be called for every new database connection
-    event.listen(Engine, "connect", _set_sqlite_pragmas)
-    logger.info("SQLite pragma configuration enabled")
+    if sqlite_uri.startswith('sqlite'):
+        event.listen(Engine, "connect", _set_sqlite_pragmas)
+        logger.info("SQLite pragma configuration enabled")
+    else:
+        logger.info("Non-SQLite database detected, skipping pragma configuration")
     
     return app
