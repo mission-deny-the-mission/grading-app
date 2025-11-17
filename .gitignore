@@ -192,3 +192,4 @@ dump.rdb
 !.brokk/project.properties
 .postgres_data
 .postgres_log
+MagicMock/
