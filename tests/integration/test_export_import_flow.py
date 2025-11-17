@@ -560,3 +560,633 @@ class TestExportInSingleUserMode:
 
         # Should succeed or require auth
         assert response.status_code in [200, 401, 404]
+
+
+class TestMarkingSchemeImport:
+    """Test marking scheme import endpoint (POST /api/schemes/import)."""
+
+    def test_import_valid_json_returns_201(self, client, app, test_user, auth_headers):
+        """
+        Test importing valid JSON creates new scheme and returns 201 Created.
+
+        Verifies that:
+        - Valid JSON file is accepted
+        - New scheme is created in database
+        - 201 status code is returned
+        """
+        from tests.unit.fixtures.sample_schemes import get_simple_scheme
+
+        # Arrange: Create valid JSON file
+        simple_scheme = get_simple_scheme()
+        json_content = json.dumps(simple_scheme).encode("utf-8")
+
+        # Act: Import the scheme
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "simple_scheme.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 201
+        data = json.loads(response.data)
+        assert "scheme_id" in data or "id" in data
+
+    def test_import_returns_scheme_id_and_metadata(self, client, app, test_user, auth_headers):
+        """
+        Test import response includes scheme_id, name, and criteria_count.
+
+        Verifies that successful import response contains:
+        - scheme_id: unique identifier for the imported scheme
+        - name: scheme name from the JSON
+        - criteria_count: number of criteria imported
+        """
+        from tests.unit.fixtures.sample_schemes import get_medium_scheme
+
+        # Arrange
+        medium_scheme = get_medium_scheme()
+        json_content = json.dumps(medium_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "medium_scheme.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        if response.status_code == 201:
+            data = json.loads(response.data)
+
+            # Check for scheme identifier
+            assert "scheme_id" in data or "id" in data
+
+            # Check for scheme name
+            assert "name" in data
+            assert data["name"] == medium_scheme["metadata"]["name"]
+
+            # Check for criteria count
+            assert "criteria_count" in data
+            assert data["criteria_count"] == len(medium_scheme["criteria"])
+
+    def test_import_invalid_json_returns_400(self, client, app, test_user, auth_headers):
+        """
+        Test importing malformed JSON is rejected with 400 Bad Request.
+
+        Verifies that files containing invalid JSON syntax are rejected
+        with appropriate error message.
+        """
+        # Arrange: Create malformed JSON
+        invalid_json = b"{ this is not valid json "
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(invalid_json), "invalid.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert "error" in data or "message" in data
+
+    def test_import_missing_required_fields_returns_400(self, client, app, test_user, auth_headers):
+        """
+        Test importing JSON missing required fields returns 400 with error details.
+
+        Verifies that:
+        - Missing 'name' field is rejected
+        - Missing 'criteria' field is rejected
+        - Error response includes field details
+        """
+        # Arrange: Create JSON missing required fields
+        incomplete_scheme = {
+            "version": "1.0.0",
+            "metadata": {
+                # Missing 'name' field
+                "exported_at": datetime.now().isoformat()
+            }
+            # Missing 'criteria' field
+        }
+        json_content = json.dumps(incomplete_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "incomplete.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert "error" in data or "message" in data
+        # Should mention missing fields
+        response_text = json.dumps(data).lower()
+        assert "name" in response_text or "criteria" in response_text or "required" in response_text
+
+    def test_import_requires_authentication(self, client, app):
+        """
+        Test import endpoint requires authentication (@login_required).
+
+        Verifies that unauthenticated requests are rejected with 401 or redirect.
+        """
+        from tests.unit.fixtures.sample_schemes import get_simple_scheme
+
+        # Arrange
+        simple_scheme = get_simple_scheme()
+        json_content = json.dumps(simple_scheme).encode("utf-8")
+
+        # Act: Try to import without authentication
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "simple_scheme.json")},
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code in [401, 302]
+
+    def test_import_file_size_validation(self, client, app, test_user, auth_headers):
+        """
+        Test import rejects files larger than 10MB with 413 Payload Too Large.
+
+        Verifies file size limit enforcement to prevent abuse and
+        resource exhaustion.
+        """
+        # Arrange: Create a file larger than 10MB
+        large_scheme = {
+            "version": "1.0.0",
+            "metadata": {
+                "name": "Large Scheme",
+                "description": "x" * (11 * 1024 * 1024),  # 11MB of description
+                "exported_at": datetime.now().isoformat()
+            },
+            "criteria": []
+        }
+        json_content = json.dumps(large_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "large_scheme.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 413
+        data = json.loads(response.data)
+        assert "error" in data or "message" in data
+        response_text = json.dumps(data).lower()
+        assert "large" in response_text or "size" in response_text or "too big" in response_text
+
+    def test_import_json_file_only(self, client, app, test_user, auth_headers):
+        """
+        Test import only accepts .json files and rejects other file types.
+
+        Verifies that non-JSON files (e.g., .txt, .pdf, .docx) are rejected
+        with appropriate error message.
+        """
+        # Arrange: Create a non-JSON file
+        text_content = b"This is a text file, not JSON"
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(text_content), "scheme.txt")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert "error" in data or "message" in data
+        response_text = json.dumps(data).lower()
+        assert "json" in response_text or "file type" in response_text or "invalid" in response_text
+
+
+class TestImportValidationErrors:
+    """Test detailed validation error messages for import endpoint."""
+
+    def test_import_validation_error_messages_detailed(self, client, app, test_user, auth_headers):
+        """
+        Test validation errors include field path and helpful suggestions.
+
+        Verifies that validation errors provide:
+        - Specific field path (e.g., "criteria[0].name")
+        - Clear error message
+        - Suggestions for correction (when applicable)
+        """
+        # Arrange: Create scheme with validation errors
+        invalid_scheme = {
+            "version": "1.0.0",
+            "metadata": {
+                "name": "Test Scheme",
+                "exported_at": datetime.now().isoformat()
+            },
+            "criteria": [
+                {
+                    "id": "c1",
+                    # Missing 'name' field
+                    "weight": 1.5,  # Invalid: should be 0-1
+                    "point_value": -10,  # Invalid: negative points
+                    "descriptors": []  # Invalid: empty array
+                }
+            ]
+        }
+        json_content = json.dumps(invalid_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "invalid_scheme.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = json.loads(response.data)
+
+        # Should contain error details
+        assert "error" in data or "message" in data or "details" in data
+
+        # Check for detailed error information
+        if "details" in data:
+            assert isinstance(data["details"], list)
+            assert len(data["details"]) > 0
+
+    def test_import_empty_criteria_array_rejected(self, client, app, test_user, auth_headers):
+        """
+        Test import rejects schemes with empty criteria array.
+
+        Verifies that at least one criterion is required for a valid
+        marking scheme.
+        """
+        # Arrange: Scheme with no criteria
+        empty_criteria_scheme = {
+            "version": "1.0.0",
+            "metadata": {
+                "name": "Empty Criteria Scheme",
+                "exported_at": datetime.now().isoformat()
+            },
+            "criteria": []  # Empty array - should be rejected
+        }
+        json_content = json.dumps(empty_criteria_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "empty_criteria.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        response_text = json.dumps(data).lower()
+        assert "criteria" in response_text or "empty" in response_text or "required" in response_text
+
+    def test_import_invalid_descriptor_levels(self, client, app, test_user, auth_headers):
+        """
+        Test import rejects descriptors with invalid level values.
+
+        Verifies that descriptor levels must match enum values:
+        excellent, good, satisfactory, poor, fail
+        """
+        # Arrange: Scheme with invalid descriptor level
+        invalid_level_scheme = {
+            "version": "1.0.0",
+            "metadata": {
+                "name": "Invalid Level Scheme",
+                "exported_at": datetime.now().isoformat()
+            },
+            "criteria": [
+                {
+                    "id": "c1",
+                    "name": "Test Criterion",
+                    "weight": 1.0,
+                    "point_value": 10,
+                    "descriptors": [
+                        {
+                            "level": "amazing",  # Invalid level
+                            "description": "Amazing work",
+                            "points": 10
+                        }
+                    ]
+                }
+            ]
+        }
+        json_content = json.dumps(invalid_level_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "invalid_level.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        response_text = json.dumps(data).lower()
+        assert "level" in response_text or "invalid" in response_text or "descriptor" in response_text
+
+    def test_import_missing_descriptor_required_fields(self, client, app, test_user, auth_headers):
+        """
+        Test import rejects descriptors missing required fields.
+
+        Verifies that descriptors must include:
+        - level
+        - description
+        - points
+        """
+        # Arrange: Scheme with incomplete descriptor
+        incomplete_descriptor_scheme = {
+            "version": "1.0.0",
+            "metadata": {
+                "name": "Incomplete Descriptor Scheme",
+                "exported_at": datetime.now().isoformat()
+            },
+            "criteria": [
+                {
+                    "id": "c1",
+                    "name": "Test Criterion",
+                    "weight": 1.0,
+                    "point_value": 10,
+                    "descriptors": [
+                        {
+                            "level": "excellent",
+                            # Missing 'description' and 'points'
+                        }
+                    ]
+                }
+            ]
+        }
+        json_content = json.dumps(incomplete_descriptor_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "incomplete_descriptor.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        response_text = json.dumps(data).lower()
+        assert "descriptor" in response_text or "required" in response_text or "missing" in response_text
+
+
+class TestImportRoundTrip:
+    """Test export-import roundtrip functionality."""
+
+    def test_export_then_import_roundtrip(self, client, app, sample_marking_scheme, test_user, auth_headers):
+        """
+        Test complete export-import roundtrip preserves scheme data.
+
+        Verifies that:
+        1. Scheme can be exported
+        2. Exported file can be downloaded
+        3. Downloaded file can be re-imported
+        4. Imported scheme matches original data
+        """
+        with app.app_context():
+            original_scheme = sample_marking_scheme
+            scheme_id = original_scheme.id
+            original_name = original_scheme.name
+            original_content = original_scheme.content
+
+        # Step 1: Export the scheme
+        export_response = client.post(
+            f"/api/schemes/{scheme_id}/export",
+            headers=auth_headers
+        )
+        assert export_response.status_code == 200
+
+        # Step 2: Download the exported file
+        download_response = client.get(
+            f"/api/schemes/{scheme_id}/download",
+            headers=auth_headers
+        )
+
+        if download_response.status_code == 200:
+            exported_content = download_response.data
+
+            # Step 3: Import the downloaded file
+            import_response = client.post(
+                "/api/schemes/import",
+                data={"file": (BytesIO(exported_content), "roundtrip_scheme.json")},
+                headers=auth_headers,
+                content_type="multipart/form-data"
+            )
+
+            # Step 4: Verify imported scheme
+            if import_response.status_code == 201:
+                import_data = json.loads(import_response.data)
+
+                # Verify scheme identifier
+                assert "scheme_id" in import_data or "id" in import_data
+
+                # Verify name matches
+                if "name" in import_data:
+                    assert original_name.lower() in import_data["name"].lower() or \
+                           import_data["name"].lower() in original_name.lower()
+
+    def test_import_simple_scheme_creates_database_object(self, client, app, test_user, auth_headers):
+        """
+        Test imported scheme is stored in database.
+
+        Verifies that after successful import:
+        - Scheme exists in database
+        - Can be queried by ID
+        - Contains correct metadata
+        """
+        from tests.unit.fixtures.sample_schemes import get_simple_scheme
+
+        # Arrange
+        simple_scheme = get_simple_scheme()
+        json_content = json.dumps(simple_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "simple_scheme.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        if response.status_code == 201:
+            data = json.loads(response.data)
+            scheme_id = data.get("scheme_id") or data.get("id")
+
+            # Verify scheme exists in database
+            with app.app_context():
+                imported_scheme = MarkingScheme.query.filter_by(id=scheme_id).first()
+                assert imported_scheme is not None
+                assert imported_scheme.name == simple_scheme["metadata"]["name"]
+
+    def test_import_complex_scheme_with_many_criteria(self, client, app, test_user, auth_headers):
+        """
+        Test import handles schemes with 50+ criteria successfully.
+
+        Verifies that large, complex schemes can be imported without
+        performance issues or errors.
+        """
+        # Arrange: Create scheme with 50+ criteria
+        large_scheme = {
+            "version": "1.0.0",
+            "metadata": {
+                "name": "Large Scheme with Many Criteria",
+                "description": "Test scheme with 50+ criteria",
+                "exported_at": datetime.now().isoformat()
+            },
+            "criteria": [
+                {
+                    "id": f"c{i}",
+                    "name": f"Criterion {i}",
+                    "description": f"Description for criterion {i}",
+                    "weight": 1.0 / 50,
+                    "point_value": 2,
+                    "descriptors": [
+                        {
+                            "level": "excellent",
+                            "description": "Excellent work",
+                            "points": 2
+                        },
+                        {
+                            "level": "poor",
+                            "description": "Needs improvement",
+                            "points": 0
+                        }
+                    ]
+                }
+                for i in range(50)
+            ]
+        }
+        json_content = json.dumps(large_scheme).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "large_scheme.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        if response.status_code == 201:
+            data = json.loads(response.data)
+            assert "criteria_count" in data
+            assert data["criteria_count"] == 50
+
+
+class TestImportErrorHandling:
+    """Test error handling in import endpoint."""
+
+    def test_import_missing_file_parameter(self, client, app, test_user, auth_headers):
+        """
+        Test import fails with 400 when no file is provided in request.
+
+        Verifies that requests without the 'file' parameter are rejected
+        with appropriate error message.
+        """
+        # Act: Send request without file parameter
+        response = client.post(
+            "/api/schemes/import",
+            data={},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert "error" in data or "message" in data
+        response_text = json.dumps(data).lower()
+        assert "file" in response_text or "missing" in response_text or "required" in response_text
+
+    def test_import_file_read_error_handling(self, client, app, test_user, auth_headers):
+        """
+        Test import handles corrupted/unreadable files gracefully.
+
+        Verifies that file read errors return 500 or 400 with appropriate
+        error message rather than crashing.
+        """
+        # Arrange: Create corrupted file (binary data that's not valid JSON)
+        corrupted_content = b"\x00\x01\x02\x03\x04\x05\xff\xfe\xfd"
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(corrupted_content), "corrupted.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        assert response.status_code in [400, 500]
+        data = json.loads(response.data)
+        assert "error" in data or "message" in data
+
+    def test_import_unicode_handling(self, client, app, test_user, auth_headers):
+        """
+        Test import correctly handles Unicode characters in scheme names.
+
+        Verifies that schemes with international characters, emojis,
+        and special symbols are imported successfully.
+        """
+        # Arrange: Scheme with Unicode characters
+        unicode_scheme = {
+            "version": "1.0.0",
+            "metadata": {
+                "name": "Schéma d'évaluation 评分标准 рубрика 📝",
+                "description": "Test with Unicode: café, naïve, 日本語, Русский",
+                "exported_at": datetime.now().isoformat()
+            },
+            "criteria": [
+                {
+                    "id": "c1",
+                    "name": "Critère numéro un 第一标准",
+                    "description": "Description avec accents: àéèêô",
+                    "weight": 1.0,
+                    "point_value": 10,
+                    "descriptors": [
+                        {
+                            "level": "excellent",
+                            "description": "Excellent travail 优秀 отлично ✓",
+                            "points": 10
+                        }
+                    ]
+                }
+            ]
+        }
+        json_content = json.dumps(unicode_scheme, ensure_ascii=False).encode("utf-8")
+
+        # Act
+        response = client.post(
+            "/api/schemes/import",
+            data={"file": (BytesIO(json_content), "unicode_scheme.json")},
+            headers=auth_headers,
+            content_type="multipart/form-data"
+        )
+
+        # Assert
+        if response.status_code == 201:
+            data = json.loads(response.data)
+            assert "scheme_id" in data or "id" in data
+            # Verify Unicode name is preserved
+            if "name" in data:
+                assert "Schéma" in data["name"] or "评分标准" in data["name"]

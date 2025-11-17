@@ -17,6 +17,7 @@ from werkzeug.utils import secure_filename
 
 from models import MarkingScheme, db
 from services.scheme_serializer import MarkingSchemeSerializer
+from services.scheme_deserializer import MarkingSchemeDecoder
 
 logger = logging.getLogger(__name__)
 
@@ -259,5 +260,113 @@ def import_scheme():
         201: created scheme_id, name, criteria_count
         400: validation errors
     """
-    # TODO: Implement import endpoint (T056)
-    pass
+    try:
+        # Check if file was included in request
+        if 'file' not in request.files:
+            return jsonify({
+                "error": "Missing file",
+                "message": "No file provided in request"
+            }), 400
+
+        file = request.files['file']
+
+        # Check if file has a filename
+        if not file or file.filename == '':
+            return jsonify({
+                "error": "Invalid file",
+                "message": "No file selected for uploading"
+            }), 400
+
+        # Validate file type (must be JSON)
+        if not file.filename.lower().endswith('.json'):
+            return jsonify({
+                "error": "Invalid file type",
+                "message": "Only .json files are accepted"
+            }), 400
+
+        # Read file content
+        try:
+            file_content = file.read()
+        except Exception as e:
+            logger.error(f"Failed to read uploaded file: {str(e)}")
+            return jsonify({
+                "error": "File read failed",
+                "message": "Could not read the uploaded file"
+            }), 500
+
+        # Validate file size (< 10MB)
+        file_size = len(file_content)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if file_size > max_size:
+            return jsonify({
+                "error": "File too large",
+                "message": f"Maximum file size is 10MB, got {file_size / 1024 / 1024:.2f}MB"
+            }), 413
+
+        # Parse JSON content
+        try:
+            json_string = file_content.decode('utf-8')
+        except UnicodeDecodeError:
+            return jsonify({
+                "error": "Invalid encoding",
+                "message": "File must be UTF-8 encoded JSON"
+            }), 400
+
+        # Deserialize and validate
+        decoder = MarkingSchemeDecoder()
+        try:
+            scheme_data = decoder.deserialize(json_string)
+        except ValueError as e:
+            error_msg = str(e)
+            logger.warning(f"Import validation failed: {error_msg}")
+            return jsonify({
+                "error": "Validation failed",
+                "message": error_msg,
+                "details": decoder.collect_validation_errors(json.loads(json_string))
+            }), 400
+        except json.JSONDecodeError as e:
+            return jsonify({
+                "error": "Invalid JSON",
+                "message": f"JSON parsing error: {str(e)}"
+            }), 400
+
+        # Create MarkingScheme object in database
+        try:
+            new_scheme = MarkingScheme(
+                name=scheme_data['name'],
+                description=scheme_data.get('description'),
+                filename=file.filename,
+                original_filename=file.filename,
+                file_size=file_size,
+                file_type='json',
+                content=json_string
+            )
+
+            db.session.add(new_scheme)
+            db.session.commit()
+
+            # Count criteria for response
+            criteria_count = len(scheme_data.get('criteria', []))
+
+            logger.info(f"Successfully imported scheme '{new_scheme.name}' with ID {new_scheme.id}")
+
+            return jsonify({
+                "scheme_id": new_scheme.id,
+                "name": new_scheme.name,
+                "criteria_count": criteria_count
+            }), 201
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to create marking scheme in database: {str(e)}")
+            return jsonify({
+                "error": "Database error",
+                "message": f"Failed to save imported scheme: {str(e)}"
+            }), 500
+
+    except Exception as e:
+        logger.error(f"Unexpected error importing scheme: {str(e)}")
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
