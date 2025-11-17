@@ -87,7 +87,7 @@ def app():
             "RATELIMIT_ENABLED": False,
         }
     )
-    
+
     # Disable rate limiting for tests by monkey-patching the limiter
     try:
         from app import limiter
@@ -126,6 +126,7 @@ def runner(app):
 def sample_job(app):
     """Create a sample grading job for testing."""
     with app.app_context():
+        from models import db
         job = GradingJob(
             job_name="Test Job",
             description="A test job for unit testing",
@@ -149,6 +150,7 @@ def sample_job(app):
 def sample_submission(app, sample_job):
     """Create a sample submission for testing."""
     with app.app_context():
+        from models import db
         submission = Submission(
             job_id=sample_job.id,
             original_filename="test_document.txt",
@@ -168,6 +170,7 @@ def sample_submission(app, sample_job):
 def sample_marking_scheme(app):
     """Create a sample marking scheme for testing."""
     with app.app_context():
+        from models import db
         marking_scheme = MarkingScheme(
             name="Test Marking Scheme",
             original_filename="test_rubric.txt",
@@ -186,6 +189,7 @@ def sample_marking_scheme(app):
 def sample_batch(app):
     """Create a sample batch for testing."""
     with app.app_context():
+        from models import db
         batch = JobBatch(
             batch_name="Test Batch",
             description="A test batch for unit testing",
@@ -293,7 +297,7 @@ def sample_pdf_file():
 def multi_user_mode(app):
     """Set deployment to multi-user mode."""
     from services.deployment_service import DeploymentService
-    
+
     with app.app_context():
         DeploymentService.set_mode("multi-user")
         yield
@@ -305,12 +309,12 @@ def multi_user_mode(app):
 def test_user(app, multi_user_mode):
     """Create a regular test user for authentication tests."""
     from services.auth_service import AuthService
-    
+
     with app.app_context():
         user = AuthService.create_user(
-            "testuser@example.com", 
-            "TestPass123!", 
-            "Test User", 
+            "testuser@example.com",
+            "TestPass123!",
+            "Test User",
             is_admin=False
         )
         yield user
@@ -320,12 +324,12 @@ def test_user(app, multi_user_mode):
 def admin_user(app, multi_user_mode):
     """Create an admin user for authentication tests."""
     from services.auth_service import AuthService
-    
+
     with app.app_context():
         user = AuthService.create_user(
-            "admin@example.com", 
-            "AdminPass123!", 
-            "Admin User", 
+            "admin@example.com",
+            "AdminPass123!",
+            "Admin User",
             is_admin=True
         )
         yield user
