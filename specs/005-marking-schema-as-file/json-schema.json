@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Marking Scheme Export",
+  "description": "Standard JSON format for marking scheme export/import operations",
+  "type": "object",
+  "required": ["version", "metadata", "criteria"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Format version for backward compatibility (semantic versioning)",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "example": "1.0.0"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Scheme metadata and export information",
+      "required": ["name", "exported_at"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Scheme name",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional long description of scheme purpose/usage",
+          "maxLength": 5000
+        },
+        "exported_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when scheme was exported"
+        },
+        "exported_by": {
+          "type": "string",
+          "description": "Email or user ID of exporter"
+        }
+      },
+      "additionalProperties": false
+    },
+    "criteria": {
+      "type": "array",
+      "description": "Marking criteria with performance descriptors",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "descriptors"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique criterion identifier (UUID)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Criterion name/title",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional detailed description of criterion",
+            "maxLength": 2000
+          },
+          "weight": {
+            "type": "number",
+            "description": "Relative weight in overall assessment (0.0-1.0)",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "point_value": {
+            "type": "number",
+            "description": "Total points available for this criterion",
+            "minimum": 0
+          },
+          "descriptors": {
+            "type": "array",
+            "description": "Performance level descriptors for this criterion",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["level", "description"],
+              "additionalProperties": false,
+              "properties": {
+                "level": {
+                  "type": "string",
+                  "description": "Performance level identifier",
+                  "enum": ["excellent", "good", "satisfactory", "poor", "fail"]
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of work at this level",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "points": {
+                  "type": "number",
+                  "description": "Points awarded for this level",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
