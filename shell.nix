@@ -17,6 +17,12 @@ let
     psycopg2-binary
     beautifulsoup4
 
+    # Authentication dependencies (from main branch merge)
+    flask-login
+    flask-limiter
+    flask-wtf
+    email-validator
+
     # Desktop dependencies
     pywebview
     pystray
