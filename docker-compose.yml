@@ -23,7 +23,8 @@ services:
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=sqlite:///grading_app.db
-      - SECRET_KEY=dev-secret-key-change-in-production
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
@@ -43,7 +44,8 @@ services:
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=sqlite:///grading_app.db
-      - SECRET_KEY=dev-secret-key-change-in-production
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
@@ -63,7 +65,8 @@ services:
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=sqlite:///grading_app.db
-      - SECRET_KEY=dev-secret-key-change-in-production
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://localhost:1234/v1}
@@ -85,7 +88,8 @@ services:
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=sqlite:///grading_app.db
-      - SECRET_KEY=dev-secret-key-change-in-production
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - DB_ENCRYPTION_KEY=${DB_ENCRYPTION_KEY}
     depends_on:
       redis:
         condition: service_healthy

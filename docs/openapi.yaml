@@ -1,0 +1,767 @@
+openapi: 3.0.3
+info:
+  title: Grading App Authentication API
+  description: |
+    Multi-user authentication and authorization API for the grading application.
+    Supports both single-user (passwordless) and multi-user (authenticated) deployment modes.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:5000
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Admin
+    description: User administration (admin-only endpoints)
+  - name: Usage Tracking
+    description: API usage monitoring and quota management
+  - name: Project Sharing
+    description: Project collaboration and access control
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Flask session cookie (Flask-Login)
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          maxLength: 100
+        is_admin:
+          type: boolean
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - is_admin
+        - is_active
+        - created_at
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        remember:
+          type: boolean
+          default: false
+      required:
+        - email
+        - password
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        display_name:
+          type: string
+          maxLength: 100
+        is_admin:
+          type: boolean
+          default: false
+      required:
+        - email
+        - password
+
+    PasswordResetRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+        - email
+
+    PasswordResetConfirm:
+      type: object
+      properties:
+        token:
+          type: string
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+      required:
+        - token
+        - new_password
+
+    ProjectShare:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        permission_level:
+          type: string
+          enum: [read, write]
+        granted_by:
+          type: string
+          format: uuid
+        granted_at:
+          type: string
+          format: date-time
+
+    UsageRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        operation_type:
+          type: string
+          enum: [grading, batch_processing, api_call]
+        tokens_used:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+      required:
+        - success
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+        data:
+          type: object
+
+paths:
+  # Authentication Endpoints
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user with email and password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              basic:
+                summary: Basic login
+                value:
+                  email: user@example.com
+                  password: SecurePass123!
+              remember:
+                summary: Login with remember me
+                value:
+                  email: user@example.com
+                  password: SecurePass123!
+                  remember: true
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid credentials or account locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid:
+                  value:
+                    success: false
+                    error: Invalid email or password
+                    code: INVALID_CREDENTIALS
+                locked:
+                  value:
+                    success: false
+                    error: Account locked. Try again in 15 minutes.
+                    code: ACCOUNT_LOCKED
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: End current user session
+      operationId: logout
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user (admin-only in multi-user mode)
+      description: Create a new user account
+      operationId: register
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/password-reset:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      description: Generate password reset token and send reset link
+      operationId: requestPasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '200':
+          description: Reset token generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+                          expires_at:
+                            type: string
+                            format: date-time
+
+  /api/auth/password-reset/confirm:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password with token
+      description: Complete password reset using token from email
+      operationId: confirmPasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Admin Endpoints
+  /admin/users:
+    get:
+      tags:
+        - Admin
+      summary: List all users
+      description: Get paginated list of all users (admin-only)
+      operationId: listUsers
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: User list retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/users/{user_id}:
+    get:
+      tags:
+        - Admin
+      summary: Get user details
+      description: Get detailed information about a specific user
+      operationId: getUser
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User details retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - Admin
+      summary: Update user
+      description: Update user properties (admin-only)
+      operationId: updateUser
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                display_name:
+                  type: string
+                is_admin:
+                  type: boolean
+                is_active:
+                  type: boolean
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/User'
+
+    delete:
+      tags:
+        - Admin
+      summary: Delete user
+      description: Permanently delete user account
+      operationId: deleteUser
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Usage Tracking Endpoints
+  /api/usage:
+    get:
+      tags:
+        - Usage Tracking
+      summary: Get current user's usage statistics
+      description: Retrieve API usage and quota information
+      operationId: getUserUsage
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Usage statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    format: uuid
+                  total_tokens:
+                    type: integer
+                  quota_limit:
+                    type: integer
+                  quota_remaining:
+                    type: integer
+                  records:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UsageRecord'
+
+  /api/usage/quotas:
+    get:
+      tags:
+        - Usage Tracking
+      summary: Get quota information
+      description: Retrieve current quota limits and usage
+      operationId: getQuotas
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Quota information retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  monthly_limit:
+                    type: integer
+                  current_usage:
+                    type: integer
+                  remaining:
+                    type: integer
+                  reset_date:
+                    type: string
+                    format: date-time
+
+  # Project Sharing Endpoints
+  /api/projects/{project_id}/shares:
+    get:
+      tags:
+        - Project Sharing
+      summary: Get project shares
+      description: List all users who have access to the project
+      operationId: getProjectShares
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shares retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project_id:
+                    type: string
+                  shares:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectShare'
+
+    post:
+      tags:
+        - Project Sharing
+      summary: Share project
+      description: Grant access to another user
+      operationId: shareProject
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                permission_level:
+                  type: string
+                  enum: [read, write]
+                  default: read
+              required:
+                - user_id
+      responses:
+        '201':
+          description: Project shared successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          share:
+                            $ref: '#/components/schemas/ProjectShare'
+
+  /api/projects/{project_id}/shares/{share_id}:
+    patch:
+      tags:
+        - Project Sharing
+      summary: Update share permissions
+      description: Change permission level for an existing share
+      operationId: updateSharePermissions
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: share_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permission_level:
+                  type: string
+                  enum: [read, write]
+              required:
+                - permission_level
+      responses:
+        '200':
+          description: Permissions updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          share:
+                            $ref: '#/components/schemas/ProjectShare'
+
+    delete:
+      tags:
+        - Project Sharing
+      summary: Revoke share
+      description: Remove user's access to the project
+      operationId: revokeShare
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: project_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: share_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Share revoked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/projects/shared:
+    get:
+      tags:
+        - Project Sharing
+      summary: Get shared projects
+      description: List projects shared with current user
+      operationId: getSharedProjects
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Shared projects retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    format: uuid
+                  shared_projects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        project_id:
+                          type: string
+                        permission_level:
+                          type: string
+                          enum: [read, write]

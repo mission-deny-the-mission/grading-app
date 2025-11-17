@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import openai
 import requests
 from anthropic import Anthropic
-from flask import Blueprint, jsonify, render_template, request, session
+from flask import Blueprint, jsonify, redirect, render_template, request, session
 
 from models import (
     Config,
@@ -20,8 +20,25 @@ from models import (
     Submission,
     db,
 )
+from services.deployment_service import DeploymentService
 
 main_bp = Blueprint("main", __name__)
+
+
+@main_bp.route("/setup")
+def setup():
+    """Setup wizard for initial deployment configuration."""
+    try:
+        # Check if already configured
+        config = DeploymentService.get_config_dict()
+        if config.get("mode") and config["mode"] in ["single-user", "multi-user"]:
+            # Already configured, redirect to main page
+            return redirect("/")
+        # Not configured yet, show setup page
+        return render_template("setup.html")
+    except Exception:
+        # If error, still show setup page to allow configuration
+        return render_template("setup.html")
 
 
 @main_bp.route("/")

@@ -1,0 +1,775 @@
+openapi: 3.0.3
+info:
+  title: Grading App Authentication API
+  description: |
+    API endpoints for optional multi-user authentication with AI usage controls and project sharing.
+
+    This API supports two deployment modes:
+    - **Single-user**: Authentication disabled, all endpoints accessible without auth
+    - **Multi-user**: Authentication required, per-user AI limits enforced
+  version: 1.0.0
+  contact:
+    name: Grading App Development Team
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+  - url: https://grading-app.example.com/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User login, logout, session management
+  - name: Users
+    description: User account management (admin only)
+  - name: Usage Tracking
+    description: AI usage monitoring and quota management
+  - name: Project Sharing
+    description: Collaborative project access control
+  - name: Configuration
+    description: Deployment mode and system configuration
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: Authenticate user and create session (multi-user mode only)
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: teacher@school.edu
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123
+                remember_me:
+                  type: boolean
+                  default: false
+                  description: Extend session to 30 days if true
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session_expires_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User logout
+      description: Terminate current session
+      operationId: logout
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+
+  /auth/session:
+    get:
+      tags: [Authentication]
+      summary: Get current session
+      description: Retrieve current user session information
+      operationId: getSession
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Session information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session_expires_at:
+                    type: string
+                    format: date-time
+                  deployment_mode:
+                    type: string
+                    enum: [single-user, multi-user]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # User Management Endpoints
+  /users:
+    get:
+      tags: [Users]
+      summary: List all users
+      description: Get paginated list of users (admin only)
+      operationId: listUsers
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: search
+          in: query
+          description: Search by email or display name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Users]
+      summary: Create user
+      description: Create new user account (admin only)
+      operationId: createUser
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                display_name:
+                  type: string
+                  maxLength: 100
+                is_admin:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      operationId: getUser
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Users]
+      summary: Update user
+      description: Update user account (self or admin)
+      operationId: updateUser
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                is_active:
+                  type: boolean
+                  description: Admin only
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # Usage Tracking Endpoints
+  /usage/dashboard:
+    get:
+      tags: [Usage Tracking]
+      summary: Get usage dashboard
+      description: Get current user's AI usage stats across all providers
+      operationId: getUsageDashboard
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Usage dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProviderUsage'
+                  total_tokens_consumed:
+                    type: integer
+                  period_start:
+                    type: string
+                    format: date-time
+                  period_end:
+                    type: string
+                    format: date-time
+
+  /usage/quotas:
+    get:
+      tags: [Usage Tracking]
+      summary: Get user quotas
+      description: Get AI provider quotas for current user
+      operationId: getUserQuotas
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: User quotas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIProviderQuota'
+
+  /usage/quotas/{user_id}:
+    put:
+      tags: [Usage Tracking]
+      summary: Set user quota
+      description: Configure AI usage quota for a user (admin only)
+      operationId: setUserQuota
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, limit_type, limit_value, reset_period]
+              properties:
+                provider:
+                  type: string
+                  enum: [openrouter, claude, gemini, lmstudio]
+                limit_type:
+                  type: string
+                  enum: [tokens, requests]
+                limit_value:
+                  type: integer
+                  minimum: -1
+                  description: -1 for unlimited
+                reset_period:
+                  type: string
+                  enum: [daily, weekly, monthly, unlimited]
+      responses:
+        '200':
+          description: Quota updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIProviderQuota'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /usage/history:
+    get:
+      tags: [Usage Tracking]
+      summary: Get usage history
+      description: Get detailed usage history for current user
+      operationId: getUsageHistory
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: provider
+          in: query
+          schema:
+            type: string
+            enum: [openrouter, claude, gemini, lmstudio]
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Usage history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UsageRecord'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /usage/reports:
+    get:
+      tags: [Usage Tracking]
+      summary: Get aggregate usage reports
+      description: Get system-wide usage statistics (admin only)
+      operationId: getUsageReports
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: group_by
+          in: query
+          schema:
+            type: string
+            enum: [user, provider, date]
+            default: user
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Usage reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    group_key:
+                      type: string
+                      description: User ID, provider name, or date
+                    total_tokens:
+                      type: integer
+                    total_requests:
+                      type: integer
+                    cost_estimate:
+                      type: number
+                      format: float
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # Project Sharing Endpoints
+  /projects/{project_id}/shares:
+    get:
+      tags: [Project Sharing]
+      summary: List project shares
+      description: Get all users with access to a project
+      operationId: listProjectShares
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project shares
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectShare'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Project Sharing]
+      summary: Share project
+      description: Grant user access to a project (owner only)
+      operationId: shareProject
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_email, permission_level]
+              properties:
+                user_email:
+                  type: string
+                  format: email
+                  description: Email of user to share with
+                permission_level:
+                  type: string
+                  enum: [read, write]
+      responses:
+        '201':
+          description: Project shared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectShare'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /projects/{project_id}/shares/{share_id}:
+    delete:
+      tags: [Project Sharing]
+      summary: Revoke project access
+      description: Remove user's access to a project (owner only)
+      operationId: revokeProjectShare
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - name: share_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Access revoked
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Configuration Endpoints
+  /config/deployment-mode:
+    get:
+      tags: [Configuration]
+      summary: Get deployment mode
+      description: Get current system deployment mode
+      operationId: getDeploymentMode
+      responses:
+        '200':
+          description: Deployment mode
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mode:
+                    type: string
+                    enum: [single-user, multi-user]
+                  configured_at:
+                    type: string
+                    format: date-time
+                  auth_required:
+                    type: boolean
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Session cookie authentication
+
+  parameters:
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        is_admin:
+          type: boolean
+        is_active:
+          type: boolean
+      required: [id, email, created_at, is_admin, is_active]
+
+    AIProviderQuota:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [openrouter, claude, gemini, lmstudio]
+        limit_type:
+          type: string
+          enum: [tokens, requests]
+        limit_value:
+          type: integer
+        reset_period:
+          type: string
+          enum: [daily, weekly, monthly, unlimited]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UsageRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+        tokens_consumed:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        operation_type:
+          type: string
+          enum: [grading, ocr, analysis]
+        model_name:
+          type: string
+          nullable: true
+
+    ProviderUsage:
+      type: object
+      properties:
+        provider:
+          type: string
+        tokens_consumed:
+          type: integer
+        limit_value:
+          type: integer
+        percentage_used:
+          type: number
+          format: float
+        remaining_quota:
+          type: integer
+        reset_period:
+          type: string
+        next_reset_at:
+          type: string
+          format: date-time
+
+    ProjectShare:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        user:
+          $ref: '#/components/schemas/User'
+        permission_level:
+          type: string
+          enum: [read, write]
+        granted_at:
+          type: string
+          format: date-time
+        granted_by:
+          $ref: '#/components/schemas/User'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total_pages:
+          type: integer
+        total_items:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+      required: [error, message]
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: unauthorized
+            message: Please log in to access this resource
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: forbidden
+            message: You do not have permission to access this resource
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: not_found
+            message: The requested resource was not found
+
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: rate_limited
+            message: Too many login attempts. Please try again in 15 minutes.

@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Application Setup - Document Grading App{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <div class="text-center mb-5">
+        <h1 class="mb-2">Welcome to Document Grader</h1>
+        <p class="lead text-muted">Let's configure your deployment mode</p>
+    </div>
+
+    <!-- Setup Wizard -->
+    <div id="setupWizard" class="setup-wizard">
+        <!-- Step 1: Mode Selection -->
+        <div class="setup-step active" id="step-1">
+            <div class="row">
+                <div class="col-md-6 offset-md-3">
+                    <h3 class="mb-4">How will you be using Document Grader?</h3>
+                    <p class="text-muted mb-4">Choose the deployment mode that best fits your needs:</p>
+
+                    <div class="mode-selection">
+                        <div class="mode-card card mb-4" data-mode="single-user">
+                            <div class="card-body p-4">
+                                <div class="mode-icon mb-3">
+                                    <i class="fas fa-laptop fa-3x text-primary"></i>
+                                </div>
+                                <h5 class="card-title">Single-User Mode</h5>
+                                <p class="card-text text-muted">
+                                    For personal use or individual teachers grading locally
+                                </p>
+                                <div class="features mb-3">
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success me-2"></i>No login required</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>All features accessible</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Unlimited AI usage</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Works offline</li>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-outline-primary btn-select-mode w-100" data-mode="single-user">
+                                    Select This Mode
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mode-card card mb-4" data-mode="multi-user">
+                            <div class="card-body p-4">
+                                <div class="mode-icon mb-3">
+                                    <i class="fas fa-building fa-3x text-success"></i>
+                                </div>
+                                <h5 class="card-title">Multi-User Mode</h5>
+                                <p class="card-text text-muted">
+                                    For institutions with multiple teachers and cost controls
+                                </p>
+                                <div class="features mb-3">
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check text-success me-2"></i>User authentication</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Per-user AI limits</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Project sharing</li>
+                                        <li><i class="fas fa-check text-success me-2"></i>Usage tracking</li>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-outline-success btn-select-mode w-100" data-mode="multi-user">
+                                    Select This Mode
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Confirmation -->
+        <div class="setup-step" id="step-2" style="display: none;">
+            <div class="row">
+                <div class="col-md-6 offset-md-3">
+                    <h3 class="mb-4">Confirm Your Selection</h3>
+                    <div class="alert alert-info" role="alert">
+                        <h5 class="alert-heading" id="confirmation-mode"></h5>
+                        <p id="confirmation-description"></p>
+                        <hr>
+                        <p class="mb-0">You can change this setting later in the Configuration menu.</p>
+                    </div>
+
+                    <button class="btn btn-primary btn-lg w-100 mb-2" id="btn-confirm">
+                        <i class="fas fa-check me-2"></i>Confirm & Continue
+                    </button>
+                    <button class="btn btn-secondary btn-lg w-100" id="btn-back">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Complete -->
+        <div class="setup-step" id="step-3" style="display: none;">
+            <div class="row">
+                <div class="col-md-6 offset-md-3 text-center">
+                    <div class="success-icon mb-4">
+                        <i class="fas fa-check-circle fa-5x text-success"></i>
+                    </div>
+                    <h3 class="mb-3">Setup Complete!</h3>
+                    <p class="text-muted mb-4" id="success-message"></p>
+
+                    <div class="alert alert-success mb-4">
+                        <p class="mb-0">Your Document Grader is now configured and ready to use.</p>
+                    </div>
+
+                    <button class="btn btn-primary btn-lg w-100" id="btn-continue">
+                        <i class="fas fa-arrow-right me-2"></i>Go to Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="setup-loading" style="display: none; text-align: center;">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Configuring your deployment mode...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="setup-error" style="display: none;">
+            <div class="alert alert-danger" role="alert">
+                <h5 class="alert-heading">Configuration Error</h5>
+                <p id="error-message"></p>
+                <button class="btn btn-danger mt-3" id="btn-retry">
+                    <i class="fas fa-redo me-2"></i>Retry
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .setup-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 3rem 0;
+    }
+
+    .setup-step {
+        animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .mode-card {
+        cursor: pointer;
+        border: 3px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+
+    .mode-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.1);
+        transform: translateY(-8px);
+    }
+
+    .mode-card.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    }
+
+    .mode-card[data-mode="multi-user"].selected {
+        border-color: #28a745;
+        background: linear-gradient(135deg, rgba(40, 167, 69, 0.05), rgba(32, 136, 54, 0.05));
+    }
+
+    .mode-icon {
+        text-align: center;
+    }
+
+    .mode-card[data-mode="single-user"] .mode-icon i {
+        color: #667eea;
+    }
+
+    .mode-card[data-mode="multi-user"] .mode-icon i {
+        color: #28a745;
+    }
+
+    .features ul {
+        font-size: 0.95rem;
+    }
+
+    .features li {
+        margin-bottom: 0.5rem;
+    }
+
+    .success-icon {
+        animation: bounceIn 0.6s ease;
+    }
+
+    @keyframes bounceIn {
+        0% {
+            transform: scale(0.3);
+            opacity: 0;
+        }
+        50% {
+            opacity: 1;
+        }
+        70% {
+            transform: scale(1.05);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    .btn-select-mode {
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-select-mode:hover {
+        transform: translateY(-2px);
+    }
+</style>
+
+<script>
+    let selectedMode = null;
+
+    // Initialize setup
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mode selection buttons
+        document.querySelectorAll('.btn-select-mode').forEach(btn => {
+            btn.addEventListener('click', function() {
+                selectedMode = this.dataset.mode;
+
+                // Update UI
+                document.querySelectorAll('.mode-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                document.querySelector(`[data-mode="${selectedMode}"]`).classList.add('selected');
+
+                // Show confirmation step
+                showConfirmation();
+            });
+        });
+
+        // Back button
+        document.getElementById('btn-back').addEventListener('click', function() {
+            document.getElementById('step-1').style.display = 'block';
+            document.getElementById('step-2').style.display = 'none';
+            selectedMode = null;
+        });
+
+        // Confirm button
+        document.getElementById('btn-confirm').addEventListener('click', function() {
+            confirmSetup();
+        });
+
+        // Continue button
+        document.getElementById('btn-continue').addEventListener('click', function() {
+            window.location.href = '/';
+        });
+
+        // Retry button
+        document.getElementById('btn-retry').addEventListener('click', function() {
+            document.getElementById('setup-error').style.display = 'none';
+            document.getElementById('step-1').style.display = 'block';
+            selectedMode = null;
+        });
+    });
+
+    function showConfirmation() {
+        const modeNames = {
+            'single-user': 'Single-User Mode',
+            'multi-user': 'Multi-User Mode'
+        };
+
+        const modeDescriptions = {
+            'single-user': 'No authentication required. All features accessible without login. Ideal for personal use or individual teachers.',
+            'multi-user': 'Full authentication enabled. Per-user AI limits, project sharing, and usage tracking. Ideal for institutions.'
+        };
+
+        document.getElementById('confirmation-mode').textContent = modeNames[selectedMode];
+        document.getElementById('confirmation-description').textContent = modeDescriptions[selectedMode];
+
+        document.getElementById('step-1').style.display = 'none';
+        document.getElementById('step-2').style.display = 'block';
+    }
+
+    async function confirmSetup() {
+        document.getElementById('step-2').style.display = 'none';
+        document.getElementById('setup-loading').style.display = 'block';
+
+        try {
+            const response = await fetch('/api/config/deployment-mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ mode: selectedMode })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to set deployment mode');
+            }
+
+            // Success
+            const modeNames = {
+                'single-user': 'Single-User Mode',
+                'multi-user': 'Multi-User Mode'
+            };
+
+            document.getElementById('success-message').textContent =
+                `Your deployment mode has been set to ${modeNames[selectedMode]}.`;
+
+            document.getElementById('setup-loading').style.display = 'none';
+            document.getElementById('step-3').style.display = 'block';
+
+        } catch (error) {
+            document.getElementById('setup-loading').style.display = 'none';
+            document.getElementById('setup-error').style.display = 'block';
+            document.getElementById('error-message').textContent =
+                `Error: ${error.message}. Please try again.`;
+        }
+    }
+</script>
+{% endblock %}
