@@ -1,5 +1,5 @@
 """
-Unit tests for MarkingSchemeDeserializer class.
+Unit tests for MarkingSchemeDecoder class.
 
 Tests the deserialization of marking schemes from JSON format for import functionality.
 These tests follow TDD principles - they are written before the implementation.
@@ -17,7 +17,7 @@ try:
 except ImportError:
     HAS_JSONSCHEMA = False
 
-from services.scheme_deserializer import MarkingSchemeDeserializer
+from services.scheme_deserializer import MarkingSchemeDecoder
 from tests.unit.fixtures.sample_schemes import (
     get_simple_scheme,
     get_medium_scheme,
@@ -27,8 +27,8 @@ from tests.unit.fixtures.sample_schemes import (
 
 @pytest.fixture
 def deserializer():
-    """Create a MarkingSchemeDeserializer instance for testing."""
-    return MarkingSchemeDeserializer()
+    """Create a MarkingSchemeDecoder instance for testing."""
+    return MarkingSchemeDecoder()
 
 
 @pytest.fixture

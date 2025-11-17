@@ -364,22 +364,22 @@ Implement shared infrastructure: JSON schema, database models, and validation fr
 
 ### Tests (TDD - Write First)
 
-- [ ] T092 [P] [US4] Write integration test: tests/integration/test_scheme_reuse.py - test import scheme and assign to assignment
-- [ ] T093 [P] [US4] Write integration test: tests/integration/test_scheme_reuse.py - test load same scheme for 2 assignments
-- [ ] T094 [P] [US4] Write integration test: tests/integration/test_scheme_reuse.py - test modifying scheme in one assignment doesn't affect other
-- [ ] T095 [P] [US4] Write integration test: tests/integration/test_scheme_reuse.py - test 10+ assignments using same scheme
+- [x] T092 [P] [US4] Write integration test: tests/integration/test_scheme_reuse.py - test import scheme and assign to assignment
+- [x] T093 [P] [US4] Write integration test: tests/integration/test_scheme_reuse.py - test load same scheme for 2 assignments
+- [x] T094 [P] [US4] Write integration test: tests/integration/test_scheme_reuse.py - test modifying scheme in one assignment doesn't affect other
+- [x] T095 [P] [US4] Write integration test: tests/integration/test_scheme_reuse.py - test 10+ assignments using same scheme
 
 ### Implementation
 
-- [ ] T096 [US4] Extend existing assignment creation flow in app/routes/main.py or appropriate location:
+- [x] T096 [US4] Extend existing assignment creation flow in app/routes/main.py or appropriate location:
   - Add option to "Use existing scheme" when creating assignment
   - Query available MarkingScheme objects
   - Allow selection of scheme to use
   - Link assignment to selected scheme
   - No schema changes needed (Assignment model already has scheme_id relationship)
   - Verify no existing tests break
-- [ ] T097 [P] [US4] Create tests/integration/test_scheme_reuse.py: Run tests verifying scheme reuse works correctly
-- [ ] T098 [US4] Verify existing assignment endpoints work with imported schemes (no modifications needed if relationship already exists)
+- [x] T097 [P] [US4] Create tests/integration/test_scheme_reuse.py: Run tests verifying scheme reuse works correctly
+- [x] T098 [US4] Verify existing assignment endpoints work with imported schemes (no modifications needed if relationship already exists)
 
 ---
 

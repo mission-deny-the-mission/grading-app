@@ -312,7 +312,16 @@ def import_scheme():
                 "message": "File must be UTF-8 encoded JSON"
             }), 400
 
-        # Deserialize and validate
+        # First, validate JSON syntax
+        try:
+            json_data = json.loads(json_string)
+        except json.JSONDecodeError as e:
+            return jsonify({
+                "error": "Invalid JSON",
+                "message": f"JSON parsing error: {str(e)}"
+            }), 400
+
+        # Then deserialize and validate schema
         decoder = MarkingSchemeDecoder()
         try:
             scheme_data = decoder.deserialize(json_string)
@@ -322,12 +331,7 @@ def import_scheme():
             return jsonify({
                 "error": "Validation failed",
                 "message": error_msg,
-                "details": decoder.collect_validation_errors(json.loads(json_string))
-            }), 400
-        except json.JSONDecodeError as e:
-            return jsonify({
-                "error": "Invalid JSON",
-                "message": f"JSON parsing error: {str(e)}"
+                "details": decoder.collect_validation_errors(json_data)
             }), 400
 
         # Create MarkingScheme object in database

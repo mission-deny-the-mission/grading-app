@@ -159,9 +159,9 @@ class TestMarkingSchemeExport:
                     # Parse the downloaded JSON
                     exported_json = json.loads(download_response.data)
 
-                    # Verify structure
-                    assert "name" in exported_json or "scheme_name" in exported_json
-                    assert "metadata" in exported_json or "version" in exported_json
+                    # Verify structure per JSON schema spec
+                    assert "metadata" in exported_json
+                    assert "name" in exported_json.get("metadata", {})
 
     def test_multiple_exports_unique_filenames(self, client, app, sample_marking_scheme, test_user, auth_headers):
         """
@@ -436,11 +436,16 @@ class TestExportImportIntegration:
         if download_response.status_code == 200:
             exported_json = json.loads(download_response.data)
 
-            # Check for essential fields (flexible to accommodate different structures)
-            has_name = "name" in exported_json or "scheme_name" in exported_json
-            has_metadata = "metadata" in exported_json or "created_at" in exported_json
+            # Check for essential fields per JSON schema spec
+            has_metadata = "metadata" in exported_json
+            has_name = "name" in exported_json.get("metadata", {})
+            has_version = "version" in exported_json
+            has_criteria = "criteria" in exported_json
 
-            assert has_name, "Exported JSON should contain scheme name"
+            assert has_version, "Exported JSON should contain version"
+            assert has_metadata, "Exported JSON should contain metadata"
+            assert has_name, "Exported JSON should contain scheme name in metadata"
+            assert has_criteria, "Exported JSON should contain criteria"
 
 
 class TestExportErrorHandling:
