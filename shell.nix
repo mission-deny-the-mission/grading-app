@@ -17,6 +17,20 @@ let
     psycopg2-binary
     beautifulsoup4
 
+    # Authentication dependencies (from main branch merge)
+    flask-login
+    flask-limiter
+    flask-wtf
+    email-validator
+
+    # Desktop dependencies
+    pywebview
+    pystray
+    apscheduler
+    keyring
+    keyrings-alt  # Provides keyrings.cryptfile
+    pillow
+
     # Development dependencies
     black
     flake8
@@ -38,6 +52,11 @@ pkgs.mkShell {
     pythonEnv
     redis
     postgresql
+
+    # Desktop app dependencies
+    gtk3
+    gobject-introspection
+    wrapGAppsHook3
 
     # Additional useful tools
     git

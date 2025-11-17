@@ -41,6 +41,14 @@
           # Note: azure-cognitiveservices-vision-computervision and msrest
           # may need to be installed via pip in the shell
 
+          # Desktop dependencies
+          pywebview
+          pystray
+          apscheduler
+          keyring
+          keyrings-alt  # Provides keyrings.cryptfile
+          pygobject3
+
           # Development dependencies
           black
           flake8
@@ -64,6 +72,14 @@
             pythonEnv
             redis
             postgresql
+
+            # Desktop app system dependencies
+            gtk3
+            gobject-introspection
+            wrapGAppsHook3
+            webkitgtk_4_1
+
+            # Additional useful tools
             git
             gnumake
             which
@@ -80,6 +96,10 @@
             export LM_STUDIO_URL=''${LM_STUDIO_URL:-http://localhost:1234/v1}
             export PYTHONPATH=$(pwd)
             export PATH="$(pwd)/bin:$PATH"
+
+            # GTK/GObject introspection for PyWebView
+            export GI_TYPELIB_PATH="${pkgs.gtk3}/lib/girepository-1.0:${pkgs.webkitgtk_4_1}/lib/girepository-1.0"
+            export LD_LIBRARY_PATH="${pkgs.gtk3}/lib:${pkgs.webkitgtk_4_1}/lib:''${LD_LIBRARY_PATH:-}"
 
             # Create .env file if it doesn't exist
             if [ ! -f .env ]; then

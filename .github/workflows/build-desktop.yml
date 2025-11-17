@@ -1,0 +1,134 @@
+name: Build Desktop Installers
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller>=5.13.0
+
+      - name: Build with PyInstaller
+        run: pyinstaller grading-app.spec
+
+      - name: Verify build
+        run: |
+          if (Test-Path "dist/GradingApp/GradingApp.exe") {
+            Write-Host "Build successful"
+          } else {
+            Write-Error "Build failed - executable not found"
+            exit 1
+          }
+
+      - name: Build Windows installer
+        run: bash desktop/installer/build-all.sh windows
+        shell: bash
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/installers/*.exe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller>=5.13.0
+
+      - name: Build with PyInstaller
+        run: pyinstaller grading-app.spec
+
+      - name: Verify build
+        run: bash desktop/installer/verify-build.sh
+
+      - name: Build macOS DMG
+        run: bash desktop/installer/build-all.sh macos
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installer
+          path: dist/installers/*.dmg
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse libfuse2
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller>=5.13.0
+
+      - name: Build with PyInstaller
+        run: pyinstaller grading-app.spec
+
+      - name: Verify build
+        run: bash desktop/installer/verify-build.sh
+
+      - name: Build Linux installers
+        run: bash desktop/installer/build-all.sh linux
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            dist/installers/*.AppImage
+            dist/installers/*.deb
+
+  create-release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: installers
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            installers/windows-installer/*.exe
+            installers/macos-installer/*.dmg
+            installers/linux-installers/*.AppImage
+            installers/linux-installers/*.deb
+          draft: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

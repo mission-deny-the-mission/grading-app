@@ -27,7 +27,8 @@ MANIFEST
 
 # PyInstaller
 *.manifest
-*.spec
+# Note: We need grading-app.spec for desktop builds, so don't ignore *.spec
+# *.spec
 
 # Installer logs
 pip-log.txt
@@ -191,3 +192,4 @@ dump.rdb
 !.brokk/project.properties
 .postgres_data
 .postgres_log
+MagicMock/

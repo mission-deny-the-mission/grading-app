@@ -1004,9 +1004,10 @@ class JobBatch(db.Model):
         # Queue all pending jobs for processing
         for job in self.jobs:
             if job.status == "pending":
+                from desktop.task_queue import task_queue
                 from tasks import process_job
 
-                process_job.delay(job.id)
+                task_queue.submit(process_job, job.id)
 
         db.session.commit()
         return True
@@ -1031,9 +1032,10 @@ class JobBatch(db.Model):
         # Queue pending jobs for processing
         for job in self.jobs:
             if job.status == "pending":
+                from desktop.task_queue import task_queue
                 from tasks import process_job
 
-                process_job.delay(job.id)
+                task_queue.submit(process_job, job.id)
 
         db.session.commit()
         return True
@@ -2053,6 +2055,27 @@ class CriterionEvaluation(db.Model):
 
 
 # ===== Helper Methods for Auto-Calculation =====
+# These methods are called from routes to recalculate submission totals
+
+
+def recalculate_submission_total(submission_id):
+    """
+    Recalculate submission total points earned from all evaluations.
+
+    Args:
+        submission_id: ID of the submission to recalculate
+    """
+    submission = GradedSubmission.query.filter_by(id=submission_id).first()
+    if not submission:
+        return
+
+    evaluations = CriterionEvaluation.query.filter_by(submission_id=submission_id).all()
+    new_total = Decimal("0.00")
+    for eval_item in evaluations:
+        new_total += eval_item.points_awarded
+
+    submission.total_points_earned = new_total
+
 
 # AUTHENTICATION & MULTI-USER MODELS (004-optional-auth-system)
 # ============================================================================

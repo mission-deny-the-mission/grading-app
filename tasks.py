@@ -3,9 +3,9 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 
-from celery import Celery
 from dotenv import load_dotenv
 
+from desktop.task_queue import task_queue
 from models import (
     ExtractedContent,
     GradingJob,
@@ -31,7 +31,7 @@ anthropic = None  # Keep for compatibility, though not directly used now
 load_dotenv()
 
 
-# Create Flask app for Celery
+# Create Flask app for background tasks
 def create_app():
     """Return the main Flask app to share DB/session/config with web routes and tests."""
     # Import here to avoid circular import at module load time
@@ -60,13 +60,7 @@ def create_app():
     return flask_app
 
 
-# Initialize Celery
-celery_app = Celery("grading_tasks")
-celery_app.config_from_object("celeryconfig")
-
-
-@celery_app.task(bind=True)
-def process_job(self, job_id):
+def process_job(job_id):
     """Process all submissions in a job."""
     app = create_app()
     with app.app_context():
@@ -166,8 +160,7 @@ def _process_submissions_parallel(pending_submissions, workers):
                 )
 
 
-@celery_app.task(bind=True)
-def retry_submission_task(self, submission_id):
+def retry_submission_task(submission_id):
     """
     Task to retry a single submission.
     Resets status to 'pending' and re-triggers job processing.
@@ -184,7 +177,7 @@ def retry_submission_task(self, submission_id):
         db.session.commit()
 
         # Re-trigger the main job processing task
-        process_job.delay(job_id)
+        task_queue.submit(process_job, job_id)
 
 
 def process_job_sync(job_id):
@@ -537,7 +530,6 @@ def _get_last_error_message():
     return "All models failed to grade the document"
 
 
-@celery_app.task
 def process_batch(batch_id):
     """Process all jobs in a batch with intelligent scheduling."""
     app = create_app()
@@ -574,7 +566,7 @@ def process_batch(batch_id):
             for i, job in enumerate(pending_jobs):
                 # Add small delay between job starts
                 delay = i * 5  # 5 second intervals
-                process_job.apply_async(args=[job.id], countdown=delay)
+                task_queue.submit(process_job, job.id, countdown=delay)
                 print(f"Queued job {job.job_name} with {delay}s delay")
 
             return True
@@ -591,7 +583,6 @@ def process_batch(batch_id):
             return False
 
 
-@celery_app.task
 def process_batch_with_priority():
     """Process batches in priority order."""
     app = create_app()
@@ -607,13 +598,12 @@ def process_batch_with_priority():
             for batch in pending_batches:
                 if batch.can_start():
                     print(f"Auto-starting high priority batch: " f"{batch.batch_name}")
-                    process_batch.delay(batch.id)
+                    task_queue.submit(process_batch, batch.id)
 
         except Exception as e:
             print(f"Error in priority batch processing: {str(e)}")
 
 
-@celery_app.task
 def retry_batch_failed_jobs(batch_id):
     """Retry all failed jobs in a batch."""
     app = create_app()
@@ -627,7 +617,7 @@ def retry_batch_failed_jobs(batch_id):
 
             if retried_count > 0:
                 # Start processing the batch again
-                process_batch.delay(batch_id)
+                task_queue.submit(process_batch, batch_id)
                 print(
                     f"Retried {retried_count} failed jobs in batch "
                     f"{batch.batch_name}"
@@ -644,7 +634,6 @@ def retry_batch_failed_jobs(batch_id):
             return False
 
 
-@celery_app.task
 def pause_batch_processing(batch_id):
     """Pause batch processing."""
     app = create_app()
@@ -672,7 +661,6 @@ def pause_batch_processing(batch_id):
             return False
 
 
-@celery_app.task
 def resume_batch_processing(batch_id):
     """Resume batch processing."""
     app = create_app()
@@ -700,7 +688,6 @@ def resume_batch_processing(batch_id):
             return False
 
 
-@celery_app.task
 def cancel_batch_processing(batch_id):
     """Cancel batch processing."""
     app = create_app()
@@ -728,7 +715,6 @@ def cancel_batch_processing(batch_id):
             return False
 
 
-@celery_app.task
 def update_batch_progress(batch_id):
     """Update batch progress and status."""
     app = create_app()
@@ -746,8 +732,7 @@ def update_batch_progress(batch_id):
             return False
 
 
-@celery_app.task(bind=True)
-def process_image_ocr(self, image_submission_id):
+def process_image_ocr(image_submission_id):
     """
     Process OCR extraction for an image submission.
 
@@ -799,7 +784,7 @@ def process_image_ocr(self, image_submission_id):
                 db.session.commit()
 
                 # Queue quality assessment task after OCR completes
-                assess_image_quality.delay(image_submission_id)
+                task_queue.submit(assess_image_quality, image_submission_id)
 
                 return {
                     'status': 'success',
@@ -838,8 +823,7 @@ def process_image_ocr(self, image_submission_id):
             }
 
 
-@celery_app.task(bind=True)
-def assess_image_quality(self, image_submission_id):
+def assess_image_quality(image_submission_id):
     """
     Perform quality assessment on an image submission.
 
@@ -944,7 +928,6 @@ def assess_image_quality(self, image_submission_id):
             }
 
 
-@celery_app.task
 def cleanup_completed_batches():
     """Archive old completed batches."""
     app = create_app()
@@ -970,7 +953,6 @@ def cleanup_completed_batches():
             return 0
 
 
-@celery_app.task
 def cleanup_old_files():
     """Clean up old uploaded files."""
     app = create_app()

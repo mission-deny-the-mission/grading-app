@@ -48,6 +48,15 @@ from routes.config_routes import config_bp
 from routes.main import main_bp
 from routes.templates import templates_bp
 from routes.upload import upload_bp
+# Import grading scheme blueprints
+from routes.schemes import schemes_bp
+from routes.grading import grading_bp
+from routes.export import export_bp
+from routes.schemes_ui import schemes_ui_bp
+from routes.grading_ui import grading_ui_bp
+# Import desktop settings blueprint
+from routes.desktop_settings import desktop_settings_bp
+from routes.desktop_data import desktop_data_bp
 # admin_routes, auth_routes, sharing_routes, usage_routes are imported after limiter is initialized
 
 load_dotenv()
@@ -175,6 +184,17 @@ app.register_blueprint(upload_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(batches_bp)
 app.register_blueprint(templates_bp)
+
+# Register grading scheme blueprints
+app.register_blueprint(schemes_bp)
+app.register_blueprint(grading_bp)
+app.register_blueprint(export_bp)
+app.register_blueprint(schemes_ui_bp)
+app.register_blueprint(grading_ui_bp)
+
+# Register desktop settings blueprint
+app.register_blueprint(desktop_settings_bp)
+app.register_blueprint(desktop_data_bp)
 
 # Register authentication and configuration blueprints
 app.register_blueprint(auth_bp)

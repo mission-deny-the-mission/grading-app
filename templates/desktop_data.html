@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+{% block title %}Data Management - Document Grader{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i class="fas fa-database me-3"></i>
+                Data Management
+            </h1>
+            <p class="lead text-muted">
+                Export and import your grading data for backup and portability
+            </p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            {{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <!-- Success/Error Messages -->
+        <div id="messageContainer"></div>
+
+        <!-- Current Data Statistics -->
+        {% if statistics %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Current Data Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <h2 class="text-primary mb-2">{{ statistics.num_schemes }}</h2>
+                            <p class="text-muted mb-0">Grading Schemes</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <h2 class="text-primary mb-2">{{ statistics.num_submissions }}</h2>
+                            <p class="text-muted mb-0">Submissions</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <h2 class="text-primary mb-2">{{ statistics.num_jobs }}</h2>
+                            <p class="text-muted mb-0">Grading Jobs</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <h2 class="text-primary mb-2">{{ statistics.total_size }}</h2>
+                            <p class="text-muted mb-0">Total Size</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <i class="fas fa-database me-1"></i>
+                            Database: {{ statistics.database_size }}
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <i class="fas fa-file-upload me-1"></i>
+                            Uploads: {{ statistics.uploads_size }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Export Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-download me-2"></i>Export Data
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    Export all your grading data as a portable ZIP file. This includes:
+                </p>
+                <ul class="mb-4">
+                    <li>All grading schemes and criteria</li>
+                    <li>All submissions and grading results</li>
+                    <li>All uploaded files</li>
+                    <li>Job history and configurations</li>
+                </ul>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> API keys and credentials are NOT included in exports for security reasons.
+                </div>
+                {% if last_backup %}
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="fas fa-clock me-1"></i>
+                        Last backup: {{ last_backup.date }} ({{ last_backup.size }})
+                    </small>
+                </div>
+                {% endif %}
+                <button
+                    type="button"
+                    class="btn btn-success btn-lg"
+                    id="exportButton"
+                    onclick="exportData()"
+                >
+                    <i class="fas fa-download me-2"></i>Export All Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Import Section -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-upload me-2"></i>Import Data
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    Import data from a previously exported backup file. This will restore all grading data.
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> Importing data will overwrite your current data. Make sure to export
+                    your current data first if you want to keep it!
+                </div>
+
+                <form id="importForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="backupFile" class="form-label">
+                            <i class="fas fa-file-archive me-1"></i>
+                            Select Backup File (ZIP)
+                        </label>
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="backupFile"
+                            name="backup_file"
+                            accept=".zip"
+                            required
+                        >
+                        <div class="form-text">
+                            Select a backup ZIP file created by the Export function
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-3" id="overwriteCheckContainer" style="display: none;">
+                        <input
+                            class="form-check-input"
+                            type="checkbox"
+                            id="overwriteConfirm"
+                            name="overwrite"
+                            value="true"
+                        >
+                        <label class="form-check-label text-danger fw-bold" for="overwriteConfirm">
+                            I understand this will overwrite my existing data
+                        </label>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn btn-warning btn-lg"
+                        id="importButton"
+                        onclick="importData()"
+                    >
+                        <i class="fas fa-upload me-2"></i>Import Data
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title" id="confirmModalLabel">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Confirm Data Overwrite
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="fw-bold text-danger mb-3">
+                            Warning: This will replace your existing data!
+                        </p>
+                        <div id="comparisonContent"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-danger" onclick="confirmImport()">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Overwrite My Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-top">
+            <a href="/" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Application
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+function showMessage(message, type = 'success') {
+    const container = document.getElementById('messageContainer');
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} alert-dismissible fade show`;
+    alert.innerHTML = `
+        <i class="fas ${icon} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    container.appendChild(alert);
+
+    // Auto-dismiss after 5 seconds for success, 10 for errors
+    setTimeout(() => {
+        alert.remove();
+    }, type === 'success' ? 5000 : 10000);
+}
+
+function exportData() {
+    const button = document.getElementById('exportButton');
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exporting...';
+
+    // Create a temporary link to download the file
+    window.location.href = '/desktop/data/export';
+
+    // Reset button after a delay
+    setTimeout(() => {
+        button.disabled = false;
+        button.innerHTML = originalText;
+        showMessage('Export started. Your download should begin shortly.', 'success');
+    }, 2000);
+}
+
+let pendingImportData = null;
+
+function importData() {
+    const fileInput = document.getElementById('backupFile');
+    const button = document.getElementById('importButton');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showMessage('Please select a backup file', 'error');
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    if (!file.name.endsWith('.zip')) {
+        showMessage('Please select a valid ZIP backup file', 'error');
+        return;
+    }
+
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Validating...';
+
+    const formData = new FormData();
+    formData.append('backup_file', file);
+    formData.append('overwrite', 'false'); // Initial validation
+
+    fetch('/desktop/data/import', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            button.disabled = false;
+            button.innerHTML = originalText;
+            // Reload page after success to show updated statistics
+            setTimeout(() => location.reload(), 2000);
+        } else if (data.requires_confirmation) {
+            // Show confirmation modal with comparison
+            pendingImportData = {file: file, data: data};
+            showConfirmationModal(data);
+            button.disabled = false;
+            button.innerHTML = originalText;
+        } else {
+            showMessage(data.message || 'Import failed', 'error');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Import failed: ' + error.message, 'error');
+        button.disabled = false;
+        button.innerHTML = originalText;
+    });
+}
+
+function showConfirmationModal(data) {
+    const comparisonContent = document.getElementById('comparisonContent');
+
+    comparisonContent.innerHTML = `
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Data Type</th>
+                    <th class="text-center">Current</th>
+                    <th class="text-center">Backup</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Schemes</td>
+                    <td class="text-center">${data.current_data.schemes}</td>
+                    <td class="text-center">${data.backup_data.schemes}</td>
+                </tr>
+                <tr>
+                    <td>Submissions</td>
+                    <td class="text-center">${data.current_data.submissions}</td>
+                    <td class="text-center">${data.backup_data.submissions}</td>
+                </tr>
+                <tr>
+                    <td>Jobs</td>
+                    <td class="text-center">${data.current_data.jobs}</td>
+                    <td class="text-center">${data.backup_data.jobs}</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="small text-muted">
+            Backup created: ${data.backup_data.created_at}<br>
+            App version: ${data.backup_data.app_version}
+        </p>
+    `;
+
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    modal.show();
+}
+
+function confirmImport() {
+    if (!pendingImportData) {
+        showMessage('No pending import data', 'error');
+        return;
+    }
+
+    const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+    modal.hide();
+
+    const button = document.getElementById('importButton');
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Importing...';
+
+    const formData = new FormData();
+    formData.append('backup_file', pendingImportData.file);
+    formData.append('overwrite', 'true'); // Confirmed overwrite
+
+    fetch('/desktop/data/import', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(data.message, 'success');
+            // Reload page after success
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showMessage(data.message || 'Import failed', 'error');
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Import failed: ' + error.message, 'error');
+        button.disabled = false;
+        button.innerHTML = originalText;
+    })
+    .finally(() => {
+        pendingImportData = null;
+    });
+}
+</script>
+{% endblock %}

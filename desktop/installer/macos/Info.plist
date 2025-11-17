@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+macOS Application Bundle Info.plist for Grading App
+
+This file configures the macOS application bundle (.app) metadata.
+It should be included in the PyInstaller build by configuring grading-app.spec.
+
+To use this file with PyInstaller:
+1. Copy this file to the project root (or another accessible location)
+2. Update grading-app.spec to reference it in the BUNDLE section:
+
+   app = BUNDLE(
+       exe,
+       name='GradingApp.app',
+       info_plist='desktop/installer/macos/Info.plist',  # Add this line
+       icon='desktop/installer/macos/icon.icns',
+       bundle_identifier='com.gradingapp.desktop'
+   )
+
+For more information, see:
+- PyInstaller Bundles: https://pyinstaller.org/en/stable/spec-files.html#spec-file-options-for-a-macos-bundle
+- Info.plist Reference: https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/
+-->
+<plist version="1.0">
+<dict>
+    <!-- Bundle Identifiers -->
+    <key>CFBundleIdentifier</key>
+    <string>com.gradingapp.desktop</string>
+
+    <key>CFBundleName</key>
+    <string>Grading App</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>Grading App</string>
+
+    <key>CFBundleExecutable</key>
+    <string>GradingApp</string>
+
+    <!-- Version Information -->
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+
+    <!-- Package Type (Application) -->
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <!-- Bundle Signature (4-character code, unique identifier) -->
+    <key>CFBundleSignature</key>
+    <string>GRAD</string>
+
+    <!-- Icon File -->
+    <key>CFBundleIconFile</key>
+    <string>icon.icns</string>
+
+    <!-- Minimum macOS Version -->
+    <key>LSMinimumSystemVersion</key>
+    <string>10.14</string>
+
+    <!-- High Resolution Support (Retina displays) -->
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <!-- App Category -->
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.education</string>
+
+    <!-- UI Settings -->
+    <key>NSRequiresAquaSystemAppearance</key>
+    <false/>  <!-- Support Dark Mode -->
+
+    <!-- Copyright -->
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2024 Grading App Team. All rights reserved.</string>
+
+    <!-- URL Schemes (for deep linking, if needed in future) -->
+    <!-- Uncomment to enable gradingapp:// URL scheme
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>Grading App URL</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>gradingapp</string>
+            </array>
+        </dict>
+    </array>
+    -->
+
+    <!-- Entitlements (for security) -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>  <!-- Not sandboxed (required for full filesystem access) -->
+
+    <!-- Network Access (required for API calls) -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>  <!-- Allow HTTP connections (for local development) -->
+    </dict>
+
+    <!-- Camera/Microphone Access (if needed in future for OCR) -->
+    <!-- Uncomment if you add camera support
+    <key>NSCameraUsageDescription</key>
+    <string>Grading App needs access to your camera to capture assignment photos for OCR.</string>
+
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Grading App needs access to your microphone for recording feedback.</string>
+    -->
+
+    <!-- File Access Permissions -->
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>Grading App needs access to your desktop to import and export grading files.</string>
+
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Grading App needs access to your documents to import and export grading files.</string>
+
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>Grading App needs access to your downloads to import assignment submissions.</string>
+
+    <!-- Full Disk Access (for backup/export features) -->
+    <!-- This requires user approval in System Preferences > Security & Privacy -->
+    <key>NSSystemAdministrationUsageDescription</key>
+    <string>Grading App needs full disk access to perform backups and exports.</string>
+
+    <!-- Document Types (for opening files by double-clicking) -->
+    <!-- Uncomment to associate file types with the app
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Grading File</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>LSHandlerRank</key>
+            <string>Owner</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>public.json</string>
+            </array>
+        </dict>
+    </array>
+    -->
+
+    <!-- Supported Platforms -->
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>MacOSX</string>
+    </array>
+
+    <!-- Development Region -->
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+
+    <!-- Information for Finder "Get Info" -->
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+</dict>
+</plist>

@@ -505,8 +505,9 @@ def upload_bulk():
 
         # Start processing job
         from tasks import process_job
+        from desktop.task_queue import task_queue
 
-        process_job.delay(job.id)
+        task_queue.submit(process_job, job.id)
 
         return jsonify(
             {

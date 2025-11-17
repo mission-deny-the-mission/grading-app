@@ -40,11 +40,12 @@ class TestPasswordComplexity:
         with pytest.raises(ValueError, match="at least 1 special character"):
             AuthService.validate_password("Password123")
 
-    def test_password_validation_can_be_disabled(self):
-        """Test password complexity check can be disabled for testing."""
-        # Weak password should pass when complexity check is disabled
+    def test_password_validation_always_enforced(self):
+        """Test password complexity check is always enforced for security."""
+        # Weak password should raise ValueError regardless - complexity always enforced
         weak_password = "password"
-        assert AuthService.validate_password(weak_password, check_complexity=False) is True
+        with pytest.raises(ValueError, match="at least 1 uppercase letter"):
+            AuthService.validate_password(weak_password)
 
     def test_password_with_multiple_special_chars(self):
         """Test password with various special characters."""
@@ -165,9 +166,21 @@ class TestPasswordResetValidation:
             result = AuthService.generate_password_reset_token("test@example.com")
             token = result["token"]
 
-            # Manually expire the token
-            if hasattr(AuthService, '_reset_tokens'):
-                AuthService._reset_tokens[token]["expires_at"] = datetime.now(timezone.utc) - timedelta(hours=2)
+            # Manually expire the token by directly manipulating Redis mock
+            from services.auth_service import get_redis_client
+            redis_client = get_redis_client()
+
+            # Get the token data
+            token_key = f"password_reset:{token}"
+            token_json = redis_client.get(token_key)
+            if token_json:
+                import json
+                from datetime import datetime, timezone
+                token_data = json.loads(token_json)
+                # Set expiration to past
+                token_data["expires_at"] = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+                # Store back with immediate expiration
+                redis_client.setex(token_key, 1, json.dumps(token_data))
 
             # Validation should fail
             with pytest.raises(ValueError, match="expired"):

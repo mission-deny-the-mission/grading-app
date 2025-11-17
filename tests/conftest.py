@@ -2,14 +2,68 @@
 Pytest configuration and fixtures for the grading app tests.
 """
 
+import sys
 import os
 import tempfile
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Set TESTING environment variable before importing app
+# Mock desktop-specific dependencies before importing app
+# This is needed because app.py imports routes which import desktop modules
+sys.modules['webview'] = MagicMock()
+sys.modules['keyring'] = MagicMock()
+sys.modules['keyrings'] = MagicMock()
+sys.modules['keyrings.cryptfile'] = MagicMock()
+sys.modules['keyrings.cryptfile.cryptfile'] = MagicMock()
+sys.modules['apscheduler'] = MagicMock()
+sys.modules['apscheduler.schedulers'] = MagicMock()
+sys.modules['apscheduler.schedulers.background'] = MagicMock()
+
+# Mock Redis for password reset token tests
+class MockRedis:
+    def __init__(self):
+        self.data = {}
+        self.ttl_data = {}
+
+    def get(self, key):
+        if key in self.ttl_data and datetime.now().timestamp() > self.ttl_data[key]:
+            self.data.pop(key, None)
+            self.ttl_data.pop(key, None)
+            return None
+        return self.data.get(key)
+
+    def set(self, key, value, ex=None):
+        self.data[key] = value
+        if ex:
+            self.ttl_data[key] = datetime.now().timestamp() + ex
+
+    def setex(self, key, time, value):
+        self.data[key] = value
+        self.ttl_data[key] = datetime.now().timestamp() + time
+
+    def delete(self, key):
+        self.data.pop(key, None)
+        self.ttl_data.pop(key, None)
+
+    @staticmethod
+    def from_url(url, decode_responses=True):
+        return MockRedis()
+
+# Create RedisError exception for testing
+class RedisError(Exception):
+    pass
+
+# Mock redis module
+sys.modules['redis'] = MagicMock()
+sys.modules['redis'].from_url = MockRedis.from_url
+sys.modules['redis'].RedisError = RedisError
+
+# Set TESTING environment variable and override DATABASE_URL before importing app
+# This ensures tests use SQLite instead of PostgreSQL
 os.environ["TESTING"] = "True"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"  # Override to use in-memory SQLite for tests
 
 # Import the app and models
 from app import app as flask_app

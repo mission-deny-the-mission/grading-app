@@ -1,0 +1,28 @@
+{
+  "version": "1.1.0",
+  "release_date": "2025-11-16T12:00:00Z",
+  "release_notes": "## What's New in v1.1.0\n\n- Added automatic backup feature\n- Improved grading performance\n- Fixed export formatting issues\n- Enhanced security for API key storage\n\n## Bug Fixes\n\n- Fixed crash when opening large PDFs\n- Resolved database migration issues\n- Corrected timezone handling in reports",
+  "file_urls": {
+    "windows": "https://github.com/user/grading-app/releases/download/v1.1.0/GradingApp-1.1.0-windows.exe",
+    "macos": "https://github.com/user/grading-app/releases/download/v1.1.0/GradingApp-1.1.0-macos.dmg",
+    "linux": "https://github.com/user/grading-app/releases/download/v1.1.0/GradingApp-1.1.0-linux.AppImage"
+  },
+  "checksums": {
+    "windows": {
+      "sha256": "abc123def456789..."
+    },
+    "macos": {
+      "sha256": "def456abc123789..."
+    },
+    "linux": {
+      "sha256": "789abc123def456..."
+    }
+  },
+  "minimum_version": "1.0.0",
+  "critical": false,
+  "download_size": {
+    "windows": 52428800,
+    "macos": 54525952,
+    "linux": 50331648
+  }
+}
