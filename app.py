@@ -147,6 +147,8 @@ if FLASK_MIGRATE_AVAILABLE:
 csrf = None
 if CSRF_PROTECT_AVAILABLE:
     csrf = CSRFProtect(app)
+    # Disable CSRF for testing
+    app.config['WTF_CSRF_ENABLED'] = FLASK_ENV == "production"
 
 # Initialize rate limiter BEFORE importing blueprints to avoid circular imports (optional)
 class NoOpLimiter:

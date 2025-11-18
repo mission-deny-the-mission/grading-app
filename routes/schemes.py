@@ -13,6 +13,7 @@ from utils.scheme_validator import (
     validate_scheme_name,
     validate_hierarchy,
 )
+from middleware.permission_enforcement import require_scheme_permission, require_scheme_owner
 
 schemes_bp = Blueprint("schemes", __name__, url_prefix="/api/schemes")
 
@@ -179,9 +180,12 @@ def list_schemes():
 
 
 @schemes_bp.route("/<scheme_id>", methods=["GET"])
+@require_scheme_permission('VIEW_ONLY')
 def get_scheme(scheme_id):
     """
     Get detailed scheme information including all questions and criteria.
+
+    Permission: Requires VIEW_ONLY or higher
 
     Returns: 200 OK with full scheme data or 404 if not found
     """
@@ -200,9 +204,12 @@ def get_scheme(scheme_id):
 
 
 @schemes_bp.route("/<scheme_id>", methods=["PUT"])
+@require_scheme_permission('EDITABLE')
 def update_scheme(scheme_id):
     """
     Update scheme metadata (name, description).
+
+    Permission: Requires EDITABLE permission or owner
 
     Request body:
     {
@@ -256,9 +263,12 @@ def update_scheme(scheme_id):
 
 
 @schemes_bp.route("/<scheme_id>", methods=["DELETE"])
+@require_scheme_owner()
 def delete_scheme(scheme_id):
     """
     Soft delete a grading scheme (mark as deleted).
+
+    Permission: Requires owner (EDITABLE permission holders cannot delete)
 
     Returns: 204 No Content on success or 404/409 on error
     """
@@ -711,9 +721,12 @@ def reorder_criteria():
 
 
 @schemes_bp.route("/<scheme_id>/clone", methods=["POST"])
+@require_scheme_permission('COPY')
 def clone_scheme(scheme_id):
     """
     Clone an existing scheme with all its questions and criteria.
+
+    Permission: Requires COPY permission or owner
 
     Request body:
     {
@@ -723,6 +736,20 @@ def clone_scheme(scheme_id):
     Returns: 201 Created with new scheme data
     """
     try:
+        from flask import session
+        from flask_login import current_user
+
+        # Get current user ID
+        current_user_id = None
+        try:
+            if hasattr(current_user, 'id'):
+                current_user_id = current_user.id
+        except:
+            pass
+
+        if not current_user_id:
+            current_user_id = session.get('user_id')
+
         original_scheme = GradingScheme.query.filter_by(id=scheme_id).first()
 
         if not original_scheme:
@@ -745,10 +772,11 @@ def clone_scheme(scheme_id):
                     break
                 counter += 1
 
-        # Create new scheme
+        # Create new scheme with current user as creator
         new_scheme = GradingScheme(
             name=new_name,
             description=original_scheme.description,
+            created_by=current_user_id,  # Set current user as creator of copy
         )
 
         # Clone all questions and criteria
