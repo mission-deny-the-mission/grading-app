@@ -171,5 +171,5 @@ pytest tests/desktop/integration/ -v
 ## More Information
 
 - **Full Instructions**: See `RUNNING_DESKTOP.md`
-- **Architecture**: See `desktop/README.md`
-- **Feature Specs**: See `specs/004-desktop-app/`
+- **Architecture**: See `../../desktop/README.md`
+- **Feature Specs**: See `../../specs/004-desktop-app/`

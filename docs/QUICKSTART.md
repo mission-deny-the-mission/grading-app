@@ -366,9 +366,9 @@ Now that you're set up:
 5. Start grading your actual submissions!
 
 For more detailed documentation, see:
-- [README.md](README.md) - Full documentation
-- [desktop/README.md](desktop/README.md) - Desktop app architecture
-- [TESTING.md](.github/TESTING.md) - Testing guide
+- [README.md](../README.md) - Full documentation
+- [desktop/README.md](../desktop/README.md) - Desktop app architecture
+- [TESTING.md](../.github/TESTING.md) - Testing guide
 
 ---
 

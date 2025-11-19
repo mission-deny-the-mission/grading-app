@@ -239,12 +239,11 @@ API keys are validated before storage:
 - Testing: `docs/Testing.md`
 - Docker: `docs/Docker.md`
 - Bulk upload tests: `tests/README_bulk_upload_tests.md`
-<<<<<<< Updated upstream
 - Security implementation: `specs/002-api-provider-security/quickstart.md`
 - Security deployment guide: `specs/002-api-provider-security/deployment.md`
-=======
 - **Grading Schemes Guide**: `docs/grading-schemes/README.md`
->>>>>>> Stashed changes
+- **Quick Start**: `docs/QUICKSTART.md`
+- **Desktop Quick Start**: `docs/guides/DESKTOP_QUICKSTART.md`
 
 ## File structure
 
