@@ -46,8 +46,8 @@ class PermissionChecker:
         try:
             # Try MarkingScheme (Feature 005)
             scheme = MarkingScheme.query.filter_by(id=scheme_id).first()
-            # MarkingScheme doesn't have owner field in current implementation
-            # So we'll rely on shares only for MarkingScheme
+            if scheme and hasattr(scheme, 'owner_id') and scheme.owner_id == user_id:
+                return True
         except Exception:
             pass
 

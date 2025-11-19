@@ -171,7 +171,13 @@ def upload_document(scheme_id):
                 logger.info(f"Queued document processing task for {upload_log.id}")
             except Exception as e:
                 logger.error(f"Failed to queue document processing task: {str(e)}")
-                # Task queueing failure is not critical - conversion can still be retried manually
+                # Return warning that async processing failed
+                return jsonify({
+                    "conversion_id": str(conversion_result.id),
+                    "status": "PENDING",
+                    "warning": "Automatic processing could not be started. Please retry later.",
+                    "error": str(e)
+                }), 202
 
             # Return 202 Accepted with conversion_id
             return jsonify({

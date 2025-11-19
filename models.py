@@ -135,6 +135,7 @@ class MarkingScheme(db.Model):
     # Marking scheme metadata
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
+    owner_id = db.Column(db.String(255), index=True)  # User ID of the owner
     filename = db.Column(db.String(255), nullable=False)
     original_filename = db.Column(db.String(255), nullable=False)
     file_size = db.Column(db.Integer)

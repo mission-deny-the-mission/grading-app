@@ -8,7 +8,6 @@ Implements User Story 1 (Export) and User Story 2 (Import).
 from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_login import login_required, current_user
 import json
-import os
 import uuid
 import logging
 from io import BytesIO
@@ -42,20 +41,6 @@ def sanitize_filename(name):
     return safe_name
 
 
-def get_exports_dir():
-    """
-    Get or create the exports directory.
-
-    Returns:
-        str: Path to the exports directory
-    """
-    # Use app instance path for exports
-    exports_dir = os.path.join(current_app.instance_path, 'exports')
-    if not os.path.exists(exports_dir):
-        os.makedirs(exports_dir, exist_ok=True)
-    return exports_dir
-
-
 @scheme_export_bp.route('/<scheme_id>/export', methods=['POST'])
 @login_required
 def export_scheme(scheme_id):
@@ -85,9 +70,7 @@ def export_scheme(scheme_id):
                 "message": f"No marking scheme found with ID {scheme_id}"
             }), 404
 
-        # Authorization check (if owner_id field exists)
-        # Note: MarkingScheme model currently doesn't have owner_id field
-        # This check is prepared for future multi-user support
+        # Authorization check
         if hasattr(scheme, 'owner_id') and scheme.owner_id:
             if not current_user or not current_user.is_authenticated:
                 return jsonify({
@@ -117,27 +100,9 @@ def export_scheme(scheme_id):
         date_str = datetime.utcnow().strftime("%Y-%m-%d")
         base_filename = f"{safe_name}_{date_str}.json"
 
-        # Get exports directory
-        exports_dir = get_exports_dir()
-        file_path = os.path.join(exports_dir, base_filename)
-
-        # Generate unique file name using UUID if file already exists
-        if os.path.exists(file_path):
-            unique_id = str(uuid.uuid4())[:8]
-            base_filename = f"{safe_name}_{date_str}_{unique_id}.json"
-            file_path = os.path.join(exports_dir, base_filename)
-
-        # Save JSON to file
-        try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(json_content)
-            logger.info(f"Exported scheme {scheme_id} to {file_path}")
-        except Exception as e:
-            logger.error(f"Failed to write export file for scheme {scheme_id}: {str(e)}")
-            return jsonify({
-                "error": "File write failed",
-                "message": f"Failed to save export file: {str(e)}"
-            }), 500
+        # We no longer save to disk to avoid inconsistency with download_scheme
+        # The file is generated on-the-fly when the user clicks the download link
+        logger.info(f"Prepared export for scheme {scheme_id}")
 
         # Count criteria
         criteria_count = 0
@@ -189,9 +154,7 @@ def download_scheme(scheme_id):
                 "message": f"No marking scheme found with ID {scheme_id}"
             }), 404
 
-        # Authorization check (if owner_id field exists)
-        # Note: MarkingScheme model currently doesn't have owner_id field
-        # This check is prepared for future multi-user support
+        # Authorization check
         if hasattr(scheme, 'owner_id') and scheme.owner_id:
             if not current_user or not current_user.is_authenticated:
                 return jsonify({

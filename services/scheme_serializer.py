@@ -99,6 +99,9 @@ class MarkingSchemeSerializer:
         """
         # If it already has the export format, return it
         if "version" in scheme_dict and "metadata" in scheme_dict and "criteria" in scheme_dict:
+            # Ensure exported_at is present even in existing export format
+            if "exported_at" not in scheme_dict["metadata"]:
+                scheme_dict["metadata"]["exported_at"] = datetime.utcnow().isoformat()
             return scheme_dict
 
         # Otherwise, convert from internal format
