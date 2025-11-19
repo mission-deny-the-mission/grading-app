@@ -8,6 +8,7 @@ for use in unit and integration tests.
 import json
 from datetime import datetime
 from decimal import Decimal
+from copy import deepcopy
 
 
 # Simple rubric: 2 criteria, 4 levels each
@@ -406,17 +407,17 @@ COMPLEX_SCHEME_JSON = {
 
 def get_simple_scheme():
     """Return simple scheme as dict."""
-    return SIMPLE_SCHEME_JSON.copy()
+    return deepcopy(SIMPLE_SCHEME_JSON)
 
 
 def get_medium_scheme():
     """Return medium scheme as dict."""
-    return MEDIUM_SCHEME_JSON.copy()
+    return deepcopy(MEDIUM_SCHEME_JSON)
 
 
 def get_complex_scheme():
     """Return complex scheme as dict."""
-    return COMPLEX_SCHEME_JSON.copy()
+    return deepcopy(COMPLEX_SCHEME_JSON)
 
 
 def get_all_schemes():

@@ -10,8 +10,8 @@ from flask_login import login_required, current_user
 import json
 import os
 import uuid
-import tempfile
 import logging
+from io import BytesIO
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
@@ -222,7 +222,6 @@ def download_scheme(scheme_id):
 
         # Create a temporary file for sending
         # We use BytesIO to avoid filesystem operations
-        from io import BytesIO
         file_obj = BytesIO(json_content.encode('utf-8'))
         file_obj.seek(0)
 

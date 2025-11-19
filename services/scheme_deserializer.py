@@ -114,11 +114,7 @@ class MarkingSchemeDecoder:
             'description': metadata.get('description'),
             'criteria': criteria,
             'version': data.get('version', '1.0.0'),
-            'metadata': {
-                'name': scheme_name,
-                'description': metadata.get('description'),
-                'exported_by': metadata.get('exported_by'),
-            }
+            'metadata': metadata
         }
 
     def decode_criteria(self, criteria_list: list) -> list:
@@ -196,11 +192,14 @@ class MarkingSchemeDecoder:
             if not level:
                 raise ValueError(f"Descriptor at index {i} is missing required field: level")
 
-            if level not in valid_levels:
+            if level.lower() not in valid_levels:
                 raise ValueError(
                     f"Descriptor at index {i} has invalid level '{level}'. "
                     f"Must be one of: {', '.join(valid_levels)}"
                 )
+            
+            # Normalize level
+            level = level.lower()
 
             # Validate description
             desc = descriptor.get('description')

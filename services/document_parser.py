@@ -198,7 +198,7 @@ def extract_text_from_image(file_path: str) -> str:
                 import pytesseract
                 img = Image.open(file_path)
                 text = pytesseract.image_to_string(img)
-                logger.info(f"Successfully extracted text from image using OCR")
+                logger.info("Successfully extracted text from image using OCR")
                 return text
             except ImportError:
                 # pytesseract not available, return empty (can't do OCR)
@@ -298,7 +298,7 @@ Return the result as a JSON object with this structure:
 }
 
 Rubric text:
-{}""".format(extracted_text)
+""" + extracted_text
 
     try:
         provider = get_llm_provider()
