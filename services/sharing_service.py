@@ -2,7 +2,7 @@
 
 import logging
 
-from models import ProjectShare, User, db
+from models import ProjectShare, User, db, GradingJob
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +38,14 @@ class SharingService:
         recipient = User.query.get(recipient_id)
         if not recipient:
             raise ValueError(f"User {recipient_id} not found")
+
+        # Verify project exists and owner is legitimate
+        job = GradingJob.query.get(project_id)
+        if not job:
+            raise ValueError(f"Project {project_id} not found")
+        if job.owner_id != owner_id:
+            # Prevent forged owner_id being used to share other's projects
+            raise ValueError("Caller is not the owner of project")
 
         try:
             # Check if already shared
@@ -79,8 +87,14 @@ class SharingService:
         Returns:
             bool: True if user can access project
         """
-        # Owner always has access
-        if owner_id and user_id == owner_id:
+        # Verify owner from the actual job record, do not trust caller-provided owner_id
+        job = GradingJob.query.get(project_id)
+        actual_owner_id = None
+        if job:
+            actual_owner_id = job.owner_id
+
+        # Owner always has access (do not trust incoming owner_id param)
+        if actual_owner_id and user_id == actual_owner_id:
             return True
 
         # Check for share
@@ -100,8 +114,14 @@ class SharingService:
         Returns:
             bool: True if user can modify project
         """
-        # Owner can always modify
-        if owner_id and user_id == owner_id:
+        # Verify owner from the actual job record, do not trust caller-provided owner_id
+        job = GradingJob.query.get(project_id)
+        actual_owner_id = None
+        if job:
+            actual_owner_id = job.owner_id
+
+        # Owner can always modify (do not trust incoming owner_id param)
+        if actual_owner_id and user_id == actual_owner_id:
             return True
 
         # Check for write permission

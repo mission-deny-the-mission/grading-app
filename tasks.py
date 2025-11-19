@@ -541,11 +541,11 @@ def process_batch(batch_id):
             if not batch:
                 raise ValueError(f"Batch {batch_id} not found")
 
-            print(f"Starting to process batch: {batch.batch_name} " f"(ID: {batch_id})")
+            print(f"Starting to process batch: {batch.batch_name} (ID: {batch_id})")
 
             # Check if batch can be started
             if not batch.can_start():
-                print(f"Batch {batch_id} cannot be started. " f"Status: {batch.status}")
+                print(f"Batch {batch_id} cannot be started. Status: {batch.status}")
                 return False
 
             # Start the batch
@@ -599,7 +599,7 @@ def process_batch_with_priority():
 
             for batch in pending_batches:
                 if batch.can_start():
-                    print(f"Auto-starting high priority batch: " f"{batch.batch_name}")
+                    print(f"Auto-starting high priority batch: {batch.batch_name}")
                     task_queue.submit(process_batch, batch.id)
 
         except Exception as e:

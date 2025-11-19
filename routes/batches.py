@@ -121,7 +121,6 @@ def create_batch():
             template_id=data.get("template_id"),
             saved_prompt_id=data.get("saved_prompt_id"),
             saved_marking_scheme_id=data.get("saved_marking_scheme_id"),
-            scheme_id=data.get("scheme_id"),
             created_by=data.get("created_by", "anonymous"),
         )
 

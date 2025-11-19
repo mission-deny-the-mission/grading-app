@@ -7,7 +7,7 @@ Reusable decorators for common authorization patterns.
 from functools import wraps
 from flask import jsonify
 from flask_login import current_user
-from models import Project, GradingJob
+from models import GradingJob
 
 
 def require_admin(f):
@@ -76,7 +76,8 @@ def require_ownership(resource_type='project'):
 
             # Check ownership
             if resource_type == 'project':
-                resource = Project.query.get(resource_id)
+                # GradingJob represents projects in the data model
+                resource = GradingJob.query.get(resource_id)
                 if not resource:
                     return jsonify({"success": False, "error": "Project not found"}), 404
                 if resource.owner_id != current_user.id and not current_user.is_admin:
@@ -86,7 +87,8 @@ def require_ownership(resource_type='project'):
                 resource = GradingJob.query.get(resource_id)
                 if not resource:
                     return jsonify({"success": False, "error": "Job not found"}), 404
-                if resource.user_id != current_user.id and not current_user.is_admin:
+                # GradingJob uses owner_id to indicate the owning user
+                if resource.owner_id != current_user.id and not current_user.is_admin:
                     return jsonify({"success": False, "error": "Access denied"}), 403
 
             # Add more resource types as needed
@@ -134,7 +136,7 @@ def require_project_access(permission_level='read'):
                 return jsonify({"success": False, "error": "project_id required"}), 400
 
             # Check project exists
-            project = Project.query.get(project_id)
+            project = GradingJob.query.get(project_id)
             if not project:
                 return jsonify({"success": False, "error": "Project not found"}), 404
 
