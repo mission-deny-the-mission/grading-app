@@ -141,20 +141,3 @@ class TestDeploymentServiceDict:
             assert "configured_at" in config_dict
             assert "updated_at" in config_dict
             assert config_dict["mode"] == "multi-user"
-
-
-@pytest.fixture
-def app():
-    """Create Flask app for testing."""
-    from app import create_app
-
-    app = create_app()
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["TESTING"] = True
-
-    with app.app_context():
-        db.create_all()
-        DeploymentService.initialize_default_config()
-        yield app
-        db.session.remove()
-        db.drop_all()

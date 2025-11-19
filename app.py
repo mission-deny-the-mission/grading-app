@@ -57,6 +57,8 @@ from routes.grading_ui import grading_ui_bp
 from routes.scheme_export import scheme_export_bp
 from routes.scheme_document import scheme_document_bp
 from routes.scheme_sharing import scheme_sharing_bp
+from routes.auth_pages import auth_pages_bp
+from routes.legacy_auth_redirects import legacy_auth_bp
 # Import desktop settings blueprint
 from routes.desktop_settings import desktop_settings_bp
 from routes.desktop_data import desktop_data_bp
@@ -210,6 +212,8 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(usage_bp)
 app.register_blueprint(sharing_bp)
+app.register_blueprint(auth_pages_bp)
+app.register_blueprint(legacy_auth_bp)
 
 # Initialize authentication middleware
 from middleware.auth_middleware import init_auth_middleware

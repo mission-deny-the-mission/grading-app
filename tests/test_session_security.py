@@ -74,7 +74,7 @@ class TestSessionFixationPrevention:
 class TestConcurrentSessionHandling:
     """Test handling of concurrent sessions from same user."""
 
-    def test_multiple_sessions_allowed(self, client, test_user):
+    def test_multiple_sessions_allowed(self, client, test_user, app):
         """Test that same user can have multiple active sessions."""
         # Create first session
         client1 = client
@@ -84,8 +84,7 @@ class TestConcurrentSessionHandling:
         })
         assert response1.status_code == 200
 
-        # Create second session (different client/browser)
-        from app import app
+        # Create second session (different client/browser) using the shared app fixture
         client2 = app.test_client()
         response2 = client2.post('/api/auth/login', json={
             'email': test_user.email,
@@ -97,7 +96,7 @@ class TestConcurrentSessionHandling:
         assert client1.get('/dashboard').status_code == 200
         assert client2.get('/dashboard').status_code == 200
 
-    def test_logout_only_affects_current_session(self, client, test_user):
+    def test_logout_only_affects_current_session(self, client, test_user, app):
         """Test that logout only invalidates current session, not all sessions."""
         # Create first session
         client1 = client
@@ -107,8 +106,7 @@ class TestConcurrentSessionHandling:
         })
         assert response1.status_code == 200
 
-        # Create second session
-        from app import app
+        # Create second session using the shared app fixture
         client2 = app.test_client()
         response2 = client2.post('/api/auth/login', json={
             'email': test_user.email,
@@ -200,9 +198,8 @@ class TestAbsoluteTimeoutEnforcement:
         # Login
         auth.login()
 
-        # Session should have timeout configured
-        from app import app
-        assert app.config['PERMANENT_SESSION_LIFETIME'] == 1800  # 30 minutes
+        # Session should have timeout configured on the shared app fixture
+        assert client.application.config['PERMANENT_SESSION_LIFETIME'] == 1800  # 30 minutes
 
 
 class TestSessionInvalidationOnLogout:
@@ -268,28 +265,22 @@ class TestSessionSecurityHeaders:
         """Test that session cookies have HttpOnly flag."""
         auth.login()
 
-        # Check session cookie flags
+        # Check session cookie flags via app config (test client may not expose cookie flags)
         for cookie in client.cookie_jar:
             if cookie.name == 'session':
-                # HttpOnly should be set (prevents JavaScript access)
-                # Test client may not expose this, but config should be set
-                from app import app
-                assert app.config['SESSION_COOKIE_HTTPONLY'] is True
+                assert client.application.config['SESSION_COOKIE_HTTPONLY'] is True
 
     def test_session_cookie_samesite(self, client):
         """Test that session cookies have SameSite protection."""
-        from app import app
-        assert app.config['SESSION_COOKIE_SAMESITE'] == 'Lax'
+        assert client.application.config['SESSION_COOKIE_SAMESITE'] == 'Lax'
 
     def test_session_cookie_secure_in_production(self, client, monkeypatch):
         """Test that session cookies are Secure in production."""
-        from app import app
-
         # In production, should be secure
         monkeypatch.setenv('FLASK_ENV', 'production')
         # Config is set at startup, so check the logic
         # IS_PRODUCTION should be True, SESSION_COOKIE_SECURE should be True
-        assert app.config.get('SESSION_COOKIE_SECURE') is not None
+        assert client.application.config.get('SESSION_COOKIE_SECURE') is not None
 
 
 class TestSessionDataIntegrity:
@@ -298,10 +289,9 @@ class TestSessionDataIntegrity:
     def test_session_data_signed(self, client, test_user, auth):
         """Test that session data is signed (tampering protection)."""
         # Flask sessions are signed by default with SECRET_KEY
-        # This is implicit but we can verify SECRET_KEY is set
-        from app import app
-        assert app.secret_key is not None
-        assert len(app.secret_key) >= 32  # Minimum length enforced
+        # This is implicit but we can verify SECRET_KEY is set on the shared app
+        assert client.application.secret_key is not None
+        assert len(client.application.secret_key) >= 32  # Minimum length enforced
 
     def test_tampered_session_rejected(self, client, test_user, auth):
         """Test that tampered sessions are rejected."""
@@ -318,9 +308,9 @@ class TestSessionDataIntegrity:
 
     def test_session_requires_valid_secret_key(self):
         """Test that sessions require valid SECRET_KEY."""
-        from app import app
         # SECRET_KEY validation happens at startup
         # Verify it's properly configured
+        from app import app
         assert app.secret_key is not None
 
         # In production, must be secure (checked at startup)

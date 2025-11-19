@@ -203,19 +203,3 @@ class TestAuthServiceListUsers:
             assert len(result["users"]) == 5
             assert result["limit"] == 5
             assert result["offset"] == 0
-
-
-@pytest.fixture
-def app():
-    """Create Flask app for testing."""
-    from app import create_app
-
-    app = create_app()
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["TESTING"] = True
-
-    with app.app_context():
-        db.create_all()
-        yield app
-        db.session.remove()
-        db.drop_all()

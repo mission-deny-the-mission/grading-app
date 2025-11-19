@@ -55,6 +55,8 @@ def init_auth_middleware(app):
             public_routes = {
                 "auth.login",
                 "auth.register",
+                "legacy_auth.login_redirect",
+                "legacy_auth.register_redirect",
                 "config.get_deployment_mode",  # Allow checking deployment mode
                 "config.health_check",  # Allow health checks
                 "main.index",
@@ -68,7 +70,9 @@ def init_auth_middleware(app):
                 if _is_api_request():
                     return jsonify({"error": "Unauthorized"}), 401
                 else:
-                    return redirect(url_for("auth.login", next=request.url))
+                    # Redirect to HTML login page and preserve original destination
+                    login_url = url_for("auth_pages.login_page")
+                    return redirect(f"{login_url}?next={request.url}")
 
         logger.debug(f"User {current_user.email if current_user.is_authenticated else 'anonymous'} accessing {request.path}")
 

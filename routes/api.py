@@ -267,6 +267,37 @@ def api_jobs():
     return jsonify([job.to_dict() for job in jobs])
 
 
+@api_bp.route("/batches", methods=["GET"])
+def api_batches():
+    """API endpoint for all batches.
+
+    In multi-user mode this requires authentication and returns
+    a 401 JSON error when the user is not logged in. In single-user
+    mode it behaves like an open endpoint.
+    """
+    from flask_login import current_user
+    from services.deployment_service import DeploymentService
+
+    # Enforce auth only in multi-user mode
+    if DeploymentService.is_multi_user_mode() and not current_user.is_authenticated:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    batches = JobBatch.query.order_by(JobBatch.created_at.desc()).all()
+
+    return jsonify(
+        {
+            "success": True,
+            "batches": [batch.to_dict() for batch in batches],
+            "pagination": {
+                "page": 1,
+                "pages": 1,
+                "has_next": False,
+                "has_prev": False,
+            },
+        }
+    )
+
+
 @api_bp.route("/jobs/<job_id>")
 def api_job_detail(job_id):
     """API endpoint for job details."""

@@ -220,9 +220,14 @@ def cleanup_db_session(app):
 
 @pytest.fixture(autouse=True)
 def reset_deployment_mode(app):
-    """Reset deployment mode to single-user after each test."""
+    """Reset deployment mode to multi-user after each test by default.
+
+    Tests that specifically need single-user mode use dedicated
+    fixtures (e.g. app_single_user), so the default for generic
+    tests can be multi-user to exercise auth middleware.
+    """
     yield
-    # Reset to single-user mode after each test
+    # Reset to multi-user mode after each test
     with app.app_context():
         try:
             from models import DeploymentConfig
@@ -232,7 +237,7 @@ def reset_deployment_mode(app):
             # This handles tests that create their own isolated database
             inspector = db.inspect(db.engine)
             if "deployment_config" in inspector.get_table_names():
-                DeploymentService.set_mode("single-user")
+                DeploymentService.set_mode("multi-user")
         except Exception:
             # Silently ignore errors - test may have its own isolated DB
             pass

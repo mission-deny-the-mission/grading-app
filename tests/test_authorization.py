@@ -253,26 +253,8 @@ class TestPermissionEscalation:
 
 # Fixtures
 @pytest.fixture
-def app():
-    """Create Flask app for testing."""
-    from app import create_app
-
-    app = create_app()
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["TESTING"] = True
-    app.config["WTF_CSRF_ENABLED"] = False
-
-    with app.app_context():
-        db.create_all()
-        DeploymentService.initialize_default_config()
-        yield app
-        db.session.remove()
-        db.drop_all()
-
-
-@pytest.fixture
 def app_single_user(app):
-    """Create Flask app in single-user mode."""
+    """Configure shared test app in single-user mode."""
     with app.app_context():
         DeploymentService.set_mode("single-user")
     return app
@@ -280,7 +262,7 @@ def app_single_user(app):
 
 @pytest.fixture
 def app_multi_user(app):
-    """Create Flask app in multi-user mode."""
+    """Configure shared test app in multi-user mode."""
     with app.app_context():
         DeploymentService.set_mode("multi-user")
     return app
@@ -288,11 +270,11 @@ def app_multi_user(app):
 
 @pytest.fixture
 def client_single_user(app_single_user):
-    """Create test client for single-user mode."""
+    """Create test client for single-user mode using shared app fixture."""
     return app_single_user.test_client()
 
 
 @pytest.fixture
 def client_multi_user(app_multi_user):
-    """Create test client for multi-user mode."""
+    """Create test client for multi-user mode using shared app fixture."""
     return app_multi_user.test_client()

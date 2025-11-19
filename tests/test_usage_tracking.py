@@ -376,22 +376,3 @@ class TestQuotaManagement:
             assert initial.id == updated.id  # Same record
             assert updated.limit_value == 200000
             assert updated.reset_period == "weekly"
-
-
-# Fixtures
-@pytest.fixture
-def app():
-    """Create Flask app for testing."""
-    from app import create_app
-
-    app = create_app()
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-    app.config["TESTING"] = True
-    app.config["WTF_CSRF_ENABLED"] = False
-
-    with app.app_context():
-        db.create_all()
-        DeploymentService.initialize_default_config()
-        yield app
-        db.session.remove()
-        db.drop_all()
