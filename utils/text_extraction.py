@@ -1,6 +1,9 @@
 """
 Text extraction utilities for processing various file formats.
 This module consolidates all text extraction logic to eliminate redundancy.
+
+DEPRECATED: This module is deprecated and will be removed in a future version.
+Please use services.document_parser instead.
 """
 
 import PyPDF2

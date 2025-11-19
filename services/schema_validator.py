@@ -3,6 +3,9 @@ Schema Validation Service
 
 Provides validation utilities for marking scheme JSON schema.
 Implements validation framework for import/export operations.
+
+NOTE: This module is currently a placeholder and not fully implemented.
+See utils.scheme_validator for current validation logic.
 """
 
 from typing import Tuple, List, Dict, Any

@@ -2,7 +2,6 @@
 UI Routes for Grading Scheme Management
 
 Handles rendering HTML templates for scheme CRUD operations.
-All data access goes through the /api/schemes/* endpoints.
 """
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash

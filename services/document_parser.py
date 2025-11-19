@@ -55,6 +55,8 @@ def get_document_type(file_path: str) -> str:
         return 'docx'
     elif file_path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
         return 'image'
+    elif file_path.endswith('.txt'):
+        return 'txt'
     else:
         raise ValueError(f"Unsupported file type: {Path(file_path).suffix}")
 
@@ -215,6 +217,38 @@ def extract_text_from_image(file_path: str) -> str:
         raise ValueError(f"Error processing image: {e}")
 
 
+def extract_text_from_txt(file_path: str) -> str:
+    """
+    Extract text from a text file.
+
+    Args:
+        file_path: Path to text file
+
+    Returns:
+        str: Extracted text
+
+    Raises:
+        FileNotFoundError: If file doesn't exist
+    """
+    file_path = str(file_path)
+
+    if not Path(file_path).exists():
+        raise FileNotFoundError(f"Text file not found: {file_path}")
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+
+        if not text.strip():
+            logger.warning("Text file appears to be empty")
+            return ""
+
+        return text
+    except Exception as e:
+        logger.error(f"Error reading text file: {e}")
+        raise ValueError(f"Error reading text file: {e}")
+
+
 def get_llm_provider():
     """
     Get LLM provider instance from app config.
@@ -231,10 +265,10 @@ def get_llm_provider():
     if not provider_type:
         raise ValueError("LLM provider not configured in app config")
 
-    # Import provider abstraction from 002-api-provider-security
+    # Import provider abstraction from utils.llm_providers
     try:
-        from services.llm_provider import get_provider
-        provider = get_provider(provider_type)
+        from utils.llm_providers import get_llm_provider
+        provider = get_llm_provider(provider_type)
         return provider
     except ImportError:
         raise ValueError("LLM provider abstraction not available")
@@ -301,12 +335,19 @@ Rubric text:
 
     try:
         provider = get_llm_provider()
-        response = provider.call(
-            messages=[{"role": "user", "content": prompt}],
+        # Use grade_document as a proxy for generic call
+        result = provider.grade_document(
+            text=extracted_text,
+            prompt=prompt,
             temperature=0.3,  # Lower temperature for more consistent extraction
             max_tokens=2000
         )
-        return response
+        
+        if result.get('success'):
+            return str(result.get('grade', ''))
+        else:
+            raise ValueError(result.get('error', 'Unknown error from LLM provider'))
+
     except Exception as e:
         logger.error(f"LLM call failed: {e}")
         raise ValueError(f"Failed to call LLM for rubric analysis: {e}")
@@ -446,6 +487,8 @@ class DocumentParser:
                 text = extract_text_from_docx(file_path)
             elif doc_type == 'image':
                 text = extract_text_from_image(file_path)
+            elif doc_type == 'txt':
+                text = extract_text_from_txt(file_path)
             else:
                 raise ValueError(f"Unsupported document type: {doc_type}")
 
@@ -490,10 +533,17 @@ class DocumentParser:
         # Call LLM
         try:
             if provider:
-                llm_response = provider.call(
-                    messages=[{"role": "user", "content": extracted_text}],
+                # Use grade_document as a proxy for generic call
+                # Note: provider must be an instance of LLMProvider
+                result = provider.grade_document(
+                    text=extracted_text,
+                    prompt="Parse this rubric document and extract marking criteria.",
                     temperature=0.3
                 )
+                if result.get('success'):
+                    llm_response = result.get('grade')
+                else:
+                    raise ValueError(result.get('error', 'Unknown error'))
             else:
                 llm_response = call_llm_for_rubric_analysis(extracted_text)
 

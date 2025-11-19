@@ -75,7 +75,7 @@ class TestDocumentTypeDetection:
 
     def test_unsupported_file_type_raises_error(self):
         """Test that unsupported file types raise ValueError."""
-        temp_file = tempfile.NamedTemporaryFile(suffix='.txt', delete=False)
+        temp_file = tempfile.NamedTemporaryFile(suffix='.xyz', delete=False)
         temp_file.write(b'unsupported file type')
         temp_file.close()
 
@@ -469,15 +469,18 @@ class TestDocumentParser:
         """Test that convert_document_to_scheme returns extracted scheme and flags."""
         # Create a mock provider
         mock_provider = MagicMock()
-        mock_provider.call.return_value = json.dumps({
-            "extracted_scheme": {
-                "name": "Generated Rubric",
-                "metadata": {"name": "Generated Rubric"},
-                "criteria": [],
-                "version": "1.0.0"
-            },
-            "uncertainty_flags": []
-        })
+        mock_provider.grade_document.return_value = {
+            "success": True,
+            "grade": json.dumps({
+                "extracted_scheme": {
+                    "name": "Generated Rubric",
+                    "metadata": {"name": "Generated Rubric"},
+                    "criteria": [],
+                    "version": "1.0.0"
+                },
+                "uncertainty_flags": []
+            })
+        }
 
         parser = DocumentParser()
         file_path = create_sample_pdf("Test rubric text")
@@ -488,7 +491,7 @@ class TestDocumentParser:
             assert "extracted_scheme" in result
             assert isinstance(result["extracted_scheme"], dict)
             # Verify provider was called
-            assert mock_provider.call.called
+            assert mock_provider.grade_document.called
         finally:
             cleanup_temp_file(file_path)
 
@@ -496,17 +499,20 @@ class TestDocumentParser:
     def test_convert_with_uncertainty_flags(self, mock_get_provider):
         """Test conversion result includes uncertainty flags."""
         mock_provider = MagicMock()
-        mock_provider.call.return_value = json.dumps({
-            "extracted_scheme": {
-                "name": "Test",
-                "metadata": {"name": "Test"},
-                "criteria": [{"name": "C1", "descriptors": []}],
-                "version": "1.0.0"
-            },
-            "uncertainty_flags": [
-                {"field": "criteria[0].weight", "confidence": 0.3}
-            ]
-        })
+        mock_provider.grade_document.return_value = {
+            "success": True,
+            "grade": json.dumps({
+                "extracted_scheme": {
+                    "name": "Test",
+                    "metadata": {"name": "Test"},
+                    "criteria": [{"name": "C1", "descriptors": []}],
+                    "version": "1.0.0"
+                },
+                "uncertainty_flags": [
+                    {"field": "criteria[0].weight", "confidence": 0.3}
+                ]
+            })
+        }
         mock_get_provider.return_value = mock_provider
 
         parser = DocumentParser()
