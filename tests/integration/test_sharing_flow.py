@@ -7,7 +7,7 @@ import json
 import pytest
 
 from app import app
-from models import GradingScheme, SchemeShare, SharePermission, User, db
+from models import GradingScheme, SchemeShare, SharePermission, User, DeploymentConfig, db
 
 
 @pytest.fixture(scope="function")
@@ -15,6 +15,17 @@ def app_context():
     """Create app context for tests."""
     with app.app_context():
         db.create_all()
+        # Initialize deployment mode to single-user for these tests
+        # This bypasses authentication middleware while still testing sharing logic
+        config = DeploymentConfig.query.filter_by(id="singleton").first()
+        if not config:
+            config = DeploymentConfig(id="singleton", mode="single-user")
+            db.session.add(config)
+            db.session.commit()
+        else:
+            # Ensure mode is set to single-user for these tests
+            config.mode = "single-user"
+            db.session.commit()
         yield
         db.session.remove()
         db.drop_all()

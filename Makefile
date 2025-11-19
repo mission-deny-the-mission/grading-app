@@ -1,4 +1,4 @@
-.PHONY: help build up down logs clean dev-build dev-up dev-down dev-logs test lint format
+.PHONY: help build up down logs clean dev-build dev-up dev-down dev-logs test test-sequential test-verbose test-coverage test-failed test-fast lint format
 
 # Default target
 help:
@@ -19,11 +19,16 @@ help:
 	@echo "  dev-beat  - Start Celery beat"
 	@echo ""
 	@echo "Code quality:"
-	@echo "  test      - Run tests"
-	@echo "  lint      - Run linting"
-	@echo "  format    - Format code"
-	@echo "  validate  - Validate bulk upload model loading fix"
-	@echo "  validate-tests - Run comprehensive bulk upload tests"
+	@echo "  test            - Run tests in parallel (default, fast)"
+	@echo "  test-sequential - Run tests sequentially (no parallelization)"
+	@echo "  test-verbose    - Run tests with verbose output"
+	@echo "  test-coverage   - Run tests with coverage report"
+	@echo "  test-failed     - Re-run only previously failed tests"
+	@echo "  test-fast       - Run tests with minimal output"
+	@echo "  lint            - Run linting"
+	@echo "  format          - Format code"
+	@echo "  validate        - Validate bulk upload model loading fix"
+	@echo "  validate-tests  - Run comprehensive bulk upload tests"
 
 # Production commands
 build:
@@ -68,7 +73,28 @@ dev-beat:
 
 # Code quality commands
 test:
+	@echo "Running tests in parallel with pytest-xdist..."
 	docker compose -f docker-compose.dev.yml exec app pytest
+
+test-sequential:
+	@echo "Running tests sequentially (no parallelization)..."
+	docker compose -f docker-compose.dev.yml exec app pytest -n 0
+
+test-verbose:
+	@echo "Running tests with verbose output..."
+	docker compose -f docker-compose.dev.yml exec app pytest -vv
+
+test-coverage:
+	@echo "Running tests with coverage (sequential)..."
+	docker compose -f docker-compose.dev.yml exec app pytest -n 0 --cov=app --cov=models --cov=tasks --cov=desktop --cov-report=html --cov-report=term-missing
+
+test-failed:
+	@echo "Re-running only failed tests..."
+	docker compose -f docker-compose.dev.yml exec app pytest --lf
+
+test-fast:
+	@echo "Running tests with minimal output..."
+	docker compose -f docker-compose.dev.yml exec app pytest -q
 
 lint:
 	docker compose -f docker-compose.dev.yml exec app flake8 .

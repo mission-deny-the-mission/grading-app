@@ -19,7 +19,8 @@
       "Bash(sed:*)",
       "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
       "Bash(tree:*)",
-      "Bash(.specify/scripts/bash/check-prerequisites.sh --json)"
+      "Bash(.specify/scripts/bash/check-prerequisites.sh --json)",
+      "Bash(make test:*)"
     ],
     "deny": [],
     "ask": []

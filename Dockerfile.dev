@@ -48,6 +48,7 @@ RUN pip install --no-cache-dir --upgrade pip \
         pylint \
         pytest \
         pytest-cov \
+        pytest-xdist \
         ipython \
         ipdb \
         debugpy \

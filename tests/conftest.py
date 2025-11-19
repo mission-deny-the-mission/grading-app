@@ -2,8 +2,8 @@
 Pytest configuration and fixtures for the grading app tests.
 """
 
-import sys
 import os
+import sys
 import tempfile
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -12,14 +12,15 @@ import pytest
 
 # Mock desktop-specific dependencies before importing app
 # This is needed because app.py imports routes which import desktop modules
-sys.modules['webview'] = MagicMock()
-sys.modules['keyring'] = MagicMock()
-sys.modules['keyrings'] = MagicMock()
-sys.modules['keyrings.cryptfile'] = MagicMock()
-sys.modules['keyrings.cryptfile.cryptfile'] = MagicMock()
-sys.modules['apscheduler'] = MagicMock()
-sys.modules['apscheduler.schedulers'] = MagicMock()
-sys.modules['apscheduler.schedulers.background'] = MagicMock()
+sys.modules["webview"] = MagicMock()
+sys.modules["keyring"] = MagicMock()
+sys.modules["keyrings"] = MagicMock()
+sys.modules["keyrings.cryptfile"] = MagicMock()
+sys.modules["keyrings.cryptfile.cryptfile"] = MagicMock()
+sys.modules["apscheduler"] = MagicMock()
+sys.modules["apscheduler.schedulers"] = MagicMock()
+sys.modules["apscheduler.schedulers.background"] = MagicMock()
+
 
 # Mock Redis for password reset token tests
 class MockRedis:
@@ -51,23 +52,75 @@ class MockRedis:
     def from_url(url, decode_responses=True):
         return MockRedis()
 
+
 # Create RedisError exception for testing
 class RedisError(Exception):
     pass
 
+
 # Mock redis module
-sys.modules['redis'] = MagicMock()
-sys.modules['redis'].from_url = MockRedis.from_url
-sys.modules['redis'].RedisError = RedisError
+sys.modules["redis"] = MagicMock()
+sys.modules["redis"].from_url = MockRedis.from_url
+sys.modules["redis"].RedisError = RedisError
+
+
+# Mock Celery task decorator to add .delay method to functions
+class MockCeleryTask:
+    """Mock Celery task that adds .delay and .apply_async methods."""
+
+    def __call__(self, func):
+        """Decorate function to add Celery task methods."""
+        mock_delay = MagicMock(return_value=MagicMock(id="mock-task-id"))
+        mock_apply_async = MagicMock(return_value=MagicMock(id="mock-task-id"))
+        func.delay = mock_delay
+        func.apply_async = mock_apply_async
+        return func
+
+
+# Patch tasks module to add .delay to all task functions
+def mock_tasks_module():
+    """Add .delay method to task functions after tasks module is imported."""
+    try:
+        import tasks
+
+        # Add .delay method to process_job and other task functions
+        if hasattr(tasks, "process_job") and not hasattr(tasks.process_job, "delay"):
+            tasks.process_job.delay = MagicMock(
+                return_value=MagicMock(id="mock-task-id")
+            )
+            tasks.process_job.apply_async = MagicMock(
+                return_value=MagicMock(id="mock-task-id")
+            )
+    except ImportError:
+        pass
 
 # Set TESTING environment variable and override DATABASE_URL before importing app
 # This ensures tests use SQLite instead of PostgreSQL
 os.environ["TESTING"] = "True"
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"  # Override to use in-memory SQLite for tests
+os.environ["DATABASE_URL"] = (
+    "sqlite:///:memory:"  # Override to use in-memory SQLite for tests
+)
 
 # Import the app and models
 from app import app as flask_app
 from models import GradingJob, JobBatch, MarkingScheme, Submission, db
+
+# Mock task functions to have .delay method
+mock_tasks_module()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def initialize_db_for_tests():
+    """
+    Session-level fixture to ensure db is properly initialized with the app.
+    This runs once at the start of the test session and ensures that the
+    db instance is properly bound to the Flask app, preventing SQLAlchemy
+    "not registered" errors.
+    """
+    # Force re-initialization of db with the app if needed
+    if "sqlalchemy" not in flask_app.extensions:
+        db.init_app(flask_app)
+    yield
 
 
 @pytest.fixture
@@ -85,29 +138,200 @@ def app():
             "WTF_CSRF_ENABLED": False,
             "UPLOAD_FOLDER": tempfile.mkdtemp(),
             "RATELIMIT_ENABLED": False,
+            "SQLALCHEMY_ENGINE_OPTIONS": {
+                "pool_pre_ping": True,
+                "pool_recycle": 300,
+            },
         }
     )
 
     # Disable rate limiting for tests by monkey-patching the limiter
     try:
         from app import limiter
-        if hasattr(limiter, '_enabled'):
+
+        if hasattr(limiter, "_enabled"):
             limiter._enabled = False
-        elif hasattr(limiter, 'enabled'):
+        elif hasattr(limiter, "enabled"):
             limiter.enabled = False
     except (ImportError, AttributeError):
         pass
+
+    # Ensure db is initialized with app
+    # This fixes "The current Flask app is not registered with this
+    # 'SQLAlchemy'" error which can happen if the app was imported before
+    # db was fully ready or in some test environments
+    if "sqlalchemy" not in flask_app.extensions:
+        db.init_app(flask_app)
 
     # Create the database tables
     with flask_app.app_context():
         db.create_all()
         yield flask_app
-        db.session.remove()
-        db.drop_all()
+        # Cleanup: ensure all sessions are closed and removed
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            db.session.close()
+        except Exception:
+            pass
+        try:
+            db.session.remove()
+        except Exception:
+            pass
+        try:
+            db.drop_all()
+        except Exception:
+            pass
+        # Close all connections
+        try:
+            db.engine.dispose()
+        except Exception:
+            pass
 
-    # Clean up
-    os.close(db_fd)
-    os.unlink(db_path)
+    # Clean up temp database file
+    try:
+        os.close(db_fd)
+        os.unlink(db_path)
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def cleanup_db_session(app):
+    """Automatically clean up database session after each test."""
+    yield
+    # Clean up after each test
+    with app.app_context():
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            db.session.close()
+        except Exception:
+            pass
+        try:
+            db.session.remove()
+        except Exception:
+            pass
+
+
+@pytest.fixture(autouse=True)
+def reset_deployment_mode(app):
+    """Reset deployment mode to single-user after each test."""
+    yield
+    # Reset to single-user mode after each test
+    with app.app_context():
+        try:
+            from models import DeploymentConfig
+            from services.deployment_service import DeploymentService
+
+            # Check if deployment_config table exists before trying to reset
+            # This handles tests that create their own isolated database
+            inspector = db.inspect(db.engine)
+            if "deployment_config" in inspector.get_table_names():
+                DeploymentService.set_mode("single-user")
+        except Exception:
+            # Silently ignore errors - test may have its own isolated DB
+            pass
+
+
+@pytest.fixture(autouse=True)
+def cleanup_flask_globals():
+    """Clean up Flask globals and request context after each test."""
+    yield
+    # Clean up Flask globals
+    try:
+        from flask import g
+
+        # Clear Flask g object
+        if hasattr(g, "__dict__"):
+            g.__dict__.clear()
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def cleanup_scheduler():
+    """Clean up scheduler state before and after tests."""
+    import time
+
+    # Clean up BEFORE test to ensure fresh state
+    try:
+        import desktop.scheduler
+
+        # Shutdown the global scheduler if it's running
+        if hasattr(desktop.scheduler, 'scheduler'):
+            scheduler = desktop.scheduler.scheduler
+            if hasattr(scheduler, 'running') and scheduler.running:
+                scheduler.shutdown(wait=True)
+                # Give it a moment to fully stop and release all resources
+                time.sleep(0.3)
+
+            # Remove all jobs to ensure clean state
+            if hasattr(scheduler, 'remove_all_jobs'):
+                try:
+                    scheduler.remove_all_jobs()
+                except Exception:
+                    pass
+
+            # Create a fresh scheduler instance for the next test
+            from apscheduler.schedulers.background import BackgroundScheduler
+            desktop.scheduler.scheduler = BackgroundScheduler()
+    except Exception:
+        pass
+
+    yield
+
+    # Clean up AFTER test as well
+    try:
+        import desktop.scheduler
+
+        # Shutdown the global scheduler if it's running
+        if hasattr(desktop.scheduler, 'scheduler'):
+            scheduler = desktop.scheduler.scheduler
+            if hasattr(scheduler, 'running') and scheduler.running:
+                scheduler.shutdown(wait=True)
+                # Give it a moment to fully stop and release all resources
+                time.sleep(0.3)
+
+            # Remove all jobs to ensure clean state
+            if hasattr(scheduler, 'remove_all_jobs'):
+                try:
+                    scheduler.remove_all_jobs()
+                except Exception:
+                    pass
+
+            # Create a fresh scheduler instance for the next test
+            from apscheduler.schedulers.background import BackgroundScheduler
+            desktop.scheduler.scheduler = BackgroundScheduler()
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def cleanup_environment():
+    """Clean up test-specific environment variables after each test."""
+    # Store original test-related env vars
+    test_env_vars = [
+        "FLASK_ENV",
+        "FLASK_DEBUG",
+        "SECRET_KEY",
+        "DB_ENCRYPTION_KEY",
+        "OPENROUTER_API_KEY",
+        "CLAUDE_API_KEY",
+        "LM_STUDIO_URL",
+    ]
+    original_values = {key: os.environ.get(key) for key in test_env_vars}
+    yield
+    # Restore original values for test-related env vars only
+    for key in test_env_vars:
+        if original_values[key] is not None:
+            os.environ[key] = original_values[key]
+        elif key in os.environ:
+            del os.environ[key]
 
 
 @pytest.fixture
@@ -127,6 +351,7 @@ def sample_job(app):
     """Create a sample grading job for testing."""
     with app.app_context():
         from models import db
+
         job = GradingJob(
             job_name="Test Job",
             description="A test job for unit testing",
@@ -151,6 +376,7 @@ def sample_submission(app, sample_job):
     """Create a sample submission for testing."""
     with app.app_context():
         from models import db
+
         submission = Submission(
             job_id=sample_job.id,
             original_filename="test_document.txt",
@@ -171,6 +397,7 @@ def sample_marking_scheme(app):
     """Create a sample marking scheme for testing."""
     with app.app_context():
         from models import db
+
         marking_scheme = MarkingScheme(
             name="Test Marking Scheme",
             original_filename="test_rubric.txt",
@@ -190,6 +417,7 @@ def sample_batch(app):
     """Create a sample batch for testing."""
     with app.app_context():
         from models import db
+
         batch = JobBatch(
             batch_name="Test Batch",
             description="A test batch for unit testing",
@@ -235,7 +463,9 @@ def mock_celery():
 @pytest.fixture
 def sample_text_file():
     """Create a sample text file for testing."""
-    content = "This is a test document for grading. It contains sample text to evaluate."
+    content = (
+        "This is a test document for grading. It contains sample text to evaluate."
+    )
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write(content)
         temp_path = f.name
@@ -312,10 +542,7 @@ def test_user(app, multi_user_mode):
 
     with app.app_context():
         user = AuthService.create_user(
-            "testuser@example.com",
-            "TestPass123!",
-            "Test User",
-            is_admin=False
+            "testuser@example.com", "TestPass123!", "Test User", is_admin=False
         )
         yield user
 
@@ -327,10 +554,7 @@ def admin_user(app, multi_user_mode):
 
     with app.app_context():
         user = AuthService.create_user(
-            "admin@example.com",
-            "AdminPass123!",
-            "Admin User",
-            is_admin=True
+            "admin@example.com", "AdminPass123!", "Admin User", is_admin=True
         )
         yield user
 
@@ -340,7 +564,7 @@ def auth_headers(client, test_user):
     """Get authentication headers for a regular user."""
     response = client.post(
         "/api/auth/login",
-        json={"email": "testuser@example.com", "password": "TestPass123!"}
+        json={"email": "testuser@example.com", "password": "TestPass123!"},
     )
     assert response.status_code == 200
     # Flask-Login uses session cookies, so no need for explicit headers
@@ -353,7 +577,7 @@ def admin_headers(client, admin_user):
     """Get authentication headers for an admin user."""
     response = client.post(
         "/api/auth/login",
-        json={"email": "admin@example.com", "password": "AdminPass123!"}
+        json={"email": "admin@example.com", "password": "AdminPass123!"},
     )
     assert response.status_code == 200
     # Flask-Login uses session cookies, so no need for explicit headers
