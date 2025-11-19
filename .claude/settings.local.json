@@ -18,7 +18,8 @@
       "Bash(python3:*)",
       "Bash(sed:*)",
       "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh --json)"
     ],
     "deny": [],
     "ask": []

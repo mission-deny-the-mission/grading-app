@@ -135,6 +135,7 @@ class MarkingScheme(db.Model):
     # Marking scheme metadata
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
+    owner_id = db.Column(db.String(255), index=True)  # User ID of the owner
     filename = db.Column(db.String(255), nullable=False)
     original_filename = db.Column(db.String(255), nullable=False)
     file_size = db.Column(db.Integer)
@@ -2309,3 +2310,197 @@ class AuthSession(db.Model):
             "ip_address": self.ip_address,
             "user_agent": self.user_agent,
         }
+
+
+# ============================================================================
+# Feature 005: Marking Schemes as Files - New Models
+# ============================================================================
+from enum import Enum
+
+
+class SharePermission(Enum):
+    """Permission levels for shared marking schemes."""
+    VIEW_ONLY = "VIEW_ONLY"      # Can view and use; cannot modify
+    EDITABLE = "EDITABLE"        # Can modify (affects shared version)
+    COPY = "COPY"                # Can create independent copy
+
+
+class SchemeShare(db.Model):
+    """Model representing a sharing relationship for a marking scheme.
+
+    Links a MarkingScheme to one or more users or groups with specific permissions.
+    """
+
+    __tablename__ = "scheme_share"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    # Scheme being shared
+    scheme_id = db.Column(db.String(36), db.ForeignKey('marking_schemes.id', ondelete='CASCADE'), nullable=False)
+
+    # Recipients (one of user_id or group_id, not both)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True)
+    group_id = db.Column(db.String(36), nullable=True)  # Will add FK when UserGroup exists
+
+    # Permission level
+    permission = db.Column(db.String(20), nullable=False)  # VIEW_ONLY, EDITABLE, COPY
+
+    # Audit trail
+    shared_by_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    shared_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    revoked_at = db.Column(db.DateTime, nullable=True)
+    revoked_by_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=True)
+
+    # Metadata
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    scheme = db.relationship("MarkingScheme", backref="shares", lazy=True)
+    recipient_user = db.relationship("User", foreign_keys=[user_id], lazy=True)
+    shared_by_user = db.relationship("User", foreign_keys=[shared_by_id], lazy=True)
+    revoked_by_user = db.relationship("User", foreign_keys=[revoked_by_id], lazy=True)
+
+    def to_dict(self):
+        """Convert scheme share to dictionary."""
+        return {
+            "id": self.id,
+            "scheme_id": self.scheme_id,
+            "user_id": self.user_id,
+            "group_id": self.group_id,
+            "permission": self.permission,
+            "shared_by_id": self.shared_by_id,
+            "shared_at": self.shared_at.isoformat() if self.shared_at else None,
+            "revoked_at": self.revoked_at.isoformat() if self.revoked_at else None,
+            "revoked_by_id": self.revoked_by_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+    def is_active(self):
+        """Check if share is active (not revoked)."""
+        return self.revoked_at is None
+
+
+class DocumentUploadLog(db.Model):
+    """Model for audit trail of document uploads and conversions."""
+
+    __tablename__ = "document_upload_log"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    # User who uploaded
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+
+    # File information
+    file_name = db.Column(db.String(500), nullable=False)
+    file_size_bytes = db.Column(db.Integer, nullable=False)
+    mime_type = db.Column(db.String(100), nullable=False)
+    file_hash = db.Column(db.String(64), nullable=True)  # SHA256 for deduplication
+    upload_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    # LLM tracking
+    llm_provider = db.Column(db.String(50), nullable=False)
+    llm_model = db.Column(db.String(100), nullable=False)
+    llm_request_tokens = db.Column(db.Integer, nullable=True)
+    llm_response_tokens = db.Column(db.Integer, nullable=True)
+
+    # Conversion status
+    conversion_status = db.Column(db.String(20), nullable=False)  # PENDING, PROCESSING, SUCCESS, FAILED
+    conversion_time_ms = db.Column(db.Integer, nullable=True)
+
+    # Results and errors
+    error_message = db.Column(db.Text, nullable=True)
+    extracted_scheme_preview = db.Column(db.Text, nullable=True)
+    uncertainty_flags = db.Column(db.JSON, nullable=True)
+
+    # Metadata
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    # Relationships
+    user = db.relationship("User", backref="document_uploads", lazy=True)
+    conversion_result = db.relationship("DocumentConversionResult", backref="upload_log", uselist=False, lazy=True)
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "file_name": self.file_name,
+            "file_size_bytes": self.file_size_bytes,
+            "mime_type": self.mime_type,
+            "file_hash": self.file_hash,
+            "upload_at": self.upload_at.isoformat() if self.upload_at else None,
+            "llm_provider": self.llm_provider,
+            "llm_model": self.llm_model,
+            "llm_request_tokens": self.llm_request_tokens,
+            "llm_response_tokens": self.llm_response_tokens,
+            "conversion_status": self.conversion_status,
+            "conversion_time_ms": self.conversion_time_ms,
+            "error_message": self.error_message,
+            "extracted_scheme_preview": self.extracted_scheme_preview,
+            "uncertainty_flags": self.uncertainty_flags,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class DocumentConversionResult(db.Model):
+    """Model for in-progress and completed document conversions."""
+
+    __tablename__ = "document_conversion_result"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    # Link to upload log (1:1)
+    upload_log_id = db.Column(db.String(36), db.ForeignKey('document_upload_log.id', ondelete='CASCADE'), nullable=False, unique=True)
+
+    # Status
+    status = db.Column(db.String(20), nullable=False)  # PENDING, QUEUED, PROCESSING, SUCCESS, FAILED
+
+    # Results
+    llm_response = db.Column(db.Text, nullable=True)  # Raw LLM output
+    extracted_scheme = db.Column(db.JSON, nullable=True)  # Draft MarkingScheme
+    uncertainty_flags = db.Column(db.JSON, nullable=True)  # Confidence ratings
+
+    # Errors
+    error_code = db.Column(db.String(50), nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        """Convert to dictionary."""
+        return {
+            "id": self.id,
+            "upload_log_id": self.upload_log_id,
+            "status": self.status,
+            "llm_response": self.llm_response,
+            "extracted_scheme": self.extracted_scheme,
+            "uncertainty_flags": self.uncertainty_flags,
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+    def is_complete(self):
+        """Check if conversion has completed."""
+        return self.status in ('SUCCESS', 'FAILED')

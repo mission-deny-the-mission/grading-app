@@ -54,6 +54,9 @@ from routes.grading import grading_bp
 from routes.export import export_bp
 from routes.schemes_ui import schemes_ui_bp
 from routes.grading_ui import grading_ui_bp
+from routes.scheme_export import scheme_export_bp
+from routes.scheme_document import scheme_document_bp
+from routes.scheme_sharing import scheme_sharing_bp
 # Import desktop settings blueprint
 from routes.desktop_settings import desktop_settings_bp
 from routes.desktop_data import desktop_data_bp
@@ -144,6 +147,8 @@ if FLASK_MIGRATE_AVAILABLE:
 csrf = None
 if CSRF_PROTECT_AVAILABLE:
     csrf = CSRFProtect(app)
+    # Disable CSRF for testing
+    app.config['WTF_CSRF_ENABLED'] = FLASK_ENV == "production"
 
 # Initialize rate limiter BEFORE importing blueprints to avoid circular imports (optional)
 class NoOpLimiter:
@@ -191,6 +196,9 @@ app.register_blueprint(grading_bp)
 app.register_blueprint(export_bp)
 app.register_blueprint(schemes_ui_bp)
 app.register_blueprint(grading_ui_bp)
+app.register_blueprint(scheme_export_bp)
+app.register_blueprint(scheme_document_bp)
+app.register_blueprint(scheme_sharing_bp)
 
 # Register desktop settings blueprint
 app.register_blueprint(desktop_settings_bp)

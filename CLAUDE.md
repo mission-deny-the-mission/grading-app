@@ -7,6 +7,8 @@ Auto-generated from all feature plans. Last updated: 2025-11-17
 - Python 3.13.7 (recommend constraint: `>=3.9,<4.0` in setup.py) (002-api-provider-security)
 - Python 3.13.7 (existing project) (004-optional-auth-system)
 - Python 3.13.7 (001-ocr-image-grading)
+- Python 3.13.7 (per CLAUDE.md requirements) + Flask 2.3.3, Flask-SQLAlchemy 3.0.5, Celery (async document processing), existing LLM provider abstraction (from 002-api-provider-security), PyPDF2 3.0.1, python-docx 0.8.11, Pillow (image handling) (005-marking-schema-as-file)
+- SQLite for desktop version, database (PostgreSQL for production) for web version, local filesystem for exported JSON files (005-marking-schema-as-file)
 
 ## Project Structure
 
@@ -26,10 +28,9 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.13.7 (recommend constraint: `>=3.9,<4.0` in setup.py): Follow standard conventions
 
 ## Recent Changes
+- 005-marking-schema-as-file: Added Python 3.13.7 (per CLAUDE.md requirements) + Flask 2.3.3, Flask-SQLAlchemy 3.0.5, Celery (async document processing), existing LLM provider abstraction (from 002-api-provider-security), PyPDF2 3.0.1, python-docx 0.8.11, Pillow (image handling)
 - 004-desktop-app: Added SQLite (replacing PostgreSQL/Redis for single-user desktop), local filesystem for uploads and backups
 - 004-optional-auth-system: Added Python 3.13.7 (existing project)
-- 003-structured-grading-scheme: Added Python 3.13.7 + Flask 2.3.3, Flask-SQLAlchemy 3.0.5, Celery 5.3.4, Redis 5.0.1
-- 002-api-provider-security: Added Python 3.13.7 (recommend constraint: `>=3.9,<4.0` in setup.py)
 
 
 <!-- MANUAL ADDITIONS START -->

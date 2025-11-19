@@ -150,6 +150,10 @@ cython_debug/
 # Uploads directory
 uploads/
 
+# Exports directory (contains generated export files)
+exports/*.json
+!exports/.gitkeep
+
 # Logs
 *.log
 logs/

@@ -262,7 +262,7 @@ class ScreenshotQualityChecker:
         # Blur issues
         if blur_results["is_blurry"]:
             issues.append(
-                f"Image is blurry (score: {blur_results['blur_score']:.2f}, " f"threshold: {blur_results['threshold']})"
+                f"Image is blurry (score: {blur_results['blur_score']:.2f}, threshold: {blur_results['threshold']})"
             )
 
         # Resolution issues
@@ -274,7 +274,7 @@ class ScreenshotQualityChecker:
 
         if resolution_results["too_large"]:
             issues.append(
-                f"File size too large ({resolution_results['file_size_mb']}MB, " f"maximum: {self.max_size_mb}MB)"
+                f"File size too large ({resolution_results['file_size_mb']}MB, maximum: {self.max_size_mb}MB)"
             )
 
         # Completeness issues

@@ -15,6 +15,8 @@ from models import (
     MarkingScheme,
     SavedMarkingScheme,
     Submission,
+    DocumentUploadLog,
+    DocumentConversionResult,
     db,
 )
 from utils.file_utils import cleanup_file
@@ -539,11 +541,11 @@ def process_batch(batch_id):
             if not batch:
                 raise ValueError(f"Batch {batch_id} not found")
 
-            print(f"Starting to process batch: {batch.batch_name} " f"(ID: {batch_id})")
+            print(f"Starting to process batch: {batch.batch_name} (ID: {batch_id})")
 
             # Check if batch can be started
             if not batch.can_start():
-                print(f"Batch {batch_id} cannot be started. " f"Status: {batch.status}")
+                print(f"Batch {batch_id} cannot be started. Status: {batch.status}")
                 return False
 
             # Start the batch
@@ -597,7 +599,7 @@ def process_batch_with_priority():
 
             for batch in pending_batches:
                 if batch.can_start():
-                    print(f"Auto-starting high priority batch: " f"{batch.batch_name}")
+                    print(f"Auto-starting high priority batch: {batch.batch_name}")
                     task_queue.submit(process_batch, batch.id)
 
         except Exception as e:
@@ -976,3 +978,136 @@ def cleanup_old_files():
                             os.remove(file_path)
                         except OSError:
                             pass  # Don't fail if cleanup fails
+
+
+def process_document_rubric(upload_id, file_path, document_type):
+    """
+    Process a document upload and convert to marking scheme via LLM.
+
+    This task:
+    1. Extracts text from the document
+    2. Calls LLM to convert to marking scheme
+    3. Stores the extracted scheme and uncertainty flags
+    4. Updates conversion status
+    5. Handles errors with appropriate status updates
+
+    Args:
+        upload_id (str): UUID of DocumentUploadLog record
+        file_path (str): Path to uploaded document
+        document_type (str): Type of document (pdf, docx, image)
+
+    Returns:
+        bool: True if successful, False if failed
+    """
+    app = create_app()
+    with app.app_context():
+        try:
+            # Get upload log
+            upload_log = db.session.get(DocumentUploadLog, upload_id)
+            if not upload_log:
+                print(f"Upload log {upload_id} not found")
+                return False
+
+            # Get conversion result
+            conversion = DocumentConversionResult.query.filter_by(
+                upload_log_id=upload_id
+            ).first()
+            if not conversion:
+                print(f"Conversion result not found for upload {upload_id}")
+                return False
+
+            print(f"Processing document {file_path} (type: {document_type})")
+
+            # Update status to PROCESSING
+            conversion.status = "PROCESSING"
+            upload_log.conversion_status = "PROCESSING"
+            db.session.commit()
+
+            # Extract text from document
+            from services.document_parser import DocumentParser
+            parser = DocumentParser()
+
+            try:
+                parse_result = parser.parse_document(file_path)
+                extracted_text = parse_result["extracted_text"]
+            except Exception as e:
+                print(f"Failed to extract text from document: {str(e)}")
+                conversion.status = "FAILED"
+                conversion.error_code = "TEXT_EXTRACTION_FAILED"
+                conversion.error_message = f"Could not extract text: {str(e)}"
+                upload_log.conversion_status = "FAILED"
+                upload_log.error_message = conversion.error_message
+                db.session.commit()
+                return False
+
+            if not extracted_text:
+                print(f"No text could be extracted from document")
+                conversion.status = "FAILED"
+                conversion.error_code = "NO_TEXT_EXTRACTED"
+                conversion.error_message = "Document contains no extractable text"
+                upload_log.conversion_status = "FAILED"
+                upload_log.error_message = conversion.error_message
+                db.session.commit()
+                return False
+
+            # Call LLM for rubric analysis
+            try:
+                from services.document_parser import call_llm_for_rubric_analysis, parse_llm_response
+
+                llm_response = call_llm_for_rubric_analysis(extracted_text)
+                conversion.llm_response = llm_response
+
+                # Parse LLM response
+                parsed_result = parse_llm_response(llm_response)
+                conversion.extracted_scheme = parsed_result.get("extracted_scheme", {})
+                conversion.uncertainty_flags = parsed_result.get("uncertainty_flags", [])
+
+                print(f"Successfully converted document to scheme")
+
+            except Exception as e:
+                print(f"Failed to call LLM for rubric analysis: {str(e)}")
+                conversion.status = "FAILED"
+                conversion.error_code = "LLM_CONVERSION_FAILED"
+                conversion.error_message = f"LLM conversion failed: {str(e)}"
+                upload_log.conversion_status = "FAILED"
+                upload_log.error_message = conversion.error_message
+                db.session.commit()
+                return False
+
+            # Update status to SUCCESS
+            conversion.status = "SUCCESS"
+            conversion.completed_at = datetime.now(timezone.utc)
+            upload_log.conversion_status = "SUCCESS"
+
+            # Update LLM provider info from the provider used
+            try:
+                from services.llm_provider import get_provider
+                provider_type = app.config.get('LLM_PROVIDER', 'unknown')
+                upload_log.llm_provider = provider_type
+                upload_log.llm_model = app.config.get('LLM_MODEL', 'unknown')
+            except:
+                upload_log.llm_provider = "unknown"
+                upload_log.llm_model = "unknown"
+
+            db.session.commit()
+            print(f"Completed processing document {upload_id}")
+            return True
+
+        except Exception as e:
+            print(f"Unexpected error processing document {upload_id}: {str(e)}")
+            try:
+                conversion = DocumentConversionResult.query.filter_by(
+                    upload_log_id=upload_id
+                ).first()
+                if conversion:
+                    conversion.status = "FAILED"
+                    conversion.error_code = "UNEXPECTED_ERROR"
+                    conversion.error_message = f"Unexpected error: {str(e)}"
+                    upload_log = db.session.get(DocumentUploadLog, upload_id)
+                    if upload_log:
+                        upload_log.conversion_status = "FAILED"
+                        upload_log.error_message = conversion.error_message
+                    db.session.commit()
+            except:
+                pass  # If cleanup fails, that's ok
+            return False
