@@ -1,7 +1,7 @@
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, redirect, request, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 
 try:
@@ -117,6 +117,17 @@ login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 login_manager.session_protection = 'strong'
 
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    """Handle unauthorized access for both API and web requests."""
+    # For API requests, return JSON 401
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "Authentication required"}), 401
+    # For web requests, redirect to login
+    return redirect(url_for('auth.login', next=request.url))
+
+
 # Session configuration (security & timeouts)
 # Cookie security flags based on environment (HTTPS required in production, optional in dev)
 IS_PRODUCTION = FLASK_ENV == "production"
@@ -181,7 +192,9 @@ def load_user(user_id):
 
 # NOW import blueprints that depend on limiter (after limiter is initialized)
 from routes.admin_routes import admin_bp
+from routes.admin_pages import admin_pages_bp
 from routes.auth_routes import auth_bp
+from routes.projects_routes import projects_bp
 from routes.sharing_routes import sharing_bp
 from routes.usage_routes import usage_bp
 
@@ -209,9 +222,11 @@ app.register_blueprint(desktop_data_bp)
 # Register authentication and configuration blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(admin_pages_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(usage_bp)
 app.register_blueprint(sharing_bp)
+app.register_blueprint(projects_bp)
 app.register_blueprint(auth_pages_bp)
 app.register_blueprint(legacy_auth_bp)
 

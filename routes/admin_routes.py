@@ -296,3 +296,56 @@ def update_user(user_id):
     except Exception as e:
         logger.error(f"Error updating user: {e}")
         return jsonify({"success": False, "message": "User update failed"}), 500
+
+
+@admin_bp.route("/users/<user_id>/quotas", methods=["PUT"])
+@login_required
+def update_user_quotas(user_id):
+    """
+    Update user quotas (admin only).
+
+    Request body:
+        {
+            "provider": str,
+            "limit_type": str,
+            "limit_value": int,
+            "reset_period": str
+        }
+
+    Response:
+        {
+            "success": bool,
+            "quota": {...},
+            "message": str
+        }
+    """
+    # Check admin
+    admin_check = require_admin()
+    if admin_check:
+        return admin_check
+
+    from services.usage_tracking_service import UsageTrackingService
+
+    data = request.get_json() or {}
+    provider = data.get("provider")
+    limit_type = data.get("limit_type")
+    limit_value = data.get("limit_value")
+    reset_period = data.get("reset_period")
+
+    if not all([provider, limit_type, limit_value is not None, reset_period]):
+        return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+    try:
+        quota = UsageTrackingService.set_quota(user_id, provider, limit_type, limit_value, reset_period)
+
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Quota updated for user {user_id}",
+                "quota": quota.to_dict(),
+            }
+        ), 200
+
+    except Exception as e:
+        logger.error(f"Error updating quota: {e}")
+        return jsonify({"success": False, "message": "Quota update failed"}), 500

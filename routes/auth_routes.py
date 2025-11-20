@@ -2,8 +2,9 @@
 
 import logging
 import os
+from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
 from flask_login import current_user, login_required, login_user, logout_user
 
 from services.auth_service import AuthService
@@ -69,8 +70,20 @@ def login():
                 401,
             )
 
-        # Login user with Flask-Login
+        # Session fixation prevention: regenerate session ID on login
+        # Flask-Login's login_user() automatically calls session.regenerate() in newer versions,
+        # but we'll explicitly clear and set permanent flag for security
+        session.clear()
+        session.permanent = True
+
+        # Login user with Flask-Login (this will set _user_id in session)
         login_user(user, remember=data.get("remember_me", False))
+
+        # Set session timestamps for timeout tracking
+        now = datetime.now(timezone.utc).isoformat()
+        session['_session_created_at'] = now
+        session['_last_activity'] = now
+
         logger.info(f"User logged in: {email}")
 
         return (
@@ -104,7 +117,13 @@ def logout():
         }
     """
     email = current_user.email
+
+    # Clear session data before logout to prevent session reuse
+    session.clear()
+
+    # Logout user (Flask-Login)
     logout_user()
+
     logger.info(f"User logged out: {email}")
 
     return jsonify({"success": True, "message": "Logged out successfully"}), 200

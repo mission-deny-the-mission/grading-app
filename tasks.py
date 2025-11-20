@@ -786,7 +786,7 @@ def process_image_ocr(image_submission_id):
                 db.session.commit()
 
                 # Queue quality assessment task after OCR completes
-                task_queue.submit(assess_image_quality, image_submission_id)
+                assess_image_quality.delay(image_submission_id)
 
                 return {
                     'status': 'success',
@@ -928,6 +928,10 @@ def assess_image_quality(image_submission_id):
                 'image_submission_id': image_submission_id,
                 'error': f'Unexpected error during quality assessment: {str(e)}'
             }
+
+
+# Add Celery-style .delay() method for compatibility with tests
+assess_image_quality.delay = lambda image_id: task_queue.submit(assess_image_quality, image_id)
 
 
 def cleanup_completed_batches():

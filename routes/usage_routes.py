@@ -14,6 +14,41 @@ logger = logging.getLogger(__name__)
 usage_bp = Blueprint("usage", __name__, url_prefix="/api/usage")
 
 
+@usage_bp.route("", methods=["GET"])
+@login_required
+def get_usage():
+    """
+    Get usage records for current user.
+
+    Returns usage records filtered by user in multi-user mode.
+
+    Response:
+        {
+            "user_id": str,
+            "usage_records": [...],
+            "total_tokens": int
+        }
+    """
+    try:
+        from models import UsageRecord
+
+        # Get all usage records for the current user
+        records = UsageRecord.query.filter_by(user_id=current_user.id).all()
+
+        # Calculate total tokens
+        total_tokens = sum(record.tokens_consumed for record in records)
+
+        return jsonify({
+            "user_id": current_user.id,
+            "usage_records": [record.to_dict() for record in records],
+            "total_tokens": total_tokens
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error getting usage: {e}")
+        return jsonify({"error": "Could not retrieve usage"}), 500
+
+
 @usage_bp.route("/dashboard", methods=["GET"])
 def get_usage_dashboard():
     """

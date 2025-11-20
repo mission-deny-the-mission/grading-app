@@ -779,16 +779,68 @@ content %}
             .then(response => response.json())
             .then(data => {
                 if (data.popular && data.popular.length > 0) {
+                    // Add popular models to the dropdown
+                    data.popular.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = getModelDisplayName(model);
+                        modelSelect.appendChild(option);
+                    });
+
+                    // Add "Custom Model" option at the end
+                    const customOption = document.createElement('option');
+                    customOption.value = 'custom';
+                    customOption.textContent = 'Custom Model';
+                    modelSelect.appendChild(customOption);
+
                     status.textContent = 'Models loaded successfully';
                 } else {
-                    status.textContent = 'No models available';
-                    errorDiv.style.display = 'block';
+                    // Use fallback models if API returns no models
+                    const fallbackModels = getBulkFallbackModels(providerValue);
+                    if (fallbackModels.length > 0) {
+                        fallbackModels.forEach(model => {
+                            const option = document.createElement('option');
+                            option.value = model.id;
+                            option.textContent = model.name;
+                            modelSelect.appendChild(option);
+                        });
+
+                        // Add "Custom Model" option at the end
+                        const customOption = document.createElement('option');
+                        customOption.value = 'custom';
+                        customOption.textContent = 'Custom Model';
+                        modelSelect.appendChild(customOption);
+
+                        status.textContent = 'Models loaded (using fallback)';
+                    } else {
+                        status.textContent = 'No models available';
+                        errorDiv.style.display = 'block';
+                        errorDiv.textContent = 'No models available for this provider';
+                    }
                 }
             })
             .catch(error => {
                 status.textContent = 'Error loading models';
                 errorDiv.style.display = 'block';
+                errorDiv.textContent = 'Failed to load models. Please try again.';
                 console.error('Error loading models:', error);
+
+                // Load fallback models on error
+                const fallbackModels = getBulkFallbackModels(providerValue);
+                if (fallbackModels.length > 0) {
+                    fallbackModels.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = model.name;
+                        modelSelect.appendChild(option);
+                    });
+
+                    // Add "Custom Model" option at the end
+                    const customOption = document.createElement('option');
+                    customOption.value = 'custom';
+                    customOption.textContent = 'Custom Model';
+                    modelSelect.appendChild(customOption);
+                }
             })
             .finally(() => {
                 spinner.style.display = 'none';
