@@ -44,13 +44,13 @@ class TestCeleryWorkerFailures:
     @patch('tasks.process_submission_task')
     def test_worker_task_revocation(self, mock_task):
         """Test task revocation during processing."""
-        from celery.exceptions import Revoked
+        from celery.exceptions import TaskRevokedError
 
         # Mock task revocation
-        mock_task.apply_async.side_effect = Revoked("Task revoked")
+        mock_task.apply_async.side_effect = TaskRevokedError("Task revoked")
 
-        # Should raise Revoked
-        with pytest.raises(Revoked):
+        # Should raise TaskRevokedError
+        with pytest.raises(TaskRevokedError):
             mock_task.apply_async(args=['submission-id'])
 
 
@@ -308,11 +308,14 @@ class TestTaskTimeoutHandling:
 class TestTaskQueueManagement:
     """Test task queue management and prioritization."""
 
-    @patch('tasks.celery')
-    def test_task_queue_priority(self, mock_celery):
+    @patch('tasks.process_submission_task.apply_async')
+    def test_task_queue_priority(self, mock_apply_async):
         """Test task priority in queue."""
         from tasks import process_submission_task
 
+        # Configure mock to return mock results
+        mock_apply_async.return_value = MagicMock()
+        
         # High priority task
         high_priority = process_submission_task.apply_async(
             args=['sub1'],
@@ -325,6 +328,10 @@ class TestTaskQueueManagement:
             priority=1
         )
 
+        # Verify apply_async was called with correct priorities
+        mock_apply_async.assert_any_call(args=['sub1'], priority=9)
+        mock_apply_async.assert_any_call(args=['sub2'], priority=1)
+        
         # High priority should be processed first (in theory)
         assert high_priority is not None
         assert low_priority is not None

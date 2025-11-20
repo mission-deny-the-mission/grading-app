@@ -9,7 +9,6 @@ import pytest
 import time
 import threading
 from concurrent.futures import TimeoutError
-from desktop.task_queue import DesktopTaskQueue
 
 
 # Test helper functions
@@ -48,7 +47,8 @@ class TestDesktopTaskQueue:
 
     @pytest.fixture
     def queue(self):
-        """Create a fresh task queue for each test."""
+        """Create a DesktopTaskQueue for testing."""
+        from desktop.task_queue import DesktopTaskQueue
         return DesktopTaskQueue(max_workers=4)
 
     @pytest.fixture(autouse=True)
@@ -317,6 +317,7 @@ class TestDesktopTaskQueue:
     def test_cancel_task_before_execution(self, queue):
         """Test cancelling a task before it starts executing."""
         # Create a queue with only 1 worker
+        from desktop.task_queue import DesktopTaskQueue
         small_queue = DesktopTaskQueue(max_workers=1)
 
         try:
@@ -379,6 +380,7 @@ class TestDesktopTaskQueue:
     def test_multiple_workers(self):
         """Test queue with different numbers of workers."""
         # Create queue with 8 workers
+        from desktop.task_queue import DesktopTaskQueue
         large_queue = DesktopTaskQueue(max_workers=8)
 
         try:
@@ -448,6 +450,7 @@ class TestDesktopTaskQueueIntegration:
 
     def test_realistic_workload(self):
         """Test a realistic workload with mixed task types."""
+        from desktop.task_queue import DesktopTaskQueue
         queue = DesktopTaskQueue(max_workers=4)
 
         try:
@@ -487,6 +490,7 @@ class TestDesktopTaskQueueIntegration:
 
     def test_stress_test_many_tasks(self):
         """Stress test with many concurrent tasks."""
+        from desktop.task_queue import DesktopTaskQueue
         queue = DesktopTaskQueue(max_workers=8)
 
         try:

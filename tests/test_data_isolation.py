@@ -7,6 +7,7 @@ quota enforcement, and unauthorized modification attempts.
 """
 
 import pytest
+from tests.factories import UserFactory
 from models import User, GradingJob, Submission, UsageRecord, ProjectShare, db
 from datetime import datetime, timezone
 
@@ -14,19 +15,11 @@ from datetime import datetime, timezone
 class TestCrossUserProjectAccess:
     """Test that users cannot access other users' projects."""
 
-    def test_user_cannot_view_other_user_projects(self, client, auth):
+    def test_user_cannot_view_other_user_projects(self, client, auth, multi_user_mode):
         """Test that user A cannot view user B's projects."""
-        # Create two users
-        user_a = User(
-            email='usera@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        user_b = User(
-            email='userb@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([user_a, user_b])
-        db.session.commit()
+        # Create two users using the factory
+        user_a = UserFactory.create(email='usera@example.com', password='TestPass123!')
+        user_b = UserFactory.create(email='userb@example.com', password='TestPass123!')
 
         # Create grading job for user B
         project_b = GradingJob(
@@ -46,25 +39,16 @@ class TestCrossUserProjectAccess:
         response = client.get(f'/api/projects/{project_b.id}')
         assert response.status_code == 403  # Forbidden
 
-    def test_user_cannot_list_other_user_projects(self, client, auth):
+    def test_user_cannot_list_other_user_projects(self, client, auth, multi_user_mode):
         """Test that project listings are filtered by user."""
-        # Create two users
-        user_a = User(
-            email='usera@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        user_b = User(
-            email='userb@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([user_a, user_b])
-        db.session.commit()
+        # Create two users using the factory
+        user_a = UserFactory.create(email='usera@example.com', password='TestPass123!')
+        user_b = UserFactory.create(email='userb@example.com', password='TestPass123!')
 
         # Create grading jobs for both users
         project_a = GradingJob(job_name='User A Project', owner_id=user_a.id, created_at=datetime.now(timezone.utc), provider='openrouter', prompt='Test prompt')
         project_b = GradingJob(job_name='User B Project', owner_id=user_b.id, created_at=datetime.now(timezone.utc), provider='openrouter', prompt='Test prompt')
         db.session.add_all([project_a, project_b])
-        db.session.commit()
 
         # Login as user A
         auth.login(email='usera@example.com', password='TestPass123!')
@@ -79,19 +63,11 @@ class TestCrossUserProjectAccess:
         assert 'User A Project' in project_names
         assert 'User B Project' not in project_names
 
-    def test_user_cannot_delete_other_user_projects(self, client, auth):
+    def test_user_cannot_delete_other_user_projects(self, client, auth, multi_user_mode):
         """Test that user A cannot delete user B's projects."""
-        # Create two users
-        user_a = User(
-            email='usera@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        user_b = User(
-            email='userb@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([user_a, user_b])
-        db.session.commit()
+        # Create two users using the factory
+        user_a = UserFactory.create(email='usera@example.com', password='TestPass123!')
+        user_b = UserFactory.create(email='userb@example.com', password='TestPass123!')
 
         # Create grading job for user B
         project_b = GradingJob(
@@ -118,19 +94,11 @@ class TestCrossUserProjectAccess:
 class TestSharedProjectPermissionBoundaries:
     """Test shared project access control boundaries."""
 
-    def test_shared_project_viewer_can_read_only(self, client, auth):
+    def test_shared_project_viewer_can_read_only(self, client, auth, multi_user_mode):
         """Test that viewer permission allows read but not write."""
         # Create owner and viewer
-        owner = User(
-            email='owner@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        viewer = User(
-            email='viewer@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([owner, viewer])
-        db.session.commit()
+        owner = UserFactory.create(email='owner@example.com', password='TestPass123!')
+        viewer = UserFactory.create(email='viewer@example.com', password='TestPass123!')
 
         # Create grading job
         project = GradingJob(
@@ -167,19 +135,11 @@ class TestSharedProjectPermissionBoundaries:
         })
         assert response.status_code == 403
 
-    def test_shared_project_editor_can_modify(self, client, auth):
+    def test_shared_project_editor_can_modify(self, client, auth, multi_user_mode):
         """Test that editor permission allows modification."""
         # Create owner and editor
-        owner = User(
-            email='owner@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        editor = User(
-            email='editor@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([owner, editor])
-        db.session.commit()
+        owner = UserFactory.create(email='owner@example.com', password='TestPass123!')
+        editor = UserFactory.create(email='editor@example.com', password='TestPass123!')
 
         # Create grading job
         project = GradingJob(
@@ -213,19 +173,11 @@ class TestSharedProjectPermissionBoundaries:
         # Either succeeds or endpoint doesn't exist yet
         assert response.status_code in [200, 404]
 
-    def test_share_revocation_removes_access(self, client, auth):
+    def test_share_revocation_removes_access(self, client, auth, multi_user_mode):
         """Test that revoking share removes access immediately."""
         # Create owner and viewer
-        owner = User(
-            email='owner@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        viewer = User(
-            email='viewer@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([owner, viewer])
-        db.session.commit()
+        owner = UserFactory.create(email='owner@example.com', password='TestPass123!')
+        viewer = UserFactory.create(email='viewer@example.com', password='TestPass123!')
 
         # Create grading job
         project = GradingJob(
@@ -268,20 +220,11 @@ class TestSharedProjectPermissionBoundaries:
 class TestAdminVsRegularUserDataAccess:
     """Test admin privilege boundaries vs regular users."""
 
-    def test_admin_can_view_all_user_data(self, client, auth):
+    def test_admin_can_view_all_user_data(self, client, auth, multi_user_mode):
         """Test that admin can view all users' data."""
         # Create admin and regular user
-        admin = User(
-            email='admin@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-            is_admin=True
-        )
-        regular_user = User(
-            email='user@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([admin, regular_user])
-        db.session.commit()
+        admin = UserFactory.create(email='admin@example.com', password='TestPass123!', is_admin=True)
+        regular_user = UserFactory.create(email='user@example.com', password='TestPass123!')
 
         # Login as admin
         auth.login(email='admin@example.com', password='TestPass123!')
@@ -290,13 +233,10 @@ class TestAdminVsRegularUserDataAccess:
         response = client.get('/admin/users')
         assert response.status_code == 200
 
-    def test_regular_user_cannot_access_admin_endpoints(self, client, auth):
+    def test_regular_user_cannot_access_admin_endpoints(self, client, auth, multi_user_mode):
         """Test that regular users cannot access admin endpoints."""
         # Create regular user
-        regular_user = User(
-            email='user@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
+        regular_user = UserFactory.create(email='user@example.com', password='TestPass123!')
         db.session.add(regular_user)
         db.session.commit()
 
@@ -307,20 +247,11 @@ class TestAdminVsRegularUserDataAccess:
         response = client.get('/admin/users')
         assert response.status_code == 403
 
-    def test_admin_cannot_modify_data_without_ownership(self, client, auth):
+    def test_admin_cannot_modify_data_without_ownership(self, client, auth, multi_user_mode):
         """Test that admin still respects data ownership for modifications."""
         # Create admin and regular user
-        admin = User(
-            email='admin@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-            is_admin=True
-        )
-        owner = User(
-            email='owner@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([admin, owner])
-        db.session.commit()
+        admin = UserFactory.create(email='admin@example.com', password='TestPass123!', is_admin=True)
+        owner = UserFactory.create(email='owner@example.com', password='TestPass123!')
 
         # Create grading job owned by regular user
         project = GradingJob(
@@ -345,19 +276,18 @@ class TestAdminVsRegularUserDataAccess:
 class TestQuotaEnforcementAcrossUsers:
     """Test that quota limits are enforced per-user."""
 
-    def test_quota_is_per_user_not_global(self, client, auth):
+    def test_quota_is_per_user_not_global(self, client_multi_user, auth, multi_user_mode):
         """Test that each user has independent quota."""
         # Create two users
-        user_a = User(
+        user_a = UserFactory.create(
             email='usera@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
+            password='TestPass123!'
         )
-        user_b = User(
+        user_b = UserFactory.create(
             email='userb@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
+            password='TestPass123!'
         )
         db.session.add_all([user_a, user_b])
-        db.session.commit()
 
         # User A uses quota
         usage_a = UsageRecord(
@@ -374,18 +304,18 @@ class TestQuotaEnforcementAcrossUsers:
         auth.login(email='userb@example.com', password='TestPass123!')
 
         # User B should have independent quota
-        response = client.get('/api/usage')
+        response = client_multi_user.get('/api/usage')
         assert response.status_code == 200
         data = response.get_json()
         # User B should have separate quota tracking
         assert data is not None
 
-    def test_user_cannot_exceed_individual_quota(self, client, auth):
+    def test_user_cannot_exceed_individual_quota(self, client, auth, multi_user_mode):
         """Test that users are limited by their individual quota."""
         # Create user with usage near limit
-        user = User(
+        user = UserFactory.create(
             email='user@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
+            password='TestPass123!'
         )
         db.session.add(user)
         db.session.commit()
@@ -414,19 +344,11 @@ class TestQuotaEnforcementAcrossUsers:
 class TestUnauthorizedDataModification:
     """Test prevention of unauthorized data modification attempts."""
 
-    def test_user_cannot_modify_submission_ownership(self, client, auth):
+    def test_user_cannot_modify_submission_ownership(self, client, auth, multi_user_mode):
         """Test that user cannot change submission ownership."""
         # Create two users
-        user_a = User(
-            email='usera@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        user_b = User(
-            email='userb@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
-        db.session.add_all([user_a, user_b])
-        db.session.commit()
+        user_a = UserFactory.create(email='usera@example.com', password='TestPass123!')
+        user_b = UserFactory.create(email='userb@example.com', password='TestPass123!')
 
         # Create grading job and submission for user A
         project_a = GradingJob(job_name='Project A', owner_id=user_a.id, created_at=datetime.now(timezone.utc), provider='openrouter', prompt='Test prompt')
@@ -454,13 +376,10 @@ class TestUnauthorizedDataModification:
         # Should either fail or ignore ownership change
         assert response.status_code in [403, 404, 400]
 
-    def test_user_cannot_manipulate_usage_records(self, client, auth):
+    def test_user_cannot_manipulate_usage_records(self, client, auth, multi_user_mode):
         """Test that users cannot modify their own usage records."""
         # Create user
-        user = User(
-            email='user@example.com',
-            password_hash='$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeD.e4hIxjVFUwjVC',
-        )
+        user = UserFactory.create(email='user@example.com', password='TestPass123!')
         db.session.add(user)
         db.session.commit()
 
@@ -485,7 +404,7 @@ class TestUnauthorizedDataModification:
         # Endpoint may not exist, but if it does, should deny
         assert response.status_code in [403, 404, 405]
 
-    def test_sql_injection_protection_in_queries(self, client, auth, test_user):
+    def test_sql_injection_protection_in_queries(self, client, auth, test_user, multi_user_mode):
         """Test that SQL injection attempts are blocked."""
         # Login
         auth.login(email='testuser@example.com', password='TestPass123!')

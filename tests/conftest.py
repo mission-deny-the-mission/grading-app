@@ -8,7 +8,19 @@ import tempfile
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
+
+def pytest_configure(config):
+    """Configure pytest before test collection.
+    
+    Ensures sys.path is set before any test modules are imported
+    across all pytest-xdist workers.
+    """
+    sys.path.insert(0, '/workspace')
+
+
 import pytest
+
+from services.deployment_service import DeploymentService
 
 # Mock desktop-specific dependencies before importing app
 # This is needed because app.py imports routes which import desktop modules
@@ -20,6 +32,11 @@ sys.modules["keyrings.cryptfile.cryptfile"] = MagicMock()
 sys.modules["apscheduler"] = MagicMock()
 sys.modules["apscheduler.schedulers"] = MagicMock()
 sys.modules["apscheduler.schedulers.background"] = MagicMock()
+sys.modules["pystray"] = MagicMock()
+sys.modules["PIL"] = MagicMock()
+sys.modules["PIL.Image"] = MagicMock()
+# Note: Desktop modules are mocked in individual test files as needed
+# to avoid interfering with desktop-specific tests
 
 
 # Mock Redis for password reset token tests
@@ -70,11 +87,23 @@ class MockCeleryTask:
 
     def __call__(self, func):
         """Decorate function to add Celery task methods."""
+        # Create a wrapper function that preserves the original function's attributes
+        def wrapped_func(*args, **kwargs):
+            return func(*args, **kwargs)
+        
+        # Copy all attributes from the original function to the wrapper
+        wrapped_func.__name__ = func.__name__
+        wrapped_func.__doc__ = func.__doc__
+        wrapped_func.__module__ = func.__module__
+        wrapped_func.__qualname__ = getattr(func, '__qualname__', func.__name__)
+        
+        # Add Celery task methods to the wrapper
         mock_delay = MagicMock(return_value=MagicMock(id="mock-task-id"))
         mock_apply_async = MagicMock(return_value=MagicMock(id="mock-task-id"))
-        func.delay = mock_delay
-        func.apply_async = mock_apply_async
-        return func
+        wrapped_func.delay = mock_delay
+        wrapped_func.apply_async = mock_apply_async
+        
+        return wrapped_func
 
 
 # Patch tasks module to add .delay to all task functions
@@ -620,6 +649,26 @@ class AuthActions:
 def auth(client, app):
     """Provide authentication helper for tests."""
     return AuthActions(client, app)
+
+
+@pytest.fixture
+def app_multi_user(app):
+    """Configure shared test app in multi-user mode."""
+    with app.app_context():
+        DeploymentService.set_mode("multi-user")
+    return app
+
+
+@pytest.fixture
+def client_single_user(app_single_user):
+    """Create test client for single-user mode using shared app fixture."""
+    return app_single_user.test_client()
+
+
+@pytest.fixture
+def client_multi_user(app_multi_user):
+    """Create test client for multi-user mode using shared app fixture."""
+    return app_multi_user.test_client()
 
 
 @pytest.fixture

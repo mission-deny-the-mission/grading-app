@@ -19,8 +19,6 @@ from unittest.mock import patch
 
 import pytest
 
-from desktop.settings import Settings
-
 
 @pytest.fixture
 def temp_settings_dir(tmp_path):
@@ -39,6 +37,7 @@ def settings_path(temp_settings_dir):
 @pytest.fixture
 def settings(settings_path):
     """Provide a Settings instance."""
+    from desktop.settings import Settings
     return Settings(settings_path)
 
 
@@ -47,12 +46,14 @@ class TestSettingsInitialization:
 
     def test_init_creates_settings_object(self, settings_path):
         """Test that Settings object can be initialized."""
+        from desktop.settings import Settings
         s = Settings(settings_path)
         assert s.settings_path == settings_path
         assert s._settings == {}
 
     def test_load_creates_default_settings_when_file_missing(self, settings, settings_path):
         """Test that load() creates default settings when file doesn't exist."""
+        from desktop.settings import Settings
         settings.load()
 
         # File should now exist
@@ -258,6 +259,7 @@ class TestSettingsSaving:
     def test_save_creates_directory_if_missing(self, temp_settings_dir):
         """Test that save() creates parent directory if it doesn't exist."""
         nested_path = temp_settings_dir / "nested" / "dir" / "settings.json"
+        from desktop.settings import Settings
         settings = Settings(nested_path)
         settings.load()
         settings.save()
@@ -271,6 +273,7 @@ class TestGetSet:
 
     def test_get_simple_value(self, settings):
         """Test get() with a simple top-level key."""
+        from desktop.settings import Settings
         settings.load()
         assert settings.get('version') == Settings.SETTINGS_VERSION
 
@@ -320,6 +323,7 @@ class TestGetSet:
         settings.save()
 
         # Load fresh instance
+        from desktop.settings import Settings
         new_settings = Settings(settings_path)
         new_settings.load()
         assert new_settings.get('ui.theme') == 'dark'
@@ -521,6 +525,7 @@ class TestSettingsRoundtrip:
         settings.save()
 
         # Create new instance and load
+        from desktop.settings import Settings
         new_settings = Settings(settings_path)
         new_settings.load()
 

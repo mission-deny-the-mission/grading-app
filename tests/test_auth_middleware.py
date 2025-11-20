@@ -169,13 +169,15 @@ class TestSessionSecurity:
 
         # Flask-Login handles session regeneration
         # Just verify we have a valid user session
-        assert session.get('_user_id') is not None
+        with client.session_transaction() as sess:
+            assert sess.get('_user_id') is not None
 
     def test_session_cleared_on_logout(self, client, test_user, auth):
         """Test that session is cleared on logout."""
         # Login
         auth.login(email='testuser@example.com', password='TestPass123!')
-        assert session.get('_user_id') is not None
+        with client.session_transaction() as sess:
+            assert sess.get('_user_id') is not None
 
         # Logout
         auth.logout()

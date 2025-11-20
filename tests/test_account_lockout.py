@@ -58,7 +58,14 @@ class TestAccountLockout:
         assert test_user.failed_login_attempts == 5
 
         # Lockout should be approximately 15 minutes
-        lockout_duration = (test_user.locked_until - datetime.now(timezone.utc)).total_seconds()
+        now_utc = datetime.now(timezone.utc)
+        # Handle both timezone-aware and naive datetime objects
+        if test_user.locked_until.tzinfo is None:
+            # Convert naive datetime to timezone-aware for comparison
+            locked_until_utc = test_user.locked_until.replace(tzinfo=timezone.utc)
+        else:
+            locked_until_utc = test_user.locked_until
+        lockout_duration = (locked_until_utc - now_utc).total_seconds()
         assert 14 * 60 < lockout_duration < 16 * 60  # 14-16 minutes
 
     def test_account_locked_after_10_failures(self, test_user):
@@ -73,7 +80,14 @@ class TestAccountLockout:
             AuthService.authenticate(test_user.email, 'WrongPassword!')
 
         db.session.refresh(test_user)
-        lockout_duration = (test_user.locked_until - datetime.now(timezone.utc)).total_seconds()
+        now_utc = datetime.now(timezone.utc)
+        # Handle both timezone-aware and naive datetime objects
+        if test_user.locked_until.tzinfo is None:
+            # Convert naive datetime to timezone-aware for comparison
+            locked_until_utc = test_user.locked_until.replace(tzinfo=timezone.utc)
+        else:
+            locked_until_utc = test_user.locked_until
+        lockout_duration = (locked_until_utc - now_utc).total_seconds()
         assert 59 * 60 < lockout_duration < 61 * 60  # ~1 hour
 
     def test_account_locked_after_15_failures(self, test_user):
@@ -88,8 +102,15 @@ class TestAccountLockout:
             AuthService.authenticate(test_user.email, 'WrongPassword!')
 
         db.session.refresh(test_user)
-        lockout_duration = (test_user.locked_until - datetime.now(timezone.utc)).total_seconds()
-        assert 23 * 3600 < lockout_duration < 25 * 3600  # ~24 hours
+        now_utc = datetime.now(timezone.utc)
+        # Handle both timezone-aware and naive datetime objects
+        if test_user.locked_until.tzinfo is None:
+            # Convert naive datetime to timezone-aware for comparison
+            locked_until_utc = test_user.locked_until.replace(tzinfo=timezone.utc)
+        else:
+            locked_until_utc = test_user.locked_until
+        lockout_duration = (locked_until_utc - now_utc).total_seconds()
+        assert 23 * 60 * 60 < lockout_duration < 25 * 60 * 60  # ~24 hours
 
     def test_login_blocked_while_locked(self, test_user):
         """Test that login is blocked while account is locked."""

@@ -13,10 +13,31 @@ import pytest
 mock_credentials = MagicMock()
 mock_desktop = MagicMock()
 mock_desktop.credentials = mock_credentials
+
+# Save original desktop module if it exists
+original_desktop = sys.modules.get('desktop')
+original_credentials = sys.modules.get('desktop.credentials')
+
 sys.modules['desktop'] = mock_desktop
 sys.modules['desktop.credentials'] = mock_credentials
 
 from app import app
+
+
+@pytest.fixture(scope="module", autouse=True)
+def cleanup_desktop_mocks():
+    """Clean up desktop mocks after test module completes."""
+    yield
+    # Restore original modules or remove pollution
+    if original_desktop is not None:
+        sys.modules['desktop'] = original_desktop
+    else:
+        sys.modules.pop('desktop', None)
+    
+    if original_credentials is not None:
+        sys.modules['desktop.credentials'] = original_credentials
+    else:
+        sys.modules.pop('desktop.credentials', None)
 
 
 @pytest.fixture
