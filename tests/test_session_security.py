@@ -130,7 +130,7 @@ class TestSessionRotationOnPrivilegeEscalation:
     def test_session_refresh_after_admin_promotion(self, client, test_user, auth):
         """Test that session refreshes after user becomes admin."""
         # Login as regular user
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Verify not admin
         response = client.get('/admin/users')
@@ -150,7 +150,7 @@ class TestSessionRotationOnPrivilegeEscalation:
     def test_session_invalidated_on_deactivation(self, client, test_user, auth):
         """Test that session is invalidated when user is deactivated."""
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Verify access
         assert client.get('/dashboard').status_code == 200
@@ -170,7 +170,7 @@ class TestAbsoluteTimeoutEnforcement:
     def test_session_expires_after_timeout(self, client, test_user, auth, monkeypatch):
         """Test that sessions expire after configured timeout."""
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Verify session works
         assert client.get('/dashboard').status_code == 200
@@ -196,7 +196,7 @@ class TestAbsoluteTimeoutEnforcement:
     def test_session_idle_timeout(self, client, test_user, auth):
         """Test that idle sessions timeout correctly."""
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Session should have timeout configured on the shared app fixture
         assert client.application.config['PERMANENT_SESSION_LIFETIME'] == 1800  # 30 minutes
@@ -208,7 +208,7 @@ class TestSessionInvalidationOnLogout:
     def test_logout_clears_session(self, client, test_user, auth):
         """Test that logout completely clears session."""
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Verify session exists
         with client.session_transaction() as sess:
@@ -242,7 +242,7 @@ class TestSessionInvalidationOnLogout:
     def test_session_cannot_be_reused_after_logout(self, client, test_user, auth):
         """Test that session cannot be reused after logout."""
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Capture session cookie
         session_cookie = None
@@ -263,7 +263,7 @@ class TestSessionSecurityHeaders:
 
     def test_session_cookie_httponly(self, client, test_user, auth):
         """Test that session cookies have HttpOnly flag."""
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Check session cookie flags via app config (test client may not expose cookie flags)
         for cookie in client.cookie_jar:
@@ -296,7 +296,7 @@ class TestSessionDataIntegrity:
     def test_tampered_session_rejected(self, client, test_user, auth):
         """Test that tampered sessions are rejected."""
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Try to access with valid session
         response = client.get('/dashboard')

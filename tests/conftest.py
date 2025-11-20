@@ -126,21 +126,28 @@ def initialize_db_for_tests():
 @pytest.fixture
 def app():
     """Create a Flask app for testing."""
-    # Create a temporary database
-    db_fd, db_path = tempfile.mkstemp()
+    # Use in-memory database for tests to avoid concurrency issues
+    # Each test gets its own isolated in-memory database
+
+    # Create a temporary upload folder for this test
+    upload_folder = tempfile.mkdtemp()
 
     # Configure the app for testing
     flask_app.config.update(
         {
             "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{db_path}",
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "WTF_CSRF_ENABLED": False,
-            "UPLOAD_FOLDER": tempfile.mkdtemp(),
+            "UPLOAD_FOLDER": upload_folder,
             "RATELIMIT_ENABLED": False,
             "SQLALCHEMY_ENGINE_OPTIONS": {
                 "pool_pre_ping": True,
                 "pool_recycle": 300,
+                "connect_args": {
+                    "check_same_thread": False,
+                    "timeout": 30,
+                },
             },
         }
     )
@@ -190,10 +197,10 @@ def app():
         except Exception:
             pass
 
-    # Clean up temp database file
+    # Clean up the temporary upload folder
     try:
-        os.close(db_fd)
-        os.unlink(db_path)
+        import shutil
+        shutil.rmtree(upload_folder, ignore_errors=True)
     except Exception:
         pass
 
@@ -588,3 +595,51 @@ def admin_headers(client, admin_user):
     # Flask-Login uses session cookies, so no need for explicit headers
     # The session is maintained by the test client
     return {}
+
+
+class AuthActions:
+    """Helper class for authentication actions in tests."""
+
+    def __init__(self, client, app):
+        self._client = client
+        self._app = app
+
+    def login(self, email, password):
+        """Log in a user."""
+        return self._client.post(
+            "/api/auth/login",
+            json={"email": email, "password": password},
+        )
+
+    def logout(self):
+        """Log out the current user."""
+        return self._client.post("/api/auth/logout")
+
+
+@pytest.fixture
+def auth(client, app):
+    """Provide authentication helper for tests."""
+    return AuthActions(client, app)
+
+
+@pytest.fixture
+def test_project(app, test_user):
+    """Create a test project/grading job owned by test_user."""
+    with app.app_context():
+        from models import db
+
+        job = GradingJob(
+            job_name="Test Project",
+            description="A test project for testing",
+            provider="openrouter",
+            model="anthropic/claude-3-5-sonnet-20241022",
+            prompt="Please grade this document.",
+            owner_id=test_user.id,
+            priority=5,
+            temperature=0.7,
+            max_tokens=2000,
+        )
+        db.session.add(job)
+        db.session.commit()
+        db.session.refresh(job)
+        return job

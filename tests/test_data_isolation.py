@@ -362,8 +362,9 @@ class TestQuotaEnforcementAcrossUsers:
         # User A uses quota
         usage_a = UsageRecord(
             user_id=user_a.id,
+            provider='openrouter',
             operation_type='grading',
-            tokens_used=1000000,  # 1M tokens
+            tokens_consumed=1000000,  # 1M tokens
             timestamp=datetime.now(timezone.utc)
         )
         db.session.add(usage_a)
@@ -394,8 +395,9 @@ class TestQuotaEnforcementAcrossUsers:
         for i in range(10):
             usage = UsageRecord(
                 user_id=user.id,
+                provider='openrouter',
                 operation_type='grading',
-                tokens_used=1000000,  # 1M tokens each
+                tokens_consumed=1000000,  # 1M tokens each
                 timestamp=datetime.now(timezone.utc)
             )
             db.session.add(usage)
@@ -434,6 +436,9 @@ class TestUnauthorizedDataModification:
         submission_a = Submission(
             job_id=project_a.id,
             filename='test.txt',
+            original_filename='test.txt',
+            file_type='txt',
+            file_size=1024,
             status='pending'
         )
         db.session.add(submission_a)
@@ -462,8 +467,9 @@ class TestUnauthorizedDataModification:
         # Create usage record
         usage = UsageRecord(
             user_id=user.id,
+            provider='openrouter',
             operation_type='grading',
-            tokens_used=1000,
+            tokens_consumed=1000,
             timestamp=datetime.now(timezone.utc)
         )
         db.session.add(usage)
@@ -474,7 +480,7 @@ class TestUnauthorizedDataModification:
 
         # Try to modify usage record (should not be allowed)
         response = client.put(f'/api/usage/{usage.id}', json={
-            'tokens_used': 0
+            'tokens_consumed': 0
         })
         # Endpoint may not exist, but if it does, should deny
         assert response.status_code in [403, 404, 405]
@@ -482,7 +488,7 @@ class TestUnauthorizedDataModification:
     def test_sql_injection_protection_in_queries(self, client, auth, test_user):
         """Test that SQL injection attempts are blocked."""
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Try SQL injection in query parameters
         response = client.get("/api/projects?name='; DROP TABLE grading_jobs; --")

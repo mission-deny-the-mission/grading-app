@@ -106,14 +106,14 @@ class TestSessionValidationLogic:
 
     def test_valid_session_allows_access(self, client, test_user, auth):
         """Test that valid sessions allow access."""
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
         response = client.get('/dashboard')
         assert response.status_code == 200
 
     def test_inactive_user_denied_access(self, client, test_user, auth):
         """Test that inactive users are denied access even with valid session."""
         # Login first
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Deactivate user
         test_user.is_active = False
@@ -161,7 +161,7 @@ class TestSessionSecurity:
             initial_session_id = id(sess)
 
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Session should be regenerated
         with client.session_transaction() as sess:
@@ -174,7 +174,7 @@ class TestSessionSecurity:
     def test_session_cleared_on_logout(self, client, test_user, auth):
         """Test that session is cleared on logout."""
         # Login
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
         assert session.get('_user_id') is not None
 
         # Logout
@@ -191,7 +191,7 @@ class TestAuthorizationEnforcement:
     def test_regular_user_cannot_access_admin_routes(self, client, test_user, auth):
         """Test that non-admin users cannot access admin routes."""
         # Login as regular user
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Try to access admin route
         response = client.get('/admin/users')
@@ -221,7 +221,7 @@ class TestMiddlewareIntegration:
 
     def test_current_user_available_in_request(self, client, test_user, auth):
         """Test that current_user is available in request context."""
-        auth.login()
+        auth.login(email='testuser@example.com', password='TestPass123!')
 
         # Current user should be available in templates/routes
         response = client.get('/dashboard')
