@@ -305,7 +305,7 @@ class TestRegistration:
         response = client.post(
             "/api/auth/register",
             json={
-                "email": "testuser@example.com",  # Already exists (test_user)
+                "email": "test@example.com",  # Already exists (test_user)
                 "password": "Password123!",
                 "display_name": "Duplicate User",
             },

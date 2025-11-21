@@ -66,6 +66,14 @@ class TestLoginRedirects:
 class TestAPIvsWebRequestHandling:
     """Test that API and web requests are handled differently."""
 
+    @pytest.fixture(autouse=True)
+    def multi_user_mode(self, app):
+        """Set multi-user mode to test authentication behavior."""
+        from services.deployment_service import DeploymentService
+        with app.app_context():
+            DeploymentService.set_mode("multi-user")
+        yield
+
     def test_api_request_returns_401_not_redirect(self, client):
         """Test that API requests return 401, not redirect."""
         response = client.get('/api/batches', headers={
