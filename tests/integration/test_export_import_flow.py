@@ -502,8 +502,11 @@ class TestExportErrorHandling:
         Verifies that multiple simultaneous exports don't cause conflicts.
         """
         import concurrent.futures
+        from services.deployment_service import DeploymentService
 
         with app.app_context():
+            # Ensure single-user mode for this test (no auth required)
+            DeploymentService.set_mode("single-user")
             scheme_id = sample_marking_scheme.id
 
         def export_scheme():
@@ -697,11 +700,16 @@ class TestMarkingSchemeImport:
 
     def test_import_requires_authentication(self, client, app):
         """
-        Test import endpoint requires authentication (@login_required).
+        Test import endpoint requires authentication (@login_required) in multi-user mode.
 
         Verifies that unauthenticated requests are rejected with 401 or redirect.
         """
+        from services.deployment_service import DeploymentService
         from tests.unit.fixtures.sample_schemes import get_simple_scheme
+
+        # Set multi-user mode - authentication should be required
+        with app.app_context():
+            DeploymentService.set_mode("multi-user")
 
         # Arrange
         simple_scheme = get_simple_scheme()

@@ -8,6 +8,7 @@ Implements T122-T123: Permission enforcement for scheme routes.
 from functools import wraps
 from flask import jsonify, session
 from services.permission_checker import PermissionChecker
+from services.deployment_service import DeploymentService
 
 
 def get_current_user_id():
@@ -50,6 +51,10 @@ def require_scheme_permission(required_permission):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            # In single-user mode, skip permission checks
+            if DeploymentService.is_single_user_mode():
+                return f(*args, **kwargs)
+
             # Get current user
             current_user_id = get_current_user_id()
             if not current_user_id:
@@ -107,6 +112,10 @@ def require_scheme_owner():
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            # In single-user mode, skip owner checks
+            if DeploymentService.is_single_user_mode():
+                return f(*args, **kwargs)
+
             # Get current user
             current_user_id = get_current_user_id()
             if not current_user_id:

@@ -265,10 +265,17 @@ class TestGetCurrentUser:
 
 
 class TestRegistration:
-    """Test user registration endpoint."""
+    """Test user registration endpoint (admin-only in multi-user mode)."""
 
-    def test_register_new_user(self, client, app, multi_user_mode):
-        """Test registering a new user."""
+    def test_register_new_user(self, client, app, admin_user, multi_user_mode):
+        """Test registering a new user as admin."""
+        # Login as admin first - registration requires admin privileges
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin@example.com", "password": "AdminPass123!"},
+        )
+        assert login_response.status_code == 200
+
         response = client.post(
             "/api/auth/register",
             json={
@@ -285,13 +292,20 @@ class TestRegistration:
         assert "password_hash" not in data["user"]
 
     def test_register_with_duplicate_email_fails(
-        self, client, app, test_user, multi_user_mode
+        self, client, app, test_user, admin_user, multi_user_mode
     ):
         """Test registering with existing email fails."""
+        # Login as admin first
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin@example.com", "password": "AdminPass123!"},
+        )
+        assert login_response.status_code == 200
+
         response = client.post(
             "/api/auth/register",
             json={
-                "email": "test@example.com",  # Already exists
+                "email": "testuser@example.com",  # Already exists (test_user)
                 "password": "Password123!",
                 "display_name": "Duplicate User",
             },
@@ -300,8 +314,15 @@ class TestRegistration:
         assert response.status_code == 400
         assert "already registered" in response.get_json()["message"]
 
-    def test_register_with_weak_password_fails(self, client, app, multi_user_mode):
+    def test_register_with_weak_password_fails(self, client, app, admin_user, multi_user_mode):
         """Test registering with weak password fails."""
+        # Login as admin first
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin@example.com", "password": "AdminPass123!"},
+        )
+        assert login_response.status_code == 200
+
         response = client.post(
             "/api/auth/register",
             json={
@@ -315,8 +336,15 @@ class TestRegistration:
         # Should fail validation
         assert "message" in response.get_json()
 
-    def test_register_without_email_fails(self, client, app, multi_user_mode):
+    def test_register_without_email_fails(self, client, app, admin_user, multi_user_mode):
         """Test registering without email fails."""
+        # Login as admin first
+        login_response = client.post(
+            "/api/auth/login",
+            json={"email": "admin@example.com", "password": "AdminPass123!"},
+        )
+        assert login_response.status_code == 200
+
         response = client.post(
             "/api/auth/register",
             json={"password": "Password123!", "display_name": "New User"},

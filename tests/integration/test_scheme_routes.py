@@ -5,71 +5,75 @@ import json
 
 import pytest
 
-from app import app
 from models import GradingScheme, SchemeQuestion, SchemeCriterion, db
+from services.deployment_service import DeploymentService
 
 
-@pytest.fixture(scope="function")
-def app_context():
-    """Create app context for tests."""
+@pytest.fixture(autouse=True)
+def single_user_mode(app):
+    """Set single-user mode for all tests in this module (no auth required)."""
     with app.app_context():
-        db.create_all()
-        yield
-        db.session.remove()
-        db.drop_all()
+        DeploymentService.set_mode("single-user")
+    yield
 
 
 @pytest.fixture
-def client(app_context):
-    """Create Flask test client."""
-    return app.test_client()
+def sample_scheme(app):
+    """Create a sample grading scheme for testing.
 
+    Returns a dict with IDs to avoid DetachedInstanceError.
+    Use sample_scheme['id'], sample_scheme['question_id'], etc.
+    """
+    with app.app_context():
+        scheme = GradingScheme(
+            name="Test Rubric",
+            description="Sample rubric for testing",
+        )
+        db.session.add(scheme)
+        db.session.commit()
 
-@pytest.fixture
-def sample_scheme(app_context):
-    """Create a sample grading scheme for testing."""
-    scheme = GradingScheme(
-        name="Test Rubric",
-        description="Sample rubric for testing",
-    )
-    db.session.add(scheme)
-    db.session.commit()
+        # Add question
+        question = SchemeQuestion(
+            scheme_id=scheme.id,
+            title="Question 1",
+            description="First question",
+            display_order=1,
+        )
+        db.session.add(question)
+        db.session.commit()
 
-    # Add question
-    question = SchemeQuestion(
-        scheme_id=scheme.id,
-        title="Question 1",
-        description="First question",
-        display_order=1,
-    )
-    db.session.add(question)
-    db.session.commit()
+        # Add criteria
+        criterion1 = SchemeCriterion(
+            question_id=question.id,
+            name="Correctness",
+            description="Solution is correct",
+            max_points=Decimal("10.00"),
+            display_order=1,
+        )
+        criterion2 = SchemeCriterion(
+            question_id=question.id,
+            name="Clarity",
+            description="Solution is clear",
+            max_points=Decimal("5.00"),
+            display_order=2,
+        )
+        db.session.add(criterion1)
+        db.session.add(criterion2)
+        db.session.commit()
 
-    # Add criteria
-    criterion1 = SchemeCriterion(
-        question_id=question.id,
-        name="Correctness",
-        description="Solution is correct",
-        max_points=Decimal("10.00"),
-        display_order=1,
-    )
-    criterion2 = SchemeCriterion(
-        question_id=question.id,
-        name="Clarity",
-        description="Solution is clear",
-        max_points=Decimal("5.00"),
-        display_order=2,
-    )
-    db.session.add(criterion1)
-    db.session.add(criterion2)
-    db.session.commit()
+        # Update totals
+        question.total_possible_points = Decimal("15.00")
+        scheme.total_possible_points = Decimal("15.00")
+        db.session.commit()
 
-    # Update totals
-    question.total_possible_points = Decimal("15.00")
-    scheme.total_possible_points = Decimal("15.00")
-    db.session.commit()
-
-    return scheme
+        # Return dict with IDs to avoid DetachedInstanceError
+        return {
+            'id': scheme.id,
+            'name': scheme.name,
+            'question_id': question.id,
+            'criterion1_id': criterion1.id,
+            'criterion2_id': criterion2.id,
+        }
 
 
 # ============================================================================
@@ -158,7 +162,7 @@ class TestCreateScheme:
         """Test that creating a scheme with duplicate name fails."""
         response = client.post(
             "/api/schemes",
-            json={"name": sample_scheme.name},
+            json={"name": sample_scheme['name']},
         )
         assert response.status_code == 409
         assert "already exists" in response.get_json()["error"]
@@ -220,7 +224,7 @@ class TestListSchemes:
         assert response.status_code == 200
         data = response.get_json()
         assert len(data["schemes"]) >= 1
-        assert any(s["name"] == sample_scheme.name for s in data["schemes"])
+        assert any(s["name"] == sample_scheme['name'] for s in data["schemes"])
 
     def test_list_schemes_filter_no_matches(self, client):
         """Test filtering schemes with no matches."""
@@ -235,11 +239,11 @@ class TestGetScheme:
 
     def test_get_scheme_success(self, client, sample_scheme):
         """Test getting a scheme successfully."""
-        response = client.get(f"/api/schemes/{sample_scheme.id}")
+        response = client.get(f"/api/schemes/{sample_scheme['id']}")
         assert response.status_code == 200
         data = response.get_json()
-        assert data["id"] == sample_scheme.id
-        assert data["name"] == sample_scheme.name
+        assert data["id"] == sample_scheme['id']
+        assert data["name"] == sample_scheme['name']
         assert len(data["questions"]) == 1
 
     def test_get_scheme_not_found(self, client):
@@ -250,7 +254,7 @@ class TestGetScheme:
 
     def test_get_scheme_includes_criteria(self, client, sample_scheme):
         """Test that getting a scheme includes all criteria."""
-        response = client.get(f"/api/schemes/{sample_scheme.id}")
+        response = client.get(f"/api/schemes/{sample_scheme['id']}")
         assert response.status_code == 200
         data = response.get_json()
         assert len(data["questions"][0]["criteria"]) == 2
@@ -261,9 +265,12 @@ class TestUpdateScheme:
 
     def test_update_scheme_name(self, client, sample_scheme):
         """Test updating scheme name."""
-        original_version = sample_scheme.version_number
+        # First get the current version
+        get_response = client.get(f"/api/schemes/{sample_scheme['id']}")
+        original_version = get_response.get_json().get("version_number", 1)
+
         response = client.put(
-            f"/api/schemes/{sample_scheme.id}",
+            f"/api/schemes/{sample_scheme['id']}",
             json={"name": "Updated Rubric"},
         )
         assert response.status_code == 200
@@ -274,23 +281,25 @@ class TestUpdateScheme:
     def test_update_scheme_description(self, client, sample_scheme):
         """Test updating scheme description."""
         response = client.put(
-            f"/api/schemes/{sample_scheme.id}",
+            f"/api/schemes/{sample_scheme['id']}",
             json={"description": "New description"},
         )
         assert response.status_code == 200
         data = response.get_json()
         assert data["description"] == "New description"
 
-    def test_update_scheme_duplicate_name_fails(self, client, app_context):
+    def test_update_scheme_duplicate_name_fails(self, client, app):
         """Test that updating to duplicate name fails."""
-        scheme1 = GradingScheme(name="Rubric 1")
-        scheme2 = GradingScheme(name="Rubric 2")
-        db.session.add(scheme1)
-        db.session.add(scheme2)
-        db.session.commit()
+        with app.app_context():
+            scheme1 = GradingScheme(name="Rubric 1")
+            scheme2 = GradingScheme(name="Rubric 2")
+            db.session.add(scheme1)
+            db.session.add(scheme2)
+            db.session.commit()
+            scheme2_id = scheme2.id
 
         response = client.put(
-            f"/api/schemes/{scheme2.id}",
+            f"/api/schemes/{scheme2_id}",
             json={"name": "Rubric 1"},
         )
         assert response.status_code == 409
@@ -309,11 +318,11 @@ class TestDeleteScheme:
 
     def test_delete_scheme_success(self, client, sample_scheme):
         """Test deleting a scheme (soft delete)."""
-        response = client.delete(f"/api/schemes/{sample_scheme.id}")
+        response = client.delete(f"/api/schemes/{sample_scheme['id']}")
         assert response.status_code == 204
 
         # Verify scheme is marked as deleted
-        scheme = GradingScheme.query.get(sample_scheme.id)
+        scheme = GradingScheme.query.get(sample_scheme['id'])
         assert scheme.is_deleted is True
 
     def test_delete_scheme_not_found(self, client):
@@ -321,12 +330,14 @@ class TestDeleteScheme:
         response = client.delete("/api/schemes/nonexistent")
         assert response.status_code == 404
 
-    def test_delete_already_deleted_scheme_fails(self, client, sample_scheme):
+    def test_delete_already_deleted_scheme_fails(self, client, sample_scheme, app):
         """Test that deleting an already deleted scheme fails."""
-        sample_scheme.is_deleted = True
-        db.session.commit()
+        with app.app_context():
+            scheme = GradingScheme.query.get(sample_scheme['id'])
+            scheme.is_deleted = True
+            db.session.commit()
 
-        response = client.delete(f"/api/schemes/{sample_scheme.id}")
+        response = client.delete(f"/api/schemes/{sample_scheme['id']}")
         assert response.status_code == 409
 
 
@@ -341,7 +352,7 @@ class TestAddQuestion:
     def test_add_question_success(self, client, sample_scheme):
         """Test adding a question to a scheme."""
         response = client.post(
-            f"/api/schemes/{sample_scheme.id}/questions",
+            f"/api/schemes/{sample_scheme['id']}/questions",
             json={
                 "title": "Question 2",
                 "description": "Second question",
@@ -355,7 +366,7 @@ class TestAddQuestion:
     def test_add_question_no_title_fails(self, client, sample_scheme):
         """Test that adding a question without title fails."""
         response = client.post(
-            f"/api/schemes/{sample_scheme.id}/questions",
+            f"/api/schemes/{sample_scheme['id']}/questions",
             json={"description": "No title"},
         )
         assert response.status_code == 400
@@ -374,9 +385,9 @@ class TestUpdateQuestion:
 
     def test_update_question_title(self, client, sample_scheme):
         """Test updating question title."""
-        question = sample_scheme.questions[0]
+        question_id = sample_scheme['question_id']
         response = client.put(
-            f"/api/schemes/questions/{question.id}",
+            f"/api/schemes/questions/{question_id}",
             json={"title": "Updated Question"},
         )
         assert response.status_code == 200
@@ -395,15 +406,16 @@ class TestUpdateQuestion:
 class TestDeleteQuestion:
     """Tests for DELETE /api/schemes/questions/<id> endpoint."""
 
-    def test_delete_question_success(self, client, sample_scheme):
+    def test_delete_question_success(self, client, sample_scheme, app):
         """Test deleting a question."""
-        question = sample_scheme.questions[0]
-        response = client.delete(f"/api/schemes/questions/{question.id}")
+        question_id = sample_scheme['question_id']
+        response = client.delete(f"/api/schemes/questions/{question_id}")
         assert response.status_code == 204
 
         # Verify question is deleted
-        deleted_question = SchemeQuestion.query.get(question.id)
-        assert deleted_question is None
+        with app.app_context():
+            deleted_question = SchemeQuestion.query.get(question_id)
+            assert deleted_question is None
 
     def test_delete_question_not_found(self, client):
         """Test deleting non-existent question."""
@@ -414,24 +426,27 @@ class TestDeleteQuestion:
 class TestReorderQuestions:
     """Tests for POST /api/schemes/questions/reorder endpoint."""
 
-    def test_reorder_questions_success(self, client, app_context):
+    def test_reorder_questions_success(self, client, app):
         """Test reordering questions."""
-        scheme = GradingScheme(name="Test Scheme")
-        db.session.add(scheme)
-        db.session.commit()
+        with app.app_context():
+            scheme = GradingScheme(name="Test Scheme")
+            db.session.add(scheme)
+            db.session.commit()
 
-        q1 = SchemeQuestion(scheme_id=scheme.id, title="Q1", display_order=1)
-        q2 = SchemeQuestion(scheme_id=scheme.id, title="Q2", display_order=2)
-        db.session.add(q1)
-        db.session.add(q2)
-        db.session.commit()
+            q1 = SchemeQuestion(scheme_id=scheme.id, title="Q1", display_order=1)
+            q2 = SchemeQuestion(scheme_id=scheme.id, title="Q2", display_order=2)
+            db.session.add(q1)
+            db.session.add(q2)
+            db.session.commit()
+            q1_id = q1.id
+            q2_id = q2.id
 
         response = client.post(
             "/api/schemes/questions/reorder",
             json={
                 "orders": [
-                    {"question_id": q2.id, "display_order": 1},
-                    {"question_id": q1.id, "display_order": 2},
+                    {"question_id": q2_id, "display_order": 1},
+                    {"question_id": q1_id, "display_order": 2},
                 ]
             },
         )
@@ -450,9 +465,9 @@ class TestAddCriterion:
 
     def test_add_criterion_success(self, client, sample_scheme):
         """Test adding a criterion to a question."""
-        question = sample_scheme.questions[0]
+        question_id = sample_scheme['question_id']
         response = client.post(
-            f"/api/schemes/questions/{question.id}/criteria",
+            f"/api/schemes/questions/{question_id}/criteria",
             json={
                 "name": "Completeness",
                 "description": "All parts answered",
@@ -466,27 +481,27 @@ class TestAddCriterion:
 
     def test_add_criterion_missing_name_fails(self, client, sample_scheme):
         """Test adding criterion without name fails."""
-        question = sample_scheme.questions[0]
+        question_id = sample_scheme['question_id']
         response = client.post(
-            f"/api/schemes/questions/{question.id}/criteria",
+            f"/api/schemes/questions/{question_id}/criteria",
             json={"max_points": 5},
         )
         assert response.status_code == 400
 
     def test_add_criterion_missing_points_fails(self, client, sample_scheme):
         """Test adding criterion without points fails."""
-        question = sample_scheme.questions[0]
+        question_id = sample_scheme['question_id']
         response = client.post(
-            f"/api/schemes/questions/{question.id}/criteria",
+            f"/api/schemes/questions/{question_id}/criteria",
             json={"name": "Criterion"},
         )
         assert response.status_code == 400
 
     def test_add_criterion_invalid_points_fails(self, client, sample_scheme):
         """Test adding criterion with invalid points fails."""
-        question = sample_scheme.questions[0]
+        question_id = sample_scheme['question_id']
         response = client.post(
-            f"/api/schemes/questions/{question.id}/criteria",
+            f"/api/schemes/questions/{question_id}/criteria",
             json={
                 "name": "Criterion",
                 "max_points": -5,
@@ -500,9 +515,9 @@ class TestUpdateCriterion:
 
     def test_update_criterion_name(self, client, sample_scheme):
         """Test updating criterion name."""
-        criterion = sample_scheme.questions[0].criteria[0]
+        criterion_id = sample_scheme['criterion1_id']
         response = client.put(
-            f"/api/schemes/criteria/{criterion.id}",
+            f"/api/schemes/criteria/{criterion_id}",
             json={"name": "Updated Criterion"},
         )
         assert response.status_code == 200
@@ -511,9 +526,9 @@ class TestUpdateCriterion:
 
     def test_update_criterion_points(self, client, sample_scheme):
         """Test updating criterion points."""
-        criterion = sample_scheme.questions[0].criteria[0]
+        criterion_id = sample_scheme['criterion1_id']
         response = client.put(
-            f"/api/schemes/criteria/{criterion.id}",
+            f"/api/schemes/criteria/{criterion_id}",
             json={"max_points": 20},
         )
         assert response.status_code == 200
@@ -524,15 +539,16 @@ class TestUpdateCriterion:
 class TestDeleteCriterion:
     """Tests for DELETE /api/schemes/criteria/<id> endpoint."""
 
-    def test_delete_criterion_success(self, client, sample_scheme):
+    def test_delete_criterion_success(self, client, sample_scheme, app):
         """Test deleting a criterion."""
-        criterion = sample_scheme.questions[0].criteria[0]
-        response = client.delete(f"/api/schemes/criteria/{criterion.id}")
+        criterion_id = sample_scheme['criterion1_id']
+        response = client.delete(f"/api/schemes/criteria/{criterion_id}")
         assert response.status_code == 204
 
         # Verify criterion is deleted
-        deleted = SchemeCriterion.query.get(criterion.id)
-        assert deleted is None
+        with app.app_context():
+            deleted = SchemeCriterion.query.get(criterion_id)
+            assert deleted is None
 
 
 # ============================================================================
@@ -545,18 +561,19 @@ class TestCloneScheme:
 
     def test_clone_scheme_success(self, client, sample_scheme):
         """Test cloning a scheme."""
-        response = client.post(f"/api/schemes/{sample_scheme.id}/clone")
+        response = client.post(f"/api/schemes/{sample_scheme['id']}/clone")
         assert response.status_code == 201
         data = response.get_json()
         assert "Copy" in data["name"]
-        # Verify cloned scheme has at least one question with matching title
+        # Verify cloned scheme has at least one question
         assert len(data["questions"]) > 0
-        assert data["questions"][0]["title"] == sample_scheme.questions[0].title
+        # The original question title was "Question 1"
+        assert data["questions"][0]["title"] == "Question 1"
 
     def test_clone_scheme_with_custom_name(self, client, sample_scheme):
         """Test cloning a scheme with custom name."""
         response = client.post(
-            f"/api/schemes/{sample_scheme.id}/clone",
+            f"/api/schemes/{sample_scheme['id']}/clone",
             json={"name": "Custom Clone Name"},
         )
         assert response.status_code == 201
@@ -574,7 +591,7 @@ class TestGetStatistics:
 
     def test_get_statistics_no_submissions(self, client, sample_scheme):
         """Test getting statistics for scheme with no submissions."""
-        response = client.get(f"/api/schemes/{sample_scheme.id}/statistics")
+        response = client.get(f"/api/schemes/{sample_scheme['id']}/statistics")
         assert response.status_code == 200
         data = response.get_json()
         assert data["total_submissions"] == 0
@@ -591,7 +608,7 @@ class TestValidateScheme:
 
     def test_validate_scheme_success(self, client, sample_scheme):
         """Test validating a valid scheme."""
-        response = client.post(f"/api/schemes/{sample_scheme.id}/validate")
+        response = client.post(f"/api/schemes/{sample_scheme['id']}/validate")
         assert response.status_code == 200
         data = response.get_json()
         assert data["is_valid"] is True

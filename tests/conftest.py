@@ -37,8 +37,8 @@ sys.modules["apscheduler"] = MagicMock()
 sys.modules["apscheduler.schedulers"] = MagicMock()
 sys.modules["apscheduler.schedulers.background"] = MagicMock()
 sys.modules["pystray"] = MagicMock()
-sys.modules["PIL"] = MagicMock()
-sys.modules["PIL.Image"] = MagicMock()
+# Note: PIL is NOT mocked because it's needed for real image processing tests
+# pystray uses PIL but the mock for pystray itself is sufficient
 # Note: Desktop modules are mocked in individual test files as needed
 # to avoid interfering with desktop-specific tests
 
@@ -446,8 +446,8 @@ def sample_submission(app, sample_job):
 
 
 @pytest.fixture
-def sample_marking_scheme(app):
-    """Create a sample marking scheme for testing."""
+def sample_marking_scheme(app, test_user):
+    """Create a sample marking scheme for testing, owned by test_user."""
     with app.app_context():
         from models import db
 
@@ -458,6 +458,7 @@ def sample_marking_scheme(app):
             file_type="txt",
             file_size=2048,
             content="Test marking scheme content",
+            owner_id=test_user.id,  # Set owner for authorization tests
         )
         db.session.add(marking_scheme)
         db.session.commit()

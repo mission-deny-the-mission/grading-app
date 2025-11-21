@@ -5,6 +5,7 @@ Handles marking scheme export to JSON and import from JSON files.
 Implements User Story 1 (Export) and User Story 2 (Import).
 """
 
+from functools import wraps
 from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_login import login_required, current_user
 import json
@@ -17,8 +18,19 @@ from werkzeug.utils import secure_filename
 from models import MarkingScheme, db
 from services.scheme_serializer import MarkingSchemeSerializer
 from services.scheme_deserializer import MarkingSchemeDecoder
+from services.deployment_service import DeploymentService
 
 logger = logging.getLogger(__name__)
+
+
+def auth_required_unless_single_user(f):
+    """Decorator that skips login_required in single-user mode."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if DeploymentService.is_single_user_mode():
+            return f(*args, **kwargs)
+        return login_required(f)(*args, **kwargs)
+    return decorated_function
 
 scheme_export_bp = Blueprint('scheme_export', __name__, url_prefix='/api/schemes')
 
@@ -42,7 +54,7 @@ def sanitize_filename(name):
 
 
 @scheme_export_bp.route('/<scheme_id>/export', methods=['POST'])
-@login_required
+@auth_required_unless_single_user
 def export_scheme(scheme_id):
     """
     Export a marking scheme to JSON format.
@@ -70,18 +82,19 @@ def export_scheme(scheme_id):
                 "message": f"No marking scheme found with ID {scheme_id}"
             }), 404
 
-        # Authorization check
-        if hasattr(scheme, 'owner_id') and scheme.owner_id:
-            if not current_user or not current_user.is_authenticated:
-                return jsonify({
-                    "error": "Unauthorized",
-                    "message": "Authentication required"
-                }), 403
-            if scheme.owner_id != current_user.id:
-                return jsonify({
-                    "error": "Forbidden",
-                    "message": "You do not have permission to export this scheme"
-                }), 403
+        # Authorization check (skip in single-user mode)
+        if not DeploymentService.is_single_user_mode():
+            if hasattr(scheme, 'owner_id') and scheme.owner_id:
+                if not current_user or not current_user.is_authenticated:
+                    return jsonify({
+                        "error": "Unauthorized",
+                        "message": "Authentication required"
+                    }), 403
+                if scheme.owner_id != current_user.id:
+                    return jsonify({
+                        "error": "Forbidden",
+                        "message": "You do not have permission to export this scheme"
+                    }), 403
 
         # Use MarkingSchemeSerializer to convert scheme to JSON
         serializer = MarkingSchemeSerializer()
@@ -96,7 +109,14 @@ def export_scheme(scheme_id):
             }), 500
 
         # Generate filename: scheme_name_YYYY-MM-DD.json (sanitized)
-        safe_name = sanitize_filename(scheme.name)
+        # Check for custom filename from request body
+        request_data = request.get_json(silent=True) or {}
+        custom_filename = request_data.get('file_name')
+
+        if custom_filename:
+            safe_name = sanitize_filename(custom_filename)
+        else:
+            safe_name = sanitize_filename(scheme.name)
         date_str = datetime.utcnow().strftime("%Y-%m-%d")
         base_filename = f"{safe_name}_{date_str}.json"
 
@@ -130,7 +150,7 @@ def export_scheme(scheme_id):
 
 
 @scheme_export_bp.route('/<scheme_id>/download', methods=['GET'])
-@login_required
+@auth_required_unless_single_user
 def download_scheme(scheme_id):
     """
     Download a previously exported JSON file.
@@ -154,18 +174,19 @@ def download_scheme(scheme_id):
                 "message": f"No marking scheme found with ID {scheme_id}"
             }), 404
 
-        # Authorization check
-        if hasattr(scheme, 'owner_id') and scheme.owner_id:
-            if not current_user or not current_user.is_authenticated:
-                return jsonify({
-                    "error": "Unauthorized",
-                    "message": "Authentication required"
-                }), 403
-            if scheme.owner_id != current_user.id:
-                return jsonify({
-                    "error": "Forbidden",
-                    "message": "You do not have permission to download this scheme"
-                }), 403
+        # Authorization check (skip in single-user mode)
+        if not DeploymentService.is_single_user_mode():
+            if hasattr(scheme, 'owner_id') and scheme.owner_id:
+                if not current_user or not current_user.is_authenticated:
+                    return jsonify({
+                        "error": "Unauthorized",
+                        "message": "Authentication required"
+                    }), 403
+                if scheme.owner_id != current_user.id:
+                    return jsonify({
+                        "error": "Forbidden",
+                        "message": "You do not have permission to download this scheme"
+                    }), 403
 
         # Generate the export on-the-fly since we don't persist export files
         # This ensures we always have the latest version
@@ -205,7 +226,7 @@ def download_scheme(scheme_id):
 
 
 @scheme_export_bp.route('/import', methods=['POST'])
-@login_required
+@auth_required_unless_single_user
 def import_scheme():
     """
     Import a marking scheme from JSON file.

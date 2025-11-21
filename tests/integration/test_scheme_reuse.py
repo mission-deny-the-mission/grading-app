@@ -10,6 +10,15 @@ import json
 import pytest
 
 from models import GradingScheme, SchemeQuestion, SchemeCriterion, db
+from services.deployment_service import DeploymentService
+
+
+@pytest.fixture(autouse=True)
+def single_user_mode(app):
+    """Set single-user mode for all tests in this module (no auth required)."""
+    with app.app_context():
+        DeploymentService.set_mode("single-user")
+    yield
 
 
 class TestSchemeReuse:
