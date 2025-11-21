@@ -76,7 +76,8 @@ def test_cleanup_completed_batches_archives_old(app):
 
         assert count >= 1
         assert (
-            old_batch.status in ["archived", "completed_with_errors", "completed", "failed", "cancelled"]
+            old_batch.status
+            in ["archived", "completed_with_errors", "completed", "failed", "cancelled"]
             or old_batch.status == "archived"
         )
 
@@ -91,10 +92,12 @@ def test_process_batch_with_priority_triggers_pending(mock_submit, app):
         batch = JobBatch(batch_name="Priority", status="pending")
         db.session.add(batch)
         db.session.commit()
-        job = GradingJob(job_name="J", provider="openrouter", prompt="p", batch_id=batch.id)
+        job = GradingJob(
+            job_name="J", provider="openrouter", prompt="p", batch_id=batch.id
+        )
         db.session.add(job)
         db.session.commit()
 
         process_batch_with_priority()
 
-    assert mock_delay.called
+    assert mock_submit.called

@@ -6,7 +6,7 @@ Tests the complete workflow: upload → queue → process → extract text.
 import io
 import os
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import cv2
 import numpy as np
@@ -40,7 +40,9 @@ class TestImageUploadAndOCR:
         # Draw text (use default font)
         try:
             # Try to use a larger font if available
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 40)
+            font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 40
+            )
         except Exception:
             # Fallback to default font
             font = ImageFont.load_default()
@@ -103,7 +105,9 @@ class TestImageUploadAndOCR:
 
         # Verify ImageSubmission created in database
         with app.app_context():
-            image_submission = ImageSubmission.query.filter_by(submission_id=submission_id).first()
+            image_submission = ImageSubmission.query.filter_by(
+                submission_id=submission_id
+            ).first()
             assert image_submission is not None
             assert image_submission.original_filename == "test_screenshot.png"
             assert image_submission.mime_type == "image/png"
@@ -118,7 +122,9 @@ class TestImageUploadAndOCR:
                 pass
 
     @patch("tasks.extract_text_from_image_azure")
-    def test_ocr_processing_creates_extracted_content(self, mock_azure_ocr, client, app):
+    def test_ocr_processing_creates_extracted_content(
+        self, mock_azure_ocr, client, app
+    ):
         """Test: Wait for OCR completion → verify ExtractedContent exists."""
         # Mock Azure OCR response
         mock_azure_ocr.return_value = {
@@ -169,15 +175,20 @@ class TestImageUploadAndOCR:
         image_id = image_data["id"]
 
         # Manually trigger OCR processing (instead of waiting for Celery)
+        from tasks import process_image_ocr
+
+        # Run the task synchronously (task creates its own app context)
+        result = process_image_ocr(image_id)
+        print(f"OCR task result: {result}")
+
+        # Verify ExtractedContent was created
         with app.app_context():
-            from tasks import process_image_ocr
-
-            # Run the task synchronously
-            process_image_ocr(image_id)
-
-            # Verify ExtractedContent was created
-            extracted = ExtractedContent.query.filter_by(image_submission_id=image_id).first()
-            assert extracted is not None
+            extracted = ExtractedContent.query.filter_by(
+                image_submission_id=image_id
+            ).first()
+            assert extracted is not None, (
+                f"No ExtractedContent found for image_id {image_id}"
+            )
             assert extracted.extracted_text == "Test Document\nThis is a test image"
             assert float(extracted.confidence_score) == 0.95
 
@@ -237,21 +248,22 @@ class TestImageUploadAndOCR:
 
         image_id = response.get_json()["image"]["id"]
 
+        # Run OCR task (outside of app context to avoid session conflicts)
+        from tasks import process_image_ocr
+
+        process_image_ocr(image_id)
+
+        # Get OCR results via API
+        ocr_response = client.get(f"/api/images/{image_id}/ocr")
+        assert ocr_response.status_code == 200
+
+        ocr_data = ocr_response.get_json()
+        assert ocr_data["success"] is True
+        assert ocr_data["status"] == "completed"
+        assert ocr_data["content"]["extracted_text"] == expected_text
+
+        # Cleanup
         with app.app_context():
-            from tasks import process_image_ocr
-
-            process_image_ocr(image_id)
-
-            # Get OCR results via API
-            ocr_response = client.get(f"/api/images/{image_id}/ocr")
-            assert ocr_response.status_code == 200
-
-            ocr_data = ocr_response.get_json()
-            assert ocr_data["success"] is True
-            assert ocr_data["status"] == "completed"
-            assert ocr_data["content"]["extracted_text"] == expected_text
-
-            # Cleanup
             image_submission = ImageSubmission.query.get(image_id)
             try:
                 os.remove(image_submission.storage_path)
@@ -266,7 +278,9 @@ class TestImageUploadAndOCR:
             "status": "success",
             "text": "Clear Text Document",
             "confidence": 0.97,  # High confidence for clear image
-            "text_regions": [{"text": "Clear Text Document", "confidence": 0.97, "bounding_box": []}],
+            "text_regions": [
+                {"text": "Clear Text Document", "confidence": 0.97, "bounding_box": []}
+            ],
             "processing_time_ms": 1000,
         }
 
@@ -308,7 +322,9 @@ class TestImageUploadAndOCR:
             process_image_ocr(image_id)
 
             # Verify confidence score
-            extracted = ExtractedContent.query.filter_by(image_submission_id=image_id).first()
+            extracted = ExtractedContent.query.filter_by(
+                image_submission_id=image_id
+            ).first()
             assert extracted is not None
             confidence = float(extracted.confidence_score)
             assert confidence >= 0.9, f"Confidence {confidence} below 0.9 threshold"
@@ -391,7 +407,9 @@ class TestBlurDetection:
 
         # Draw clear black text
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 40)
+            font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 40
+            )
         except Exception:
             font = ImageFont.load_default()
 
@@ -423,7 +441,9 @@ class TestBlurDetection:
         # Test blur detection
         result = detect_blur(str(sharp_path))
 
-        assert result["blur_score"] > 100, f"Sharp image blur score {result['blur_score']} should be > 100"
+        assert result["blur_score"] > 100, (
+            f"Sharp image blur score {result['blur_score']} should be > 100"
+        )
         assert result["is_blurry"] is False
         assert result["threshold"] == 100.0
 
@@ -437,7 +457,9 @@ class TestBlurDetection:
         # Test blur detection
         result = detect_blur(str(blurry_path))
 
-        assert result["blur_score"] < 100, f"Blurry image blur score {result['blur_score']} should be < 100"
+        assert result["blur_score"] < 100, (
+            f"Blurry image blur score {result['blur_score']} should be < 100"
+        )
         assert result["is_blurry"] is True
         assert result["threshold"] == 100.0
 
@@ -497,7 +519,9 @@ class TestQualityAssessmentFlow:
         draw = ImageDraw.Draw(img)
 
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30)
+            font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 30
+            )
         except Exception:
             font = ImageFont.load_default()
 
@@ -509,9 +533,8 @@ class TestQualityAssessmentFlow:
 
         return img
 
-    @patch("tasks.assess_image_quality.delay")
     @patch("tasks.extract_text_from_image_azure")
-    def test_quality_assessment_triggered_after_ocr(self, mock_azure_ocr, mock_quality_task, client, app):
+    def test_quality_assessment_triggered_after_ocr(self, mock_azure_ocr, client, app):
         """Test: Quality assessment task is queued after OCR completes."""
         mock_azure_ocr.return_value = {
             "status": "success",
@@ -557,16 +580,28 @@ class TestQualityAssessmentFlow:
 
         image_id = response.get_json()["image"]["id"]
 
-        # Run OCR task
-        with app.app_context():
+        # Patch the quality assessment function at the module level
+        import tasks
+
+        original_delay = tasks.assess_image_quality.delay
+        mock_delay = Mock()
+        mock_delay.reset_mock()  # Clear any previous calls
+        tasks.assess_image_quality.delay = mock_delay
+
+        try:
+            # Run OCR task (outside of app context to avoid session conflicts)
             from tasks import process_image_ocr
 
-            process_image_ocr(image_id)
+            result = process_image_ocr(image_id)
 
-            # Verify quality assessment was queued
-            mock_quality_task.assert_called_once_with(image_id)
+            # Verify quality assessment was queued exactly once
+            mock_delay.assert_called_once_with(image_id)
+        finally:
+            # Restore original function
+            tasks.assess_image_quality.delay = original_delay
 
-            # Cleanup
+        # Cleanup
+        with app.app_context():
             image = ImageSubmission.query.get(image_id)
             try:
                 os.remove(image.storage_path)
@@ -574,7 +609,9 @@ class TestQualityAssessmentFlow:
                 pass
 
     @patch("tasks.extract_text_from_image_azure")
-    def test_blurry_image_quality_metrics_show_is_blurry_true(self, mock_azure_ocr, client, app):
+    def test_blurry_image_quality_metrics_show_is_blurry_true(
+        self, mock_azure_ocr, client, app
+    ):
         """Test: Upload blurry image → quality metrics show is_blurry=true."""
         mock_azure_ocr.return_value = {
             "status": "success",
@@ -630,7 +667,9 @@ class TestQualityAssessmentFlow:
             assert result["overall_quality"] in ["good", "poor", "rejected"]
 
             # Check quality metrics in database
-            quality_metrics = ImageQualityMetrics.query.filter_by(image_submission_id=image_id).first()
+            quality_metrics = ImageQualityMetrics.query.filter_by(
+                image_submission_id=image_id
+            ).first()
 
             assert quality_metrics is not None
             assert quality_metrics.is_blurry is True
