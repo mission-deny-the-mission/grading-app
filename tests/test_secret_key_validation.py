@@ -15,7 +15,8 @@ class TestSecretKeyValidation:
 
     def test_production_rejects_default_secret_key(self):
         """Test that production environment rejects default SECRET_KEY."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': 'your-secret-key-here'}):
+        valid_encryption_key = 'b' * 44  # Fernet key is 44 chars base64
+        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': 'your-secret-key-here', 'DB_ENCRYPTION_KEY': valid_encryption_key}):
             with pytest.raises(ValueError, match="CRITICAL SECURITY ERROR"):
                 # Re-import app to trigger startup validation
                 import importlib
@@ -24,7 +25,8 @@ class TestSecretKeyValidation:
 
     def test_production_rejects_empty_secret_key(self):
         """Test that production environment rejects empty SECRET_KEY."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': ''}):
+        valid_encryption_key = 'b' * 44  # Fernet key is 44 chars base64
+        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': '', 'DB_ENCRYPTION_KEY': valid_encryption_key}):
             with pytest.raises(ValueError, match="CRITICAL SECURITY ERROR"):
                 import importlib
                 import app as app_module
@@ -32,7 +34,8 @@ class TestSecretKeyValidation:
 
     def test_production_rejects_short_secret_key(self):
         """Test that production environment rejects short SECRET_KEY (<32 chars)."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': 'short_key'}):
+        valid_encryption_key = 'b' * 44  # Fernet key is 44 chars base64
+        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': 'short_key', 'DB_ENCRYPTION_KEY': valid_encryption_key}):
             with pytest.raises(ValueError, match="CRITICAL SECURITY ERROR"):
                 import importlib
                 import app as app_module
@@ -41,7 +44,8 @@ class TestSecretKeyValidation:
     def test_production_accepts_valid_secret_key(self):
         """Test that production environment accepts valid SECRET_KEY (>=32 chars)."""
         valid_key = 'a' * 32  # 32 character minimum
-        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': valid_key}):
+        valid_encryption_key = 'b' * 44  # Fernet key is 44 chars base64
+        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': valid_key, 'DB_ENCRYPTION_KEY': valid_encryption_key}):
             try:
                 import importlib
                 import app as app_module
@@ -71,7 +75,8 @@ class TestSecretKeyValidation:
 
     def test_error_message_includes_generation_command(self):
         """Test that error message includes SECRET_KEY generation command."""
-        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': 'bad'}):
+        valid_encryption_key = 'b' * 44  # Fernet key is 44 chars base64
+        with patch.dict(os.environ, {'FLASK_ENV': 'production', 'SECRET_KEY': 'bad', 'DB_ENCRYPTION_KEY': valid_encryption_key}):
             try:
                 import importlib
                 import app as app_module

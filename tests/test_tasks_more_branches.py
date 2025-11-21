@@ -118,22 +118,21 @@ def test_process_batch_mixed_status_jobs(app, sample_batch):
         db.session.add(completed_job)
         db.session.add(pending_job)
         db.session.commit()
+        pending_job_id = pending_job.id
 
     # Track processed jobs in this test scope
     processed_jobs = []
 
-    def mock_delay(job_id):
+    def mock_submit(func, job_id, **kwargs):
         processed_jobs.append(job_id)
-        # Return a mock AsyncResult-like object
-        mock_result = type("MockAsyncResult", (), {"id": job_id})()
-        return mock_result
+        return f"task-{job_id}"
 
-    # Patch the delay method of process_job and run the batch processing
-    with patch("tasks.process_job.delay", side_effect=mock_delay):
+    # Patch task_queue.submit and run the batch processing
+    with patch("desktop.task_queue.task_queue.submit", side_effect=mock_submit):
         result = process_batch(sample_batch.id)
 
     # process_batch should return True and process the pending job
     assert result is True
     # The pending job should be processed exactly once
     assert len(processed_jobs) == 1
-    assert processed_jobs[0] == pending_job.id
+    assert processed_jobs[0] == pending_job_id

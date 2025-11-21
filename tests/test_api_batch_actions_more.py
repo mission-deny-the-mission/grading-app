@@ -17,10 +17,10 @@ def _create_batch(client, app, **kwargs):
         return batch.id
 
 
-@patch("tasks.process_batch.delay")
-def test_start_batch_success(mock_delay, client, app):
+@patch("desktop.task_queue.task_queue.submit")
+def test_start_batch_success(mock_submit, client, app):
     """Test successful batch start via API."""
-    mock_delay.return_value = MagicMock()
+    mock_submit.return_value = MagicMock()
     bid = _create_batch(client, app)
     # Add a pending job to satisfy can_start()
     with app.app_context():
@@ -35,10 +35,10 @@ def test_start_batch_success(mock_delay, client, app):
     assert data["success"] is True
 
 
-@patch("tasks.pause_batch_processing.delay")
-def test_pause_batch_success(mock_delay, client, app):
+@patch("desktop.task_queue.task_queue.submit")
+def test_pause_batch_success(mock_submit, client, app):
     """Test successful batch pause via API."""
-    mock_delay.return_value = MagicMock()
+    mock_submit.return_value = MagicMock()
     bid = _create_batch(client, app)
     resp = client.post(f"/api/batches/{bid}/pause")
     assert resp.status_code == 200
@@ -46,10 +46,10 @@ def test_pause_batch_success(mock_delay, client, app):
     assert data["success"] is True
 
 
-@patch("tasks.resume_batch_processing.delay")
-def test_resume_batch_success(mock_delay, client, app):
+@patch("desktop.task_queue.task_queue.submit")
+def test_resume_batch_success(mock_submit, client, app):
     """Test successful batch resume via API."""
-    mock_delay.return_value = MagicMock()
+    mock_submit.return_value = MagicMock()
     bid = _create_batch(client, app)
     resp = client.post(f"/api/batches/{bid}/resume")
     assert resp.status_code == 200
@@ -57,10 +57,10 @@ def test_resume_batch_success(mock_delay, client, app):
     assert data["success"] is True
 
 
-@patch("tasks.cancel_batch_processing.delay")
-def test_cancel_batch_success(mock_delay, client, app):
+@patch("desktop.task_queue.task_queue.submit")
+def test_cancel_batch_success(mock_submit, client, app):
     """Test successful batch cancel via API."""
-    mock_delay.return_value = MagicMock()
+    mock_submit.return_value = MagicMock()
     bid = _create_batch(client, app)
     resp = client.post(f"/api/batches/{bid}/cancel")
     assert resp.status_code == 200
@@ -68,10 +68,10 @@ def test_cancel_batch_success(mock_delay, client, app):
     assert data["success"] is True
 
 
-@patch("tasks.retry_batch_failed_jobs.delay")
-def test_retry_batch_no_failed(mock_delay, client, app):
+@patch("desktop.task_queue.task_queue.submit")
+def test_retry_batch_no_failed(mock_submit, client, app):
     """Test batch retry when no failed jobs exist."""
-    mock_delay.return_value = MagicMock()
+    mock_submit.return_value = MagicMock()
     bid = _create_batch(client, app)
     # By default no failed jobs, expect 400
     resp = client.post(f"/api/batches/{bid}/retry")

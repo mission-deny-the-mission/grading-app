@@ -81,10 +81,10 @@ def test_cleanup_completed_batches_archives_old(app):
         )
 
 
-@patch("tasks.process_batch.delay")
-def test_process_batch_with_priority_triggers_pending(mock_delay, app):
+@patch("desktop.task_queue.task_queue.submit")
+def test_process_batch_with_priority_triggers_pending(mock_submit, app):
     """Test that process_batch_with_priority triggers pending batches."""
-    mock_delay.return_value = MagicMock()
+    mock_submit.return_value = MagicMock()
 
     with app.app_context():
         # Create a pending batch with one pending job

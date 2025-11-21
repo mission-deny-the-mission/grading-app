@@ -1659,7 +1659,7 @@ def api_create_job_in_batch_with_files(batch_id):
         # Start processing job
         from tasks import process_job
 
-        process_job.delay(job.id)
+        task_queue.submit(process_job, job.id)
 
         return jsonify(
             {

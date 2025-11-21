@@ -39,10 +39,10 @@ class TestApiJobsExports:
 class TestApiJobActions:
     """Test API job action endpoints."""
 
-    @patch("tasks.process_job.delay")
-    def test_trigger_job_processing_success(self, mock_delay, client, sample_job):
+    @patch("desktop.task_queue.task_queue.submit")
+    def test_trigger_job_processing_success(self, mock_submit, client, sample_job):
         """Test successful job processing trigger."""
-        mock_delay.return_value = MagicMock(id="task123")
+        mock_submit.return_value = "task123"
         resp = client.post(f"/api/jobs/{sample_job.id}/process")
         assert resp.status_code == 200
         data = json.loads(resp.data)
@@ -56,10 +56,10 @@ class TestApiJobActions:
         data = json.loads(resp.data)
         assert data["success"] is False
 
-    @patch("tasks.process_job.delay")
-    def test_retry_submission_success_path(self, mock_delay, client, app, sample_job, sample_submission, tmp_path):
+    @patch("desktop.task_queue.task_queue.submit")
+    def test_retry_submission_success_path(self, mock_submit, client, app, sample_job, sample_submission, tmp_path):
         """Test successful submission retry with real file."""
-        mock_delay.return_value = MagicMock(id="task123")
+        mock_submit.return_value = "task123"
         # create a real file so tasks code finds it
         file_path = tmp_path / "test_document.txt"
         file_path.write_text("hello world")

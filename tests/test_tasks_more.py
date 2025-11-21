@@ -32,15 +32,15 @@ class TestTasksHelpers:
 class TestTasksBatchErrors:
     def test_process_batch_nonexistent(self, app):
         """Test process_batch returns False for non-existent batch."""
-        assert process_batch.run("nonexistent") is False
+        assert process_batch("nonexistent") is False
 
     def test_retry_batch_failed_jobs_nonexistent(self, app):
         """Test retry_batch_failed_jobs returns 0 for non-existent batch."""
-        assert retry_batch_failed_jobs.run("nonexistent") == 0
+        assert retry_batch_failed_jobs("nonexistent") == 0
 
     def test_pause_resume_cancel_nonexistent(self, app):
         """Test pause/resume/cancel operations return False for non-existent
         batch."""
-        assert pause_batch_processing.run("nonexistent") is False
-        assert resume_batch_processing.run("nonexistent") is False
-        assert cancel_batch_processing.run("nonexistent") is False
+        assert pause_batch_processing("nonexistent") is False
+        assert resume_batch_processing("nonexistent") is False
+        assert cancel_batch_processing("nonexistent") is False
