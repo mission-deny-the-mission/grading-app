@@ -57,6 +57,8 @@
           pytest
           pytest-cov
           pytest-flask
+          pytest-xdist
+          pytest-mock
           ipython
           ipdb
           debugpy
