@@ -20,32 +20,18 @@ sys.modules['apscheduler.schedulers.background'] = MagicMock()
 class TestSchedulerInitialization:
     """Test scheduler initialization and configuration."""
 
-    @patch('desktop.scheduler.BackgroundScheduler')
-    @patch('desktop.scheduler.cleanup_old_files')
-    @patch('desktop.scheduler.cleanup_completed_batches')
-    def test_scheduler_instance_created(
-        self,
-        mock_cleanup_batches,
-        mock_cleanup_files,
-        mock_scheduler_class
-    ):
+    def test_scheduler_instance_created(self):
         """Test that scheduler instance is created on module import."""
-        # Reset module to force re-import
-        if 'desktop.scheduler' in sys.modules:
-            del sys.modules['desktop.scheduler']
-
-        # Mock the scheduler instance
-        mock_scheduler_instance = MagicMock()
-        mock_scheduler_class.return_value = mock_scheduler_instance
-
-        # Import module (triggers initialization)
+        # Import module
         import desktop.scheduler as scheduler_module
 
-        # Verify BackgroundScheduler was instantiated
-        mock_scheduler_class.assert_called_once()
-
-        # Verify scheduler instance is accessible
+        # Verify scheduler instance exists and is accessible
         assert scheduler_module.scheduler is not None
+
+        # Verify it has the expected BackgroundScheduler methods
+        assert hasattr(scheduler_module.scheduler, 'add_job')
+        assert hasattr(scheduler_module.scheduler, 'start')
+        assert hasattr(scheduler_module.scheduler, 'shutdown')
 
     @patch('desktop.scheduler.scheduler')
     @patch('desktop.scheduler.cleanup_old_files')

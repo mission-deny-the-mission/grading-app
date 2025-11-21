@@ -119,9 +119,8 @@ class TestCreateMainWindow:
 
         # Reset the mock
         webview.create_window.reset_mock()
-        webview.start.reset_mock()
 
-        create_main_window('http://127.0.0.1:5050')
+        window = create_main_window('http://127.0.0.1:5050')
 
         # Verify sleep was called to wait for Flask
         mock_sleep.assert_called_once_with(0.5)
@@ -131,11 +130,12 @@ class TestCreateMainWindow:
             title='Grading App',
             url='http://127.0.0.1:5050',
             width=1280,
-            height=800
+            height=800,
+            hidden=False
         )
 
-        # Verify webview was started
-        webview.start.assert_called_once()
+        # Verify function returns the window
+        assert window is not None
 
     @patch('time.sleep')
     def test_create_window_with_custom_params(self, mock_sleep):
@@ -144,20 +144,22 @@ class TestCreateMainWindow:
         import webview
 
         webview.create_window.reset_mock()
-        webview.start.reset_mock()
 
-        create_main_window(
+        window = create_main_window(
             url='http://localhost:8080',
             title='Custom App',
             width=1920,
             height=1080
         )
 
+        assert window is not None
+
         webview.create_window.assert_called_once_with(
             title='Custom App',
             url='http://localhost:8080',
             width=1920,
-            height=1080
+            height=1080,
+            hidden=False
         )
 
     @patch('desktop.main.logger')
@@ -167,13 +169,12 @@ class TestCreateMainWindow:
         import webview
 
         webview.create_window.reset_mock()
-        webview.start.reset_mock()
 
         create_main_window('http://127.0.0.1:5050', title='Test App', width=1024, height=768)
 
         # Verify creation was logged
         mock_logger.info.assert_any_call('Creating PyWebView window: Test App (1024x768)')
-        mock_logger.info.assert_any_call('PyWebView window closed')
+        mock_logger.info.assert_any_call('PyWebView window created')
 
     @patch('desktop.main.logger')
     def test_create_window_handles_webview_errors(self, mock_logger):
@@ -181,20 +182,19 @@ class TestCreateMainWindow:
         from desktop.main import create_main_window
         import webview
 
-        # Make webview.start() raise an error
-        test_error = RuntimeError("Window creation failed")
+        # Make webview.create_window() raise an error
+        test_error = Exception("Window creation failed")
         webview.create_window.reset_mock()
-        webview.start.reset_mock()
-        webview.start.side_effect = test_error
+        webview.create_window.side_effect = test_error
 
-        with pytest.raises(RuntimeError, match="Window creation failed"):
+        with pytest.raises(Exception, match="Window creation failed"):
             create_main_window('http://127.0.0.1:5050')
 
         # Verify error was logged
         mock_logger.error.assert_called()
 
         # Reset side effect for other tests
-        webview.start.side_effect = None
+        webview.create_window.side_effect = None
 
 
 class TestShutdownGracefully:

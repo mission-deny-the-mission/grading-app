@@ -5,23 +5,12 @@ from decimal import Decimal
 
 import pytest
 
-from app import app
 from models import GradingScheme, SchemeShare, SharePermission, User, db
 from services.permission_checker import PermissionChecker
 
 
-@pytest.fixture(scope="function")
-def app_context():
-    """Create app context for tests."""
-    with app.app_context():
-        db.create_all()
-        yield
-        db.session.remove()
-        db.drop_all()
-
-
 @pytest.fixture
-def owner_user(app_context):
+def owner_user(app):
     """Create a scheme owner user."""
     user = User(
         email="owner@example.com",
@@ -34,7 +23,7 @@ def owner_user(app_context):
 
 
 @pytest.fixture
-def recipient_user(app_context):
+def recipient_user(app):
     """Create a recipient user."""
     user = User(
         email="recipient@example.com",
@@ -47,7 +36,7 @@ def recipient_user(app_context):
 
 
 @pytest.fixture
-def other_user(app_context):
+def other_user(app):
     """Create another user with no access."""
     user = User(
         email="other@example.com",
@@ -60,7 +49,7 @@ def other_user(app_context):
 
 
 @pytest.fixture
-def sample_scheme(app_context, owner_user):
+def sample_scheme(app, owner_user):
     """Create a sample grading scheme."""
     scheme = GradingScheme(
         name="Test Scheme",
@@ -76,7 +65,7 @@ def sample_scheme(app_context, owner_user):
 class TestHasPermissionForOwner:
     """Test T099: Owner always has permission."""
 
-    def test_owner_has_view_permission(self, app_context, owner_user, sample_scheme):
+    def test_owner_has_view_permission(self, app, owner_user, sample_scheme):
         """Owner should always have VIEW_ONLY permission."""
         result = PermissionChecker.has_permission(
             owner_user.id,
@@ -85,7 +74,7 @@ class TestHasPermissionForOwner:
         )
         assert result is True
 
-    def test_owner_has_editable_permission(self, app_context, owner_user, sample_scheme):
+    def test_owner_has_editable_permission(self, app, owner_user, sample_scheme):
         """Owner should always have EDITABLE permission."""
         result = PermissionChecker.has_permission(
             owner_user.id,
@@ -94,7 +83,7 @@ class TestHasPermissionForOwner:
         )
         assert result is True
 
-    def test_owner_has_copy_permission(self, app_context, owner_user, sample_scheme):
+    def test_owner_has_copy_permission(self, app, owner_user, sample_scheme):
         """Owner should always have COPY permission."""
         result = PermissionChecker.has_permission(
             owner_user.id,
@@ -103,17 +92,17 @@ class TestHasPermissionForOwner:
         )
         assert result is True
 
-    def test_owner_can_view_scheme(self, app_context, owner_user, sample_scheme):
+    def test_owner_can_view_scheme(self, app, owner_user, sample_scheme):
         """Owner should be able to view scheme."""
         result = PermissionChecker.can_view_scheme(owner_user.id, sample_scheme.id)
         assert result is True
 
-    def test_owner_can_edit_scheme(self, app_context, owner_user, sample_scheme):
+    def test_owner_can_edit_scheme(self, app, owner_user, sample_scheme):
         """Owner should be able to edit scheme."""
         result = PermissionChecker.can_edit_scheme(owner_user.id, sample_scheme.id)
         assert result is True
 
-    def test_owner_can_copy_scheme(self, app_context, owner_user, sample_scheme):
+    def test_owner_can_copy_scheme(self, app, owner_user, sample_scheme):
         """Owner should be able to copy scheme."""
         result = PermissionChecker.can_copy_scheme(owner_user.id, sample_scheme.id)
         assert result is True
@@ -122,7 +111,7 @@ class TestHasPermissionForOwner:
 class TestHasPermissionViewOnly:
     """Test T100: VIEW_ONLY recipient restrictions."""
 
-    def test_view_only_can_view(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_view_only_can_view(self, app, owner_user, recipient_user, sample_scheme):
         """VIEW_ONLY recipient should be able to view scheme."""
         # Create VIEW_ONLY share
         share = SchemeShare(
@@ -137,7 +126,7 @@ class TestHasPermissionViewOnly:
         result = PermissionChecker.can_view_scheme(recipient_user.id, sample_scheme.id)
         assert result is True
 
-    def test_view_only_cannot_edit(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_view_only_cannot_edit(self, app, owner_user, recipient_user, sample_scheme):
         """VIEW_ONLY recipient should NOT be able to edit scheme."""
         # Create VIEW_ONLY share
         share = SchemeShare(
@@ -152,7 +141,7 @@ class TestHasPermissionViewOnly:
         result = PermissionChecker.can_edit_scheme(recipient_user.id, sample_scheme.id)
         assert result is False
 
-    def test_view_only_cannot_copy(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_view_only_cannot_copy(self, app, owner_user, recipient_user, sample_scheme):
         """VIEW_ONLY recipient should NOT be able to copy scheme."""
         # Create VIEW_ONLY share
         share = SchemeShare(
@@ -167,7 +156,7 @@ class TestHasPermissionViewOnly:
         result = PermissionChecker.can_copy_scheme(recipient_user.id, sample_scheme.id)
         assert result is False
 
-    def test_view_only_has_view_permission(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_view_only_has_view_permission(self, app, owner_user, recipient_user, sample_scheme):
         """VIEW_ONLY recipient should have VIEW_ONLY permission."""
         # Create VIEW_ONLY share
         share = SchemeShare(
@@ -190,7 +179,7 @@ class TestHasPermissionViewOnly:
 class TestHasPermissionEditable:
     """Test T101: EDITABLE recipient permissions."""
 
-    def test_editable_can_view(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_editable_can_view(self, app, owner_user, recipient_user, sample_scheme):
         """EDITABLE recipient should be able to view scheme."""
         # Create EDITABLE share
         share = SchemeShare(
@@ -205,7 +194,7 @@ class TestHasPermissionEditable:
         result = PermissionChecker.can_view_scheme(recipient_user.id, sample_scheme.id)
         assert result is True
 
-    def test_editable_can_edit(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_editable_can_edit(self, app, owner_user, recipient_user, sample_scheme):
         """EDITABLE recipient should be able to edit scheme."""
         # Create EDITABLE share
         share = SchemeShare(
@@ -220,7 +209,7 @@ class TestHasPermissionEditable:
         result = PermissionChecker.can_edit_scheme(recipient_user.id, sample_scheme.id)
         assert result is True
 
-    def test_editable_cannot_copy(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_editable_cannot_copy(self, app, owner_user, recipient_user, sample_scheme):
         """EDITABLE recipient should NOT be able to copy scheme (only COPY permission allows this)."""
         # Create EDITABLE share
         share = SchemeShare(
@@ -235,7 +224,7 @@ class TestHasPermissionEditable:
         result = PermissionChecker.can_copy_scheme(recipient_user.id, sample_scheme.id)
         assert result is False
 
-    def test_editable_has_editable_permission(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_editable_has_editable_permission(self, app, owner_user, recipient_user, sample_scheme):
         """EDITABLE recipient should have EDITABLE permission."""
         # Create EDITABLE share
         share = SchemeShare(
@@ -258,7 +247,7 @@ class TestHasPermissionEditable:
 class TestHasPermissionCopy:
     """Test T102: COPY recipient creates independent copy."""
 
-    def test_copy_can_view(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_copy_can_view(self, app, owner_user, recipient_user, sample_scheme):
         """COPY recipient should be able to view scheme."""
         # Create COPY share
         share = SchemeShare(
@@ -273,7 +262,7 @@ class TestHasPermissionCopy:
         result = PermissionChecker.can_view_scheme(recipient_user.id, sample_scheme.id)
         assert result is True
 
-    def test_copy_cannot_edit(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_copy_cannot_edit(self, app, owner_user, recipient_user, sample_scheme):
         """COPY recipient should NOT be able to edit the original scheme."""
         # Create COPY share
         share = SchemeShare(
@@ -288,7 +277,7 @@ class TestHasPermissionCopy:
         result = PermissionChecker.can_edit_scheme(recipient_user.id, sample_scheme.id)
         assert result is False
 
-    def test_copy_can_copy(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_copy_can_copy(self, app, owner_user, recipient_user, sample_scheme):
         """COPY recipient should be able to copy scheme."""
         # Create COPY share
         share = SchemeShare(
@@ -303,7 +292,7 @@ class TestHasPermissionCopy:
         result = PermissionChecker.can_copy_scheme(recipient_user.id, sample_scheme.id)
         assert result is True
 
-    def test_copy_has_copy_permission(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_copy_has_copy_permission(self, app, owner_user, recipient_user, sample_scheme):
         """COPY recipient should have COPY permission."""
         # Create COPY share
         share = SchemeShare(
@@ -326,7 +315,7 @@ class TestHasPermissionCopy:
 class TestRevokedAccessDenied:
     """Test T103: Revoked access denies permission."""
 
-    def test_revoked_view_only_cannot_view(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_revoked_view_only_cannot_view(self, app, owner_user, recipient_user, sample_scheme):
         """Revoked VIEW_ONLY share should deny view access."""
         # Create revoked share
         share = SchemeShare(
@@ -343,7 +332,7 @@ class TestRevokedAccessDenied:
         result = PermissionChecker.can_view_scheme(recipient_user.id, sample_scheme.id)
         assert result is False
 
-    def test_revoked_editable_cannot_edit(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_revoked_editable_cannot_edit(self, app, owner_user, recipient_user, sample_scheme):
         """Revoked EDITABLE share should deny edit access."""
         # Create revoked share
         share = SchemeShare(
@@ -360,7 +349,7 @@ class TestRevokedAccessDenied:
         result = PermissionChecker.can_edit_scheme(recipient_user.id, sample_scheme.id)
         assert result is False
 
-    def test_revoked_copy_cannot_copy(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_revoked_copy_cannot_copy(self, app, owner_user, recipient_user, sample_scheme):
         """Revoked COPY share should deny copy access."""
         # Create revoked share
         share = SchemeShare(
@@ -377,7 +366,7 @@ class TestRevokedAccessDenied:
         result = PermissionChecker.can_copy_scheme(recipient_user.id, sample_scheme.id)
         assert result is False
 
-    def test_revoked_has_no_permission(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_revoked_has_no_permission(self, app, owner_user, recipient_user, sample_scheme):
         """Revoked share should deny all permissions."""
         # Create revoked share
         share = SchemeShare(
@@ -398,7 +387,7 @@ class TestRevokedAccessDenied:
         )
         assert result is False
 
-    def test_share_active_until_revoked(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_share_active_until_revoked(self, app, owner_user, recipient_user, sample_scheme):
         """Share should be active until explicitly revoked."""
         # Create active share
         share = SchemeShare(
@@ -427,7 +416,7 @@ class TestRevokedAccessDenied:
 class TestGroupMembershipEvaluated:
     """Test T104: Group membership checks work."""
 
-    def test_group_member_has_permission(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_group_member_has_permission(self, app, owner_user, recipient_user, sample_scheme):
         """Group member should have permission if group has share."""
         # Note: This test assumes a UserGroup model exists
         # Since UserGroup doesn't exist yet, this test will create a mock group_id
@@ -455,7 +444,7 @@ class TestGroupMembershipEvaluated:
         # This should return True when group membership is implemented
         assert result is True
 
-    def test_non_group_member_no_permission(self, app_context, owner_user, recipient_user, other_user, sample_scheme):
+    def test_non_group_member_no_permission(self, app, owner_user, recipient_user, other_user, sample_scheme):
         """Non-group member should NOT have permission even if group has share."""
         mock_group_id = "test-group-123"
 
@@ -478,7 +467,7 @@ class TestGroupMembershipEvaluated:
         # This should return False when group membership is implemented
         assert result is False
 
-    def test_group_permission_inherits_to_members(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_group_permission_inherits_to_members(self, app, owner_user, recipient_user, sample_scheme):
         """Group members should inherit the group's permission level."""
         mock_group_id = "test-group-456"
 
@@ -502,7 +491,7 @@ class TestGroupMembershipEvaluated:
         )
         assert result is True
 
-    def test_revoked_group_share_denies_all_members(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_revoked_group_share_denies_all_members(self, app, owner_user, recipient_user, sample_scheme):
         """Revoked group share should deny access to all members."""
         mock_group_id = "test-group-789"
 
@@ -526,7 +515,7 @@ class TestGroupMembershipEvaluated:
         )
         assert result is False
 
-    def test_user_in_multiple_groups_gets_highest_permission(self, app_context, owner_user, recipient_user, sample_scheme):
+    def test_user_in_multiple_groups_gets_highest_permission(self, app, owner_user, recipient_user, sample_scheme):
         """User in multiple groups should get the highest permission level."""
         group1_id = "group-view-only"
         group2_id = "group-editable"
@@ -559,22 +548,22 @@ class TestGroupMembershipEvaluated:
 class TestNoPermission:
     """Test users with no permission."""
 
-    def test_user_with_no_share_cannot_view(self, app_context, other_user, sample_scheme):
+    def test_user_with_no_share_cannot_view(self, app, other_user, sample_scheme):
         """User with no share should NOT be able to view scheme."""
         result = PermissionChecker.can_view_scheme(other_user.id, sample_scheme.id)
         assert result is False
 
-    def test_user_with_no_share_cannot_edit(self, app_context, other_user, sample_scheme):
+    def test_user_with_no_share_cannot_edit(self, app, other_user, sample_scheme):
         """User with no share should NOT be able to edit scheme."""
         result = PermissionChecker.can_edit_scheme(other_user.id, sample_scheme.id)
         assert result is False
 
-    def test_user_with_no_share_cannot_copy(self, app_context, other_user, sample_scheme):
+    def test_user_with_no_share_cannot_copy(self, app, other_user, sample_scheme):
         """User with no share should NOT be able to copy scheme."""
         result = PermissionChecker.can_copy_scheme(other_user.id, sample_scheme.id)
         assert result is False
 
-    def test_user_with_no_share_has_no_permission(self, app_context, other_user, sample_scheme):
+    def test_user_with_no_share_has_no_permission(self, app, other_user, sample_scheme):
         """User with no share should have no permissions."""
         result = PermissionChecker.has_permission(
             other_user.id,

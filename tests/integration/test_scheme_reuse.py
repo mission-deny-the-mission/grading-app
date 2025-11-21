@@ -279,12 +279,12 @@ class TestSchemeReuse:
         scheme2_data = json.loads(response2.data)
         scheme2_id = scheme2_data["id"]
 
-        # Modify first scheme's name
-        with app.app_context():
-            scheme1 = GradingScheme.query.get(scheme1_id)
-            original_name = scheme1.name
-            scheme1.name = "Modified Scheme A"
-            db.session.commit()
+        # Modify first scheme's name via API
+        response_update = client.put(
+            f"/api/schemes/{scheme1_id}",
+            json={"name": "Modified Scheme A"}
+        )
+        assert response_update.status_code == 200
 
         # Verify first scheme was modified
         response_check1 = client.get(f"/api/schemes/{scheme1_id}")
