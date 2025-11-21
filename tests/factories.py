@@ -44,7 +44,9 @@ class UserFactory:
             email = f"test_{random_str}@example.com"
 
         if display_name is None:
-            display_name = f"Test User {email.split('@')[0]}"
+            # Extract name from email and sanitize for display_name (replace underscores with spaces)
+            email_local = email.split('@')[0].replace('_', ' ')
+            display_name = f"Test User {email_local}"
 
         from services.auth_service import AuthService
 

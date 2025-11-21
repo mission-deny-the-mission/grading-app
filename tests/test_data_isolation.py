@@ -373,8 +373,8 @@ class TestUnauthorizedDataModification:
         response = client.put(f'/api/submissions/{submission_a.id}', json={
             'owner_id': user_b.id
         })
-        # Should either fail or ignore ownership change
-        assert response.status_code in [403, 404, 400]
+        # Should either fail or ignore ownership change (405 = method not allowed is also acceptable)
+        assert response.status_code in [403, 404, 400, 405]
 
     def test_user_cannot_manipulate_usage_records(self, client, auth, multi_user_mode):
         """Test that users cannot modify their own usage records."""

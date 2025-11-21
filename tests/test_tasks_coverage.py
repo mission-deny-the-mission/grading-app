@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 class TestCeleryWorkerFailures:
     """Test Celery worker failure scenarios."""
 
+    @pytest.mark.skip(reason="Celery-specific test - app now uses ThreadPoolExecutor task queue")
     @patch('tasks.celery')
     def test_worker_connection_failure(self, mock_celery):
         """Test handling of worker connection failures."""

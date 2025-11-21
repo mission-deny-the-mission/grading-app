@@ -79,8 +79,8 @@ class TestFullStartupSequence:
         # 3. Get port
         mock_get_port.assert_called_once()
 
-        # 4. Start Flask thread
-        mock_thread.start.assert_called_once()
+        # 4. Start Flask thread (and other background threads: system tray, update checker)
+        assert mock_thread.start.call_count >= 1  # At least Flask thread started
 
         # 5. Create window
         mock_create_window.assert_called_once()
@@ -150,17 +150,21 @@ class TestFullStartupSequence:
         with patch.object(db, 'create_all', side_effect=track_db_create):
             main()
 
-        # Verify correct order
-        expected_order = [
-            'configure_app',
-            'db_create_all',
-            'get_port',
-            'thread_create',
-            'thread_start',
-            'create_window',
-            'shutdown'
-        ]
-        assert call_order == expected_order
+        # Verify correct order - key constraints (not exact order due to multiple threads)
+        # 1. configure_app must be first
+        assert call_order[0] == 'configure_app'
+        # 2. db_create_all must come before window creation
+        assert call_order.index('db_create_all') < call_order.index('create_window')
+        # 3. get_port must come before window creation
+        assert call_order.index('get_port') < call_order.index('create_window')
+        # 4. At least one thread must be created and started before window
+        thread_create_indices = [i for i, x in enumerate(call_order) if x == 'thread_create']
+        thread_start_indices = [i for i, x in enumerate(call_order) if x == 'thread_start']
+        assert len(thread_create_indices) >= 1
+        assert len(thread_start_indices) >= 1
+        assert min(thread_create_indices) < call_order.index('create_window')
+        # 5. shutdown must be last
+        assert call_order[-1] == 'shutdown'
 
 
 class TestDatabaseInitialization:
@@ -264,11 +268,13 @@ class TestUserDataDirectoryCreation:
         mock_app.app_context.return_value.__exit__ = MagicMock(return_value=False)
 
         # Use real configure_app_for_desktop to test directory creation
-        with patch('desktop.main.get_user_data_dir', return_value=temp_dir):
-            with patch('desktop.main.configure_app_for_desktop', wraps=configure_app_for_desktop):
-                with patch('desktop.main.get_free_port', return_value=5050):
-                    with patch.object(db, 'create_all'):
-                        main()
+        # Need to patch get_user_data_dir in app_wrapper where it's actually called
+        with patch('desktop.app_wrapper.get_user_data_dir', return_value=temp_dir):
+            with patch('desktop.main.get_user_data_dir', return_value=temp_dir):
+                with patch('desktop.main.configure_app_for_desktop', wraps=configure_app_for_desktop):
+                    with patch('desktop.main.get_free_port', return_value=5050):
+                        with patch.object(db, 'create_all'):
+                            main()
 
         # Verify directory was created
         assert temp_dir.exists()
@@ -305,11 +311,13 @@ class TestUserDataDirectoryCreation:
         mock_app.app_context.return_value.__enter__ = MagicMock(return_value=mock_app_context)
         mock_app.app_context.return_value.__exit__ = MagicMock(return_value=False)
 
-        with patch('desktop.main.get_user_data_dir', return_value=temp_dir):
-            with patch('desktop.main.configure_app_for_desktop', wraps=configure_app_for_desktop):
-                with patch('desktop.main.get_free_port', return_value=5050):
-                    with patch.object(db, 'create_all'):
-                        main()
+        # Need to patch get_user_data_dir in both locations
+        with patch('desktop.app_wrapper.get_user_data_dir', return_value=temp_dir):
+            with patch('desktop.main.get_user_data_dir', return_value=temp_dir):
+                with patch('desktop.main.configure_app_for_desktop', wraps=configure_app_for_desktop):
+                    with patch('desktop.main.get_free_port', return_value=5050):
+                        with patch.object(db, 'create_all'):
+                            main()
 
         # Verify all subdirectories exist
         assert temp_dir.exists()
@@ -458,9 +466,18 @@ class TestPortAllocationAndBinding:
                     with patch.object(db, 'create_all'):
                         main()
 
-        # Verify thread was created with correct port
-        assert len(thread_args) == 1
-        args, kwargs = thread_args[0]
+        # Verify threads were created (should have Flask server and possibly others)
+        assert len(thread_args) >= 1
+
+        # Find the Flask server thread specifically (by checking for FlaskServerThread name or start_flask target)
+        flask_thread = None
+        for args, kwargs in thread_args:
+            if kwargs.get('name') == 'FlaskServerThread' or 'start_flask' in str(kwargs.get('target', '')):
+                flask_thread = (args, kwargs)
+                break
+
+        assert flask_thread is not None, "Flask server thread should be created"
+        args, kwargs = flask_thread
 
         # Check that Flask thread receives correct port
         # target should be start_flask, args should be (host, port, debug)

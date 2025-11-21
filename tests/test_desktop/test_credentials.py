@@ -23,6 +23,11 @@ mock_cryptfile_module = MagicMock()
 mock_cryptfile_class = MagicMock()
 mock_cryptfile_module.CryptFileKeyring = mock_cryptfile_class
 
+# Store original modules to restore later
+_original_modules = {}
+for mod_name in ['keyring', 'keyrings', 'keyrings.cryptfile', 'keyrings.cryptfile.cryptfile']:
+    _original_modules[mod_name] = sys.modules.get(mod_name)
+
 sys.modules['keyring'] = mock_keyring
 sys.modules['keyrings'] = mock_keyrings
 sys.modules['keyrings.cryptfile'] = mock_cryptfile_module
@@ -37,6 +42,21 @@ from desktop.credentials import (
     detect_keyring_backend,
     SERVICE_NAME
 )
+
+
+# Fixture to cleanup sys.modules after all tests in this module
+@pytest.fixture(scope='module', autouse=True)
+def cleanup_module_mocks():
+    """Cleanup sys.modules mocks after all tests complete to prevent test isolation issues."""
+    yield  # Run all tests first
+    # Restore original modules or remove mocks
+    for mod_name, original_mod in _original_modules.items():
+        if original_mod is None:
+            # Module didn't exist before, remove it
+            sys.modules.pop(mod_name, None)
+        else:
+            # Restore original module
+            sys.modules[mod_name] = original_mod
 
 
 class TestInitializeKeyring:

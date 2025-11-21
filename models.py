@@ -995,20 +995,17 @@ class JobBatch(db.Model):
         )
 
     def start_batch(self):
-        """Start processing the batch."""
+        """Start processing the batch.
+
+        Note: This method only sets the batch status to 'processing'.
+        Actual job submission is handled by process_batch() in tasks.py
+        to allow for intelligent scheduling with staggered delays.
+        """
         if not self.can_start():
             return False
 
         self.status = "processing"
         self.started_at = datetime.now(timezone.utc)
-
-        # Queue all pending jobs for processing
-        for job in self.jobs:
-            if job.status == "pending":
-                from desktop.task_queue import task_queue
-                from tasks import process_job
-
-                task_queue.submit(process_job, job.id)
 
         db.session.commit()
         return True
