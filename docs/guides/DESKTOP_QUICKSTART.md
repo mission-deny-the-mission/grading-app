@@ -143,13 +143,13 @@ Run the test suite:
 
 ```bash
 # All desktop tests
-pytest tests/desktop/ -v
+pytest tests/test_desktop/ -v
 
 # Just unit tests (fast)
-pytest tests/desktop/test_*.py -v
+pytest tests/test_desktop/test_*.py -v
 
 # Integration tests
-pytest tests/desktop/integration/ -v
+pytest tests/test_desktop/integration/ -v
 ```
 
 ## Troubleshooting

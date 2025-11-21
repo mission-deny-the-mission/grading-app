@@ -171,7 +171,7 @@ From research decisions:
 
 **Tests**:
 ```bash
-pytest tests/desktop/test_task_queue.py -v
+pytest tests/test_desktop/test_task_queue.py -v
 ```
 
 ---
@@ -226,8 +226,8 @@ pytest tests/desktop/test_task_queue.py -v
 
 **Tests**:
 ```bash
-pytest tests/desktop/test_credentials.py -v
-pytest tests/desktop/test_app_wrapper.py -v
+pytest tests/test_desktop/test_credentials.py -v
+pytest tests/test_desktop/test_app_wrapper.py -v
 ```
 
 ---
@@ -308,7 +308,7 @@ pytest tests/desktop/test_app_wrapper.py -v
 
 **Tests**:
 ```bash
-pytest tests/desktop/test_updater.py -v
+pytest tests/test_desktop/test_updater.py -v
 ```
 
 ---
@@ -327,8 +327,8 @@ pytest tests/desktop/test_updater.py -v
 
 **Tests**:
 ```bash
-pytest tests/desktop/test_settings.py -v
-pytest tests/desktop/test_data_export.py -v
+pytest tests/test_desktop/test_settings.py -v
+pytest tests/test_desktop/test_data_export.py -v
 ```
 
 ---
@@ -456,12 +456,12 @@ Focus on desktop-specific modules:
 
 ```bash
 # Run all desktop tests
-pytest tests/desktop/ -v
+pytest tests/test_desktop/ -v
 
 # Test specific modules
-pytest tests/desktop/test_credentials.py -v
-pytest tests/desktop/test_task_queue.py -v
-pytest tests/desktop/test_updater.py -v
+pytest tests/test_desktop/test_credentials.py -v
+pytest tests/test_desktop/test_task_queue.py -v
+pytest tests/test_desktop/test_updater.py -v
 ```
 
 **Coverage Target**: ≥80% for new desktop modules
@@ -474,13 +474,13 @@ Test full desktop app workflows:
 
 ```bash
 # Test app startup
-pytest tests/desktop/integration/test_startup.py -v
+pytest tests/test_desktop/integration/test_startup.py -v
 
 # Test credential loading
-pytest tests/desktop/integration/test_credential_loading.py -v
+pytest tests/test_desktop/integration/test_credential_loading.py -v
 
 # Test task processing
-pytest tests/desktop/integration/test_task_processing.py -v
+pytest tests/test_desktop/integration/test_task_processing.py -v
 ```
 
 ---

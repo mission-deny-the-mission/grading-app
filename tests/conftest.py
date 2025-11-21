@@ -11,11 +11,15 @@ from unittest.mock import MagicMock, patch
 
 def pytest_configure(config):
     """Configure pytest before test collection.
-    
+
     Ensures sys.path is set before any test modules are imported
     across all pytest-xdist workers.
     """
-    sys.path.insert(0, '/workspace')
+    from pathlib import Path
+    # Add project root to Python path dynamically
+    project_root = Path(__file__).parent.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
 
 
 import pytest

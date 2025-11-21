@@ -97,16 +97,16 @@ Run the test suite:
 
 ```bash
 # All tests
-pytest tests/desktop/ -v
+pytest tests/test_desktop/ -v
 
 # Specific module
-pytest tests/desktop/test_main.py -v
+pytest tests/test_desktop/test_main.py -v
 
 # Integration tests
-pytest tests/desktop/integration/ -v
+pytest tests/test_desktop/integration/ -v
 
 # With coverage
-pytest tests/desktop/ --cov=desktop --cov-report=html
+pytest tests/test_desktop/ --cov=desktop --cov-report=html
 ```
 
 ## 🐛 Troubleshooting
@@ -168,5 +168,5 @@ If you encounter issues:
 
 1. Check the logs in `~/.local/share/GradingApp/logs/`
 2. Run with debug logging: Set `log_level: "DEBUG"` in settings.json
-3. Check test failures: `pytest tests/desktop/ -v --tb=short`
+3. Check test failures: `pytest tests/test_desktop/ -v --tb=short`
 4. Review the desktop app README: `desktop/README.md`
