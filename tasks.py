@@ -35,21 +35,30 @@ anthropic = None  # Keep for compatibility, though not directly used now
 load_dotenv()
 
 
-# Create Flask app for background tasks
+# Global app instance cache for tests and background tasks
+_app_instance = None
+
+
 def create_app():
-    """Return the main Flask app to share DB/session/config with web routes and tests."""
+    """Return the main Flask app to share DB/session/config with web routes and tests.
+
+    In testing mode, reuses the same app instance to avoid database mismatch issues
+    where worker threads would get a different database than the test.
+    """
+    global _app_instance
+
+    # In testing mode, reuse cached instance if available to ensure worker threads
+    # use the same database as the test
+    if os.environ.get("TESTING") == "True" and _app_instance is not None:
+        return _app_instance
+
     # Import here to avoid circular import at module load time
-    import os
     import sys
 
     # Add the current directory to Python path if not already there
     current_dir = os.path.dirname(os.path.abspath(__file__))
     if current_dir not in sys.path:
         sys.path.insert(0, current_dir)
-
-    # Override database URL for testing to ensure tasks use test database
-    if os.environ.get("TESTING") == "True":
-        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
     try:
         from .app import app as flask_app
@@ -65,8 +74,28 @@ def create_app():
             app_module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(app_module)
             flask_app = app_module.app
-    
+
+    # Cache the app instance in testing mode
+    if os.environ.get("TESTING") == "True":
+        _app_instance = flask_app
+
     return flask_app
+
+
+def set_test_app(app):
+    """Set the app instance for testing.
+
+    Called by test fixtures to ensure background tasks use the same
+    app instance (and therefore the same database) as the test.
+    """
+    global _app_instance
+    _app_instance = app
+
+
+def clear_test_app():
+    """Clear the cached app instance after testing."""
+    global _app_instance
+    _app_instance = None
 
 
 def process_job(job_id):

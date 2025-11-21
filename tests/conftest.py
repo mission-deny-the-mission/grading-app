@@ -199,10 +199,18 @@ def app():
     if "sqlalchemy" not in flask_app.extensions:
         db.init_app(flask_app)
 
+    # Register this app instance with tasks module so worker threads use it
+    import tasks
+    tasks.set_test_app(flask_app)
+
     # Create the database tables
     with flask_app.app_context():
         db.create_all()
         yield flask_app
+
+        # Clear the registered test app
+        tasks.clear_test_app()
+
         # Cleanup: ensure all sessions are closed and removed
         try:
             db.session.rollback()
