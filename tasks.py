@@ -215,7 +215,7 @@ def retry_submission_task(submission_id):
         db.session.commit()
 
         # Re-trigger the main job processing task
-        task_queue.submit(process_job, job_id)
+        process_job.delay(job_id)
 
 
 def process_job_sync(job_id):
@@ -325,7 +325,7 @@ def process_submission_sync(submission_id):
             if not _is_provider_supported(job.provider):
                 error_msg = (
                     f"Unsupported provider: {job.provider}. "
-                    f'Supported providers are: {", ".join(_get_supported_providers())}'
+                    f"Supported providers are: {', '.join(_get_supported_providers())}"
                 )
                 submission.set_status("failed", error_msg)
                 return False
@@ -484,7 +484,16 @@ def _grade_with_model(submission, job, model, marking_scheme_content):
         llm_provider = get_llm_provider(provider_name)
 
         with provider_semaphore(provider_name):
-            if job.provider.lower() in ["openrouter", "ollama", "gemini", "openai", "chutes", "z.ai", "nanogpt", "z.ai_coding_plan"]:
+            if job.provider.lower() in [
+                "openrouter",
+                "ollama",
+                "gemini",
+                "openai",
+                "chutes",
+                "z.ai",
+                "nanogpt",
+                "z.ai_coding_plan",
+            ]:
                 return llm_provider.grade_document(
                     text=submission.extracted_text,
                     prompt=job.prompt,
@@ -604,7 +613,7 @@ def process_batch(batch_id):
             for i, job in enumerate(pending_jobs):
                 # Add small delay between job starts
                 delay = i * 5  # 5 second intervals
-                task_queue.submit(process_job, job.id, countdown=delay)
+                process_job.delay(job.id, countdown=delay)
                 print(f"Queued job {job.job_name} with {delay}s delay")
 
             return True
@@ -636,7 +645,7 @@ def process_batch_with_priority():
             for batch in pending_batches:
                 if batch.can_start():
                     print(f"Auto-starting high priority batch: {batch.batch_name}")
-                    task_queue.submit(process_batch, batch.id)
+                    process_batch.delay(batch.id)
 
         except Exception as e:
             print(f"Error in priority batch processing: {str(e)}")
@@ -655,10 +664,9 @@ def retry_batch_failed_jobs(batch_id):
 
             if retried_count > 0:
                 # Start processing the batch again
-                task_queue.submit(process_batch, batch_id)
+                process_batch.delay(batch_id)
                 print(
-                    f"Retried {retried_count} failed jobs in batch "
-                    f"{batch.batch_name}"
+                    f"Retried {retried_count} failed jobs in batch {batch.batch_name}"
                 )
                 return True
 
@@ -787,35 +795,37 @@ def process_image_ocr(image_submission_id):
             image_submission = ImageSubmission.query.get(image_submission_id)
             if not image_submission:
                 return {
-                    'status': 'error',
-                    'error': f'ImageSubmission {image_submission_id} not found'
+                    "status": "error",
+                    "error": f"ImageSubmission {image_submission_id} not found",
                 }
 
             # Update status to processing
-            image_submission.processing_status = 'processing'
+            image_submission.processing_status = "processing"
             image_submission.ocr_started_at = datetime.now(timezone.utc)
             db.session.commit()
 
             # Extract text using Azure Vision OCR
             ocr_result = extract_text_from_image_azure(image_submission.storage_path)
 
-            if ocr_result['status'] == 'success':
+            if ocr_result["status"] == "success":
                 # Create ExtractedContent record
                 extracted_content = ExtractedContent(
                     image_submission_id=image_submission.id,
-                    extracted_text=ocr_result['text'],
-                    text_length=ocr_result.get('text_length', len(ocr_result['text'])),
-                    line_count=ocr_result.get('line_count', ocr_result['text'].count('\n') + 1),
-                    ocr_provider='azure_vision',
-                    ocr_model='azure_read_api',
-                    confidence_score=ocr_result['confidence'],
-                    processing_time_ms=ocr_result['processing_time_ms'],
-                    text_regions=ocr_result.get('text_regions', [])
+                    extracted_text=ocr_result["text"],
+                    text_length=ocr_result.get("text_length", len(ocr_result["text"])),
+                    line_count=ocr_result.get(
+                        "line_count", ocr_result["text"].count("\n") + 1
+                    ),
+                    ocr_provider="azure_vision",
+                    ocr_model="azure_read_api",
+                    confidence_score=ocr_result["confidence"],
+                    processing_time_ms=ocr_result["processing_time_ms"],
+                    text_regions=ocr_result.get("text_regions", []),
                 )
                 db.session.add(extracted_content)
 
                 # Update ImageSubmission status
-                image_submission.processing_status = 'completed'
+                image_submission.processing_status = "completed"
                 image_submission.ocr_completed_at = datetime.now(timezone.utc)
                 image_submission.error_message = None
 
@@ -825,22 +835,24 @@ def process_image_ocr(image_submission_id):
                 assess_image_quality.delay(image_submission_id)
 
                 return {
-                    'status': 'success',
-                    'image_submission_id': image_submission_id,
-                    'extracted_text_length': ocr_result.get('text_length', 0),
-                    'confidence': ocr_result['confidence'],
-                    'processing_time_ms': ocr_result['processing_time_ms']
+                    "status": "success",
+                    "image_submission_id": image_submission_id,
+                    "extracted_text_length": ocr_result.get("text_length", 0),
+                    "confidence": ocr_result["confidence"],
+                    "processing_time_ms": ocr_result["processing_time_ms"],
                 }
             else:
                 # OCR failed
-                image_submission.processing_status = 'failed'
-                image_submission.error_message = ocr_result.get('error', 'Unknown OCR error')
+                image_submission.processing_status = "failed"
+                image_submission.error_message = ocr_result.get(
+                    "error", "Unknown OCR error"
+                )
                 db.session.commit()
 
                 return {
-                    'status': 'error',
-                    'image_submission_id': image_submission_id,
-                    'error': ocr_result.get('error', 'Unknown OCR error')
+                    "status": "error",
+                    "image_submission_id": image_submission_id,
+                    "error": ocr_result.get("error", "Unknown OCR error"),
                 }
 
         except Exception as e:
@@ -848,16 +860,16 @@ def process_image_ocr(image_submission_id):
             try:
                 image_submission = ImageSubmission.query.get(image_submission_id)
                 if image_submission:
-                    image_submission.processing_status = 'failed'
-                    image_submission.error_message = f'Unexpected error: {str(e)}'
+                    image_submission.processing_status = "failed"
+                    image_submission.error_message = f"Unexpected error: {str(e)}"
                     db.session.commit()
             except Exception:
                 pass  # Don't fail if we can't update status
 
             return {
-                'status': 'error',
-                'image_submission_id': image_submission_id,
-                'error': f'Unexpected error: {str(e)}'
+                "status": "error",
+                "image_submission_id": image_submission_id,
+                "error": f"Unexpected error: {str(e)}",
             }
 
 
@@ -881,20 +893,22 @@ def assess_image_quality(image_submission_id):
             image_submission = ImageSubmission.query.get(image_submission_id)
             if not image_submission:
                 return {
-                    'status': 'error',
-                    'error': f'ImageSubmission {image_submission_id} not found'
+                    "status": "error",
+                    "error": f"ImageSubmission {image_submission_id} not found",
                 }
 
             # Check if file exists
             if not os.path.exists(image_submission.storage_path):
                 return {
-                    'status': 'error',
-                    'error': f'Image file not found at {image_submission.storage_path}'
+                    "status": "error",
+                    "error": f"Image file not found at {image_submission.storage_path}",
                 }
 
             # Perform quality assessment
             quality_checker = ScreenshotQualityChecker()
-            assessment_result = quality_checker.assess_quality(image_submission.storage_path)
+            assessment_result = quality_checker.assess_quality(
+                image_submission.storage_path
+            )
 
             # Create or update ImageQualityMetrics record
             existing_metrics = ImageQualityMetrics.query.filter_by(
@@ -912,62 +926,78 @@ def assess_image_quality(image_submission_id):
                 db.session.add(quality_metrics)
 
             # Populate quality metrics
-            quality_metrics.overall_quality = assessment_result['overall_quality']
-            quality_metrics.passes_quality_check = assessment_result['passes_quality_check']
+            quality_metrics.overall_quality = assessment_result["overall_quality"]
+            quality_metrics.passes_quality_check = assessment_result[
+                "passes_quality_check"
+            ]
 
             # Blur metrics
-            blur_data = assessment_result['blur_assessment']
-            quality_metrics.blur_score = blur_data['blur_score']
-            quality_metrics.is_blurry = blur_data['is_blurry']
-            quality_metrics.blur_threshold = blur_data['threshold']
+            blur_data = assessment_result["blur_assessment"]
+            quality_metrics.blur_score = blur_data["blur_score"]
+            quality_metrics.is_blurry = blur_data["is_blurry"]
+            quality_metrics.blur_threshold = blur_data["threshold"]
 
             # Resolution metrics
-            resolution_data = assessment_result['resolution_assessment']
-            quality_metrics.meets_min_resolution = resolution_data['meets_minimum']
+            resolution_data = assessment_result["resolution_assessment"]
+            quality_metrics.meets_min_resolution = resolution_data["meets_minimum"]
             quality_metrics.min_width_required = quality_checker.min_width
             quality_metrics.min_height_required = quality_checker.min_height
 
             # Completeness metrics
-            completeness_data = assessment_result['completeness_assessment']
+            completeness_data = assessment_result["completeness_assessment"]
             # Convert numpy types to Python floats for database storage
-            quality_metrics.edge_density_top = float(completeness_data['edge_density']['top'])
-            quality_metrics.edge_density_bottom = float(completeness_data['edge_density']['bottom'])
-            quality_metrics.edge_density_left = float(completeness_data['edge_density']['left'])
-            quality_metrics.edge_density_right = float(completeness_data['edge_density']['right'])
-            quality_metrics.avg_edge_density = float(completeness_data['avg_edge_density'])
-            quality_metrics.max_edge_density = float(completeness_data['max_edge_density'])
-            quality_metrics.likely_cropped = completeness_data['likely_cropped']
+            quality_metrics.edge_density_top = float(
+                completeness_data["edge_density"]["top"]
+            )
+            quality_metrics.edge_density_bottom = float(
+                completeness_data["edge_density"]["bottom"]
+            )
+            quality_metrics.edge_density_left = float(
+                completeness_data["edge_density"]["left"]
+            )
+            quality_metrics.edge_density_right = float(
+                completeness_data["edge_density"]["right"]
+            )
+            quality_metrics.avg_edge_density = float(
+                completeness_data["avg_edge_density"]
+            )
+            quality_metrics.max_edge_density = float(
+                completeness_data["max_edge_density"]
+            )
+            quality_metrics.likely_cropped = completeness_data["likely_cropped"]
 
             # Issues and processing time
-            quality_metrics.issues = assessment_result['issues']
-            quality_metrics.assessment_duration_ms = assessment_result['assessment_duration_ms']
+            quality_metrics.issues = assessment_result["issues"]
+            quality_metrics.assessment_duration_ms = assessment_result[
+                "assessment_duration_ms"
+            ]
 
             # Update ImageSubmission flags
-            image_submission.passes_quality_check = assessment_result['passes_quality_check']
-            image_submission.requires_manual_review = not assessment_result['passes_quality_check']
+            image_submission.passes_quality_check = assessment_result[
+                "passes_quality_check"
+            ]
+            image_submission.requires_manual_review = not assessment_result[
+                "passes_quality_check"
+            ]
 
             db.session.commit()
 
             return {
-                'status': 'success',
-                'image_submission_id': image_submission_id,
-                'overall_quality': assessment_result['overall_quality'],
-                'passes_quality_check': assessment_result['passes_quality_check'],
-                'issues_count': len(assessment_result['issues']),
-                'assessment_duration_ms': assessment_result['assessment_duration_ms']
+                "status": "success",
+                "image_submission_id": image_submission_id,
+                "overall_quality": assessment_result["overall_quality"],
+                "passes_quality_check": assessment_result["passes_quality_check"],
+                "issues_count": len(assessment_result["issues"]),
+                "assessment_duration_ms": assessment_result["assessment_duration_ms"],
             }
 
         except Exception as e:
             # Handle unexpected errors
             return {
-                'status': 'error',
-                'image_submission_id': image_submission_id,
-                'error': f'Unexpected error during quality assessment: {str(e)}'
+                "status": "error",
+                "image_submission_id": image_submission_id,
+                "error": f"Unexpected error during quality assessment: {str(e)}",
             }
-
-
-# Add Celery-style .delay() method for compatibility with tests
-assess_image_quality.delay = lambda image_id: task_queue.submit(assess_image_quality, image_id)
 
 
 def cleanup_completed_batches():
@@ -1065,6 +1095,7 @@ def process_document_rubric(upload_id, file_path, document_type):
 
             # Extract text from document
             from services.document_parser import DocumentParser
+
             parser = DocumentParser()
 
             try:
@@ -1092,7 +1123,10 @@ def process_document_rubric(upload_id, file_path, document_type):
 
             # Call LLM for rubric analysis
             try:
-                from services.document_parser import call_llm_for_rubric_analysis, parse_llm_response
+                from services.document_parser import (
+                    call_llm_for_rubric_analysis,
+                    parse_llm_response,
+                )
 
                 llm_response = call_llm_for_rubric_analysis(extracted_text)
                 conversion.llm_response = llm_response
@@ -1100,7 +1134,9 @@ def process_document_rubric(upload_id, file_path, document_type):
                 # Parse LLM response
                 parsed_result = parse_llm_response(llm_response)
                 conversion.extracted_scheme = parsed_result.get("extracted_scheme", {})
-                conversion.uncertainty_flags = parsed_result.get("uncertainty_flags", [])
+                conversion.uncertainty_flags = parsed_result.get(
+                    "uncertainty_flags", []
+                )
 
                 print(f"Successfully converted document to scheme")
 
@@ -1122,9 +1158,10 @@ def process_document_rubric(upload_id, file_path, document_type):
             # Update LLM provider info from the provider used
             try:
                 from services.llm_provider import get_provider
-                provider_type = app.config.get('LLM_PROVIDER', 'unknown')
+
+                provider_type = app.config.get("LLM_PROVIDER", "unknown")
                 upload_log.llm_provider = provider_type
-                upload_log.llm_model = app.config.get('LLM_MODEL', 'unknown')
+                upload_log.llm_model = app.config.get("LLM_MODEL", "unknown")
             except:
                 upload_log.llm_provider = "unknown"
                 upload_log.llm_model = "unknown"
@@ -1156,24 +1193,24 @@ def process_document_rubric(upload_id, file_path, document_type):
 # Compatibility layer for tests expecting Celery interface
 class MockCeleryTask:
     """Mock Celery task interface for desktop task queue compatibility."""
-    
+
     def __init__(self, func):
         self.func = func
         self.delay = MockDelay(func)
-    
+
     def __call__(self, *args, **kwargs):
         """Make the MockCeleryTask instance callable and return the original function."""
         return self.func(*args, **kwargs)
-    
+
     @property
     def __name__(self):
         """Return the original function's name."""
         return self.func.__name__
-    
+
     def apply_async(self, args=None, kwargs=None):
         """Mock apply_async method for test compatibility."""
         return self.delay(*args if args else [], **(kwargs or {}))
-    
+
     def retry(self, *args, **kwargs):
         """Mock retry method for test compatibility."""
         pass
@@ -1181,16 +1218,16 @@ class MockCeleryTask:
 
 class MockDelay:
     """Mock delay method for Celery task compatibility."""
-    
+
     def __init__(self, func):
         self.func = func
-    
+
     def __call__(self, *args, **kwargs):
         """Submit task to desktop task queue and return mock result."""
         task_id = task_queue.submit(self.func, *args, **kwargs)
         mock_result = Mock()
         mock_result.id = task_id
-        mock_result.state = 'PENDING'
+        mock_result.state = "PENDING"
         return mock_result
 
 
@@ -1203,23 +1240,26 @@ def process_submission_task_func(submission_id):
 # Export as Celery-style task for tests
 process_submission_task = MockCeleryTask(process_submission_task_func)
 
-# Wrap process_batch with MockCeleryTask for test compatibility
+# Wrap high-level tasks with MockCeleryTask for compatibility
+process_job = MockCeleryTask(process_job)
 process_batch = MockCeleryTask(process_batch)
-
-# Wrap batch processing functions with MockCeleryTask for test compatibility
+retry_batch_failed_jobs = MockCeleryTask(retry_batch_failed_jobs)
 pause_batch_processing = MockCeleryTask(pause_batch_processing)
 resume_batch_processing = MockCeleryTask(resume_batch_processing)
 cancel_batch_processing = MockCeleryTask(cancel_batch_processing)
+process_image_ocr = MockCeleryTask(process_image_ocr)
+assess_image_quality = MockCeleryTask(assess_image_quality)
+
 
 # Mock celery object for test imports
 class MockCelery:
     """Mock Celery object for test compatibility."""
-    
+
     def send_task(self, task_name, args=None, kwargs=None):
         """Mock send_task method."""
         mock_result = Mock()
         mock_result.id = str(uuid.uuid4())
-        mock_result.state = 'PENDING'
+        mock_result.state = "PENDING"
         return mock_result
 
 

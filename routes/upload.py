@@ -72,11 +72,21 @@ DEFAULT_MODELS = {
     },
     "nanogpt": {
         "default": "gpt-4o",
-        "popular": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022", "gemini-2.0-flash-exp"],
+        "popular": [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "claude-3-5-sonnet-20241022",
+            "gemini-2.0-flash-exp",
+        ],
     },
     "chutes": {
         "default": "gpt-4o",
-        "popular": ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet-20241022", "gemini-2.0-flash-exp"],
+        "popular": [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "claude-3-5-sonnet-20241022",
+            "gemini-2.0-flash-exp",
+        ],
     },
     "zai": {
         "default": "glm-4.6",
@@ -103,22 +113,33 @@ def upload_file():
 
     # Handle marking scheme upload if provided
     marking_scheme_content = None
-    if "marking_scheme" in request.files and request.files["marking_scheme"].filename != "":
+    if (
+        "marking_scheme" in request.files
+        and request.files["marking_scheme"].filename != ""
+    ):
         marking_scheme_file = request.files["marking_scheme"]
         marking_scheme_filename = secure_filename(marking_scheme_file.filename)
-        marking_scheme_path = os.path.join(current_app.config["UPLOAD_FOLDER"], marking_scheme_filename)
+        marking_scheme_path = os.path.join(
+            current_app.config["UPLOAD_FOLDER"], marking_scheme_filename
+        )
         marking_scheme_file.save(marking_scheme_path)
 
         # Determine marking scheme file type
         marking_scheme_type = determine_file_type(marking_scheme_filename)
         if not marking_scheme_type:
             return (
-                jsonify({"error": "Unsupported marking scheme file type. Please upload .docx, .pdf, or .txt files."}),
+                jsonify(
+                    {
+                        "error": "Unsupported marking scheme file type. Please upload .docx, .pdf, or .txt files."
+                    }
+                ),
                 400,
             )
 
         # Extract marking scheme content
-        marking_scheme_content = extract_marking_scheme_content(marking_scheme_path, marking_scheme_type)
+        marking_scheme_content = extract_marking_scheme_content(
+            marking_scheme_path, marking_scheme_type
+        )
 
         # Clean up marking scheme file
         cleanup_file(marking_scheme_path)
@@ -132,7 +153,11 @@ def upload_file():
         file_type = determine_file_type(filename)
         if not file_type:
             return (
-                jsonify({"error": "Unsupported file type. Please upload .docx, .pdf, or .txt files."}),
+                jsonify(
+                    {
+                        "error": "Unsupported file type. Please upload .docx, .pdf, or .txt files."
+                    }
+                ),
                 400,
             )
 
@@ -154,11 +179,15 @@ def upload_file():
 
         # Temperature and max_tokens (parse from the form, fall back to sensible defaults)
         try:
-            temperature = float(request.form.get("temperature", session.get("temperature", 0.3) or 0.3))
+            temperature = float(
+                request.form.get("temperature", session.get("temperature", 0.3) or 0.3)
+            )
         except Exception:
             temperature = 0.3
         try:
-            max_tokens = int(request.form.get("max_tokens", session.get("max_tokens", 2000) or 2000))
+            max_tokens = int(
+                request.form.get("max_tokens", session.get("max_tokens", 2000) or 2000)
+            )
         except Exception:
             max_tokens = 2000
 
@@ -192,12 +221,16 @@ def upload_file():
         # Add custom models to the comparison list (prefix when necessary)
         for cm in custom_models:
             if cm and cm.strip():
-                models_to_compare.append(_ensure_prefixed(cm.strip(), selected_provider_short))
+                models_to_compare.append(
+                    _ensure_prefixed(cm.strip(), selected_provider_short)
+                )
 
         # If no specific models selected, use default behavior
         if not models_to_compare:
             if custom_model:
-                models_to_compare = [_ensure_prefixed(custom_model, selected_provider_short)]
+                models_to_compare = [
+                    _ensure_prefixed(custom_model, selected_provider_short)
+                ]
             else:
                 # Use configured default model for the provider, fallback to hardcoded defaults
                 try:
@@ -214,7 +247,9 @@ def upload_file():
                 if ":" in configured_default:
                     models_to_compare = [configured_default]
                 else:
-                    models_to_compare = [_ensure_prefixed(configured_default, selected_provider_short)]
+                    models_to_compare = [
+                        _ensure_prefixed(configured_default, selected_provider_short)
+                    ]
 
         results = []
         all_successful = True
@@ -251,7 +286,11 @@ def upload_file():
                 llm_provider = get_llm_provider(prov_canonical)
             except ValueError as e:
                 return (
-                    jsonify({"error": f'Unsupported provider in model spec "{spec}": {str(e)}'}),
+                    jsonify(
+                        {
+                            "error": f'Unsupported provider in model spec "{spec}": {str(e)}'
+                        }
+                    ),
                     400,
                 )
 
@@ -270,7 +309,9 @@ def upload_file():
                 if not os.getenv("CLAUDE_API_KEY"):
                     return (
                         jsonify(
-                            {"error": "Claude API key not configured. Please configure your API key in the settings."}
+                            {
+                                "error": "Claude API key not configured. Please configure your API key in the settings."
+                            }
                         ),
                         400,
                     )
@@ -278,7 +319,9 @@ def upload_file():
                 if not os.getenv("GEMINI_API_KEY"):
                     return (
                         jsonify(
-                            {"error": "Gemini API key not configured. Please configure your API key in the settings."}
+                            {
+                                "error": "Gemini API key not configured. Please configure your API key in the settings."
+                            }
                         ),
                         400,
                     )
@@ -286,7 +329,9 @@ def upload_file():
                 if not os.getenv("OPENAI_API_KEY"):
                     return (
                         jsonify(
-                            {"error": "OpenAI API key not configured. Please configure your API key in the settings."}
+                            {
+                                "error": "OpenAI API key not configured. Please configure your API key in the settings."
+                            }
                         ),
                         400,
                     )
@@ -294,7 +339,9 @@ def upload_file():
                 if not os.getenv("NANOGPT_API_KEY"):
                     return (
                         jsonify(
-                            {"error": "NanoGPT API key not configured. Please configure your API key in the settings."}
+                            {
+                                "error": "NanoGPT API key not configured. Please configure your API key in the settings."
+                            }
                         ),
                         400,
                     )
@@ -302,7 +349,9 @@ def upload_file():
                 if not os.getenv("CHUTES_API_KEY"):
                     return (
                         jsonify(
-                            {"error": "Chutes API key not configured. Please configure your API key in the settings."}
+                            {
+                                "error": "Chutes API key not configured. Please configure your API key in the settings."
+                            }
                         ),
                         400,
                     )
@@ -310,7 +359,9 @@ def upload_file():
                 if not os.getenv("ZAI_API_KEY"):
                     return (
                         jsonify(
-                            {"error": "Z.AI API key not configured. Please configure your API key in the settings."}
+                            {
+                                "error": "Z.AI API key not configured. Please configure your API key in the settings."
+                            }
                         ),
                         400,
                     )
@@ -337,7 +388,9 @@ def upload_file():
                 )
             except Exception as e:
                 return (
-                    jsonify({"error": f"Provider error for {prov_canonical}: {str(e)}"}),
+                    jsonify(
+                        {"error": f"Provider error for {prov_canonical}: {str(e)}"}
+                    ),
                     400,
                 )
 
@@ -354,7 +407,13 @@ def upload_file():
             result = results[0]
             if not result.get("success", False):
                 return (
-                    jsonify({"error": result.get("error", "Unknown error occurred during grading")}),
+                    jsonify(
+                        {
+                            "error": result.get(
+                                "error", "Unknown error occurred during grading"
+                            )
+                        }
+                    ),
                     500,
                 )
             return jsonify(result)
@@ -366,7 +425,9 @@ def upload_file():
                     "comparison": True,
                     "results": results,
                     "total_models": len(models_to_compare),
-                    "successful_models": len([r for r in results if r.get("success", False)]),
+                    "successful_models": len(
+                        [r for r in results if r.get("success", False)]
+                    ),
                 }
             )
 
@@ -389,7 +450,11 @@ def upload_marking_scheme():
         file_type = determine_file_type(filename)
         if not file_type:
             return (
-                jsonify({"error": "Unsupported file type. Please upload .docx, .pdf, or .txt files."}),
+                jsonify(
+                    {
+                        "error": "Unsupported file type. Please upload .docx, .pdf, or .txt files."
+                    }
+                ),
                 400,
             )
 
@@ -482,7 +547,9 @@ def upload_bulk():
                 file.save(file_path)
 
                 # Determine file type
-                file_type = determine_file_type(filename) or "pdf"  # Default to PDF for unknown types
+                file_type = (
+                    determine_file_type(filename) or "pdf"
+                )  # Default to PDF for unknown types
 
                 # Create submission
                 submission = Submission(
@@ -505,9 +572,8 @@ def upload_bulk():
 
         # Start processing job
         from tasks import process_job
-        from desktop.task_queue import task_queue
 
-        task_queue.submit(process_job, job.id)
+        process_job.delay(job.id)
 
         return jsonify(
             {

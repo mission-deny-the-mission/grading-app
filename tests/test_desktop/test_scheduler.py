@@ -12,9 +12,9 @@ import importlib
 import sys
 
 # Mock APScheduler before importing scheduler module
-sys.modules['apscheduler'] = MagicMock()
-sys.modules['apscheduler.schedulers'] = MagicMock()
-sys.modules['apscheduler.schedulers.background'] = MagicMock()
+sys.modules["apscheduler"] = MagicMock()
+sys.modules["apscheduler.schedulers"] = MagicMock()
+sys.modules["apscheduler.schedulers.background"] = MagicMock()
 
 
 class TestSchedulerInitialization:
@@ -29,18 +29,15 @@ class TestSchedulerInitialization:
         assert scheduler_module.scheduler is not None
 
         # Verify it has the expected BackgroundScheduler methods
-        assert hasattr(scheduler_module.scheduler, 'add_job')
-        assert hasattr(scheduler_module.scheduler, 'start')
-        assert hasattr(scheduler_module.scheduler, 'shutdown')
+        assert hasattr(scheduler_module.scheduler, "add_job")
+        assert hasattr(scheduler_module.scheduler, "start")
+        assert hasattr(scheduler_module.scheduler, "shutdown")
 
-    @patch('desktop.scheduler.scheduler')
-    @patch('desktop.scheduler.cleanup_old_files')
-    @patch('desktop.scheduler.cleanup_completed_batches')
+    @patch("desktop.scheduler.scheduler")
+    @patch("desktop.scheduler.cleanup_old_files")
+    @patch("desktop.scheduler.cleanup_completed_batches")
     def test_initialize_scheduler_adds_jobs(
-        self,
-        mock_cleanup_batches,
-        mock_cleanup_files,
-        mock_scheduler
+        self, mock_cleanup_batches, mock_cleanup_files, mock_scheduler
     ):
         """Test that initialize_scheduler adds both periodic jobs."""
         from desktop.scheduler import initialize_scheduler
@@ -58,18 +55,18 @@ class TestSchedulerInitialization:
         calls = mock_scheduler.add_job.call_args_list
         cleanup_files_call = calls[0]
         assert cleanup_files_call[0][0] == mock_cleanup_files
-        assert cleanup_files_call[0][1] == 'interval'
-        assert cleanup_files_call[1]['hours'] == 24
-        assert cleanup_files_call[1]['id'] == 'cleanup_old_files'
+        assert cleanup_files_call[0][1] == "interval"
+        assert cleanup_files_call[1]["hours"] == 24
+        assert cleanup_files_call[1]["id"] == "cleanup_old_files"
 
         # Verify cleanup_completed_batches job configuration
         cleanup_batches_call = calls[1]
         assert cleanup_batches_call[0][0] == mock_cleanup_batches
-        assert cleanup_batches_call[0][1] == 'interval'
-        assert cleanup_batches_call[1]['hours'] == 6
-        assert cleanup_batches_call[1]['id'] == 'cleanup_completed_batches'
+        assert cleanup_batches_call[0][1] == "interval"
+        assert cleanup_batches_call[1]["hours"] == 6
+        assert cleanup_batches_call[1]["id"] == "cleanup_completed_batches"
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_initialize_scheduler_error_handling(self, mock_scheduler):
         """Test that initialization errors are properly logged and raised."""
         from desktop.scheduler import initialize_scheduler
@@ -85,7 +82,7 @@ class TestSchedulerInitialization:
 class TestSchedulerLifecycle:
     """Test scheduler start and stop functionality."""
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_start_scheduler(self, mock_scheduler):
         """Test starting the scheduler."""
         from desktop.scheduler import start
@@ -99,7 +96,7 @@ class TestSchedulerLifecycle:
         # Verify start was called
         mock_scheduler.start.assert_called_once()
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_start_scheduler_already_running(self, mock_scheduler):
         """Test starting scheduler when already running."""
         from desktop.scheduler import start
@@ -113,7 +110,7 @@ class TestSchedulerLifecycle:
         # Verify start was not called
         mock_scheduler.start.assert_not_called()
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_start_scheduler_error_handling(self, mock_scheduler):
         """Test error handling when starting scheduler."""
         from desktop.scheduler import start
@@ -126,7 +123,7 @@ class TestSchedulerLifecycle:
         with pytest.raises(Exception, match="Start failed"):
             start()
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_stop_scheduler(self, mock_scheduler):
         """Test stopping the scheduler."""
         from desktop.scheduler import stop
@@ -140,7 +137,7 @@ class TestSchedulerLifecycle:
         # Verify shutdown was called with wait=True
         mock_scheduler.shutdown.assert_called_once_with(wait=True)
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_stop_scheduler_not_running(self, mock_scheduler):
         """Test stopping scheduler when not running."""
         from desktop.scheduler import stop
@@ -154,7 +151,7 @@ class TestSchedulerLifecycle:
         # Verify shutdown was not called
         mock_scheduler.shutdown.assert_not_called()
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_stop_scheduler_error_handling(self, mock_scheduler):
         """Test error handling when stopping scheduler."""
         from desktop.scheduler import stop
@@ -171,18 +168,16 @@ class TestSchedulerLifecycle:
 class TestJobExecution:
     """Test periodic job execution (mocked)."""
 
-    @patch('desktop.scheduler.cleanup_old_files')
-    @patch('desktop.scheduler.cleanup_completed_batches')
+    @patch("desktop.scheduler.cleanup_old_files")
+    @patch("desktop.scheduler.cleanup_completed_batches")
     def test_cleanup_functions_are_callable(
-        self,
-        mock_cleanup_batches,
-        mock_cleanup_files
+        self, mock_cleanup_batches, mock_cleanup_files
     ):
         """Test that cleanup functions are properly imported and callable."""
         from desktop.scheduler import initialize_scheduler
 
         # Mock the scheduler to capture job functions
-        with patch('desktop.scheduler.scheduler') as mock_scheduler:
+        with patch("desktop.scheduler.scheduler") as mock_scheduler:
             # Reset mock
             mock_scheduler.add_job.reset_mock()
 
@@ -204,14 +199,11 @@ class TestJobExecution:
             mock_cleanup_files.assert_called_once()
             mock_cleanup_batches.assert_called_once()
 
-    @patch('desktop.scheduler.scheduler')
-    @patch('desktop.scheduler.cleanup_old_files')
-    @patch('desktop.scheduler.cleanup_completed_batches')
+    @patch("desktop.scheduler.scheduler")
+    @patch("desktop.scheduler.cleanup_old_files")
+    @patch("desktop.scheduler.cleanup_completed_batches")
     def test_job_registration_with_correct_intervals(
-        self,
-        mock_cleanup_batches,
-        mock_cleanup_files,
-        mock_scheduler
+        self, mock_cleanup_batches, mock_cleanup_files, mock_scheduler
     ):
         """Test that jobs are registered with correct interval parameters."""
         from desktop.scheduler import initialize_scheduler
@@ -226,12 +218,12 @@ class TestJobExecution:
         calls = mock_scheduler.add_job.call_args_list
 
         # cleanup_old_files should run every 24 hours
-        assert calls[0][1]['hours'] == 24
+        assert calls[0][1]["hours"] == 24
 
         # cleanup_completed_batches should run every 6 hours
-        assert calls[1][1]['hours'] == 6
+        assert calls[1][1]["hours"] == 6
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_job_ids_are_unique(self, mock_scheduler):
         """Test that each job has a unique ID."""
         from desktop.scheduler import initialize_scheduler
@@ -244,14 +236,14 @@ class TestJobExecution:
 
         # Get job IDs
         calls = mock_scheduler.add_job.call_args_list
-        job_ids = [call[1]['id'] for call in calls]
+        job_ids = [call[1]["id"] for call in calls]
 
         # Verify IDs are unique
         assert len(job_ids) == len(set(job_ids))
-        assert 'cleanup_old_files' in job_ids
-        assert 'cleanup_completed_batches' in job_ids
+        assert "cleanup_old_files" in job_ids
+        assert "cleanup_completed_batches" in job_ids
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_jobs_configured_with_replace_existing(self, mock_scheduler):
         """Test that jobs are configured with replace_existing=True."""
         from desktop.scheduler import initialize_scheduler
@@ -265,20 +257,17 @@ class TestJobExecution:
         # Verify all jobs have replace_existing=True
         calls = mock_scheduler.add_job.call_args_list
         for call in calls:
-            assert call[1].get('replace_existing') is True
+            assert call[1].get("replace_existing") is True
 
 
 class TestAutomaticBackups:
     """Test automatic backup scheduling and execution."""
 
-    @patch('desktop.scheduler.export_data')
-    @patch('desktop.scheduler.Settings')
-    @patch('desktop.scheduler.cleanup_old_backups')
+    @patch("desktop.scheduler.export_data")
+    @patch("desktop.scheduler.Settings")
+    @patch("desktop.scheduler.cleanup_old_backups")
     def test_create_automatic_backup_success(
-        self,
-        mock_cleanup,
-        mock_settings_class,
-        mock_export
+        self, mock_cleanup, mock_settings_class, mock_export
     ):
         """Test successful automatic backup creation."""
         from desktop.scheduler import create_automatic_backup
@@ -287,12 +276,12 @@ class TestAutomaticBackups:
         # Mock settings
         mock_settings = MagicMock()
         mock_settings.get.side_effect = lambda key, default=None: {
-            'data.database_path': '/path/to/grading.db',
-            'data.uploads_path': '/path/to/uploads',
-            'app_version': '0.1.0'
+            "data.database_path": "/path/to/grading.db",
+            "data.uploads_path": "/path/to/uploads",
+            "app_version": "0.1.0",
         }.get(key, default)
         mock_settings_class.return_value = mock_settings
-        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+        mock_settings_class._get_user_data_dir.return_value = Path("/tmp/user_data")
 
         # Create backup
         create_automatic_backup()
@@ -300,21 +289,19 @@ class TestAutomaticBackups:
         # Verify export_data was called with correct parameters
         mock_export.assert_called_once()
         args = mock_export.call_args
-        assert args[1]['database_path'] == '/path/to/grading.db'
-        assert args[1]['uploads_path'] == '/path/to/uploads'
-        assert args[1]['app_version'] == '0.1.0'
-        assert 'auto-backup-' in args[1]['output_path']
-        assert args[1]['output_path'].endswith('.zip')
+        assert args[1]["database_path"] == "/path/to/grading.db"
+        assert args[1]["uploads_path"] == "/path/to/uploads"
+        assert args[1]["app_version"] == "0.1.0"
+        assert "auto-backup-" in args[1]["output_path"]
+        assert args[1]["output_path"].endswith(".zip")
 
         # Verify cleanup was called
         mock_cleanup.assert_called_once()
 
-    @patch('desktop.scheduler.export_data')
-    @patch('desktop.scheduler.Settings')
+    @patch("desktop.scheduler.export_data")
+    @patch("desktop.scheduler.Settings")
     def test_create_automatic_backup_with_defaults(
-        self,
-        mock_settings_class,
-        mock_export
+        self, mock_settings_class, mock_export
     ):
         """Test backup creation with default paths."""
         from desktop.scheduler import create_automatic_backup
@@ -323,20 +310,20 @@ class TestAutomaticBackups:
         # Mock settings with no paths configured
         mock_settings = MagicMock()
         mock_settings.get.side_effect = lambda key, default=None: {
-            'app_version': '0.2.0'
+            "app_version": "0.2.0"
         }.get(key, default)
         mock_settings_class.return_value = mock_settings
-        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+        mock_settings_class._get_user_data_dir.return_value = Path("/tmp/user_data")
 
         # Create backup
         create_automatic_backup()
 
         # Verify defaults were used
         args = mock_export.call_args
-        assert '/tmp/user_data/grading.db' in args[1]['database_path']
-        assert '/tmp/user_data/uploads' in args[1]['uploads_path']
+        assert "/tmp/user_data/grading.db" in args[1]["database_path"]
+        assert "/tmp/user_data/uploads" in args[1]["uploads_path"]
 
-    @patch('desktop.scheduler.Settings')
+    @patch("desktop.scheduler.Settings")
     def test_cleanup_old_backups(self, mock_settings_class):
         """Test cleanup of old backup files."""
         from desktop.scheduler import cleanup_old_backups
@@ -345,7 +332,7 @@ class TestAutomaticBackups:
         import time
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            backups_dir = Path(tmpdir) / 'backups'
+            backups_dir = Path(tmpdir) / "backups"
             backups_dir.mkdir()
 
             # Mock settings
@@ -355,8 +342,8 @@ class TestAutomaticBackups:
             mock_settings_class._get_user_data_dir.return_value = Path(tmpdir)
 
             # Create test backup files
-            old_backup = backups_dir / 'auto-backup-20231101-020000.zip'
-            recent_backup = backups_dir / 'auto-backup-20251116-020000.zip'
+            old_backup = backups_dir / "auto-backup-20231101-020000.zip"
+            recent_backup = backups_dir / "auto-backup-20251116-020000.zip"
 
             old_backup.touch()
             recent_backup.touch()
@@ -372,8 +359,8 @@ class TestAutomaticBackups:
             assert not old_backup.exists()
             assert recent_backup.exists()
 
-    @patch('desktop.scheduler.scheduler')
-    @patch('desktop.scheduler.Settings')
+    @patch("desktop.scheduler.scheduler")
+    @patch("desktop.scheduler.Settings")
     def test_schedule_automatic_backup_daily(self, mock_settings_class, mock_scheduler):
         """Test scheduling daily backups."""
         from desktop.scheduler import schedule_automatic_backup
@@ -381,11 +368,11 @@ class TestAutomaticBackups:
         # Mock settings - backups enabled, daily frequency
         mock_settings = MagicMock()
         mock_settings.get.side_effect = lambda key, default=None: {
-            'data.backups_enabled': True,
-            'data.backup_frequency': 'daily'
+            "data.backups_enabled": True,
+            "data.backup_frequency": "daily",
         }.get(key, default)
         mock_settings_class.return_value = mock_settings
-        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+        mock_settings_class._get_user_data_dir.return_value = Path("/tmp/user_data")
 
         # Schedule backups
         schedule_automatic_backup()
@@ -393,24 +380,26 @@ class TestAutomaticBackups:
         # Verify job was added with cron trigger
         mock_scheduler.add_job.assert_called()
         call_kwargs = mock_scheduler.add_job.call_args[1]
-        assert call_kwargs['id'] == 'automatic_backup'
-        assert call_kwargs['hour'] == 2
-        assert call_kwargs['minute'] == 0
+        assert call_kwargs["id"] == "automatic_backup"
+        assert call_kwargs["hour"] == 2
+        assert call_kwargs["minute"] == 0
 
-    @patch('desktop.scheduler.scheduler')
-    @patch('desktop.scheduler.Settings')
-    def test_schedule_automatic_backup_weekly(self, mock_settings_class, mock_scheduler):
+    @patch("desktop.scheduler.scheduler")
+    @patch("desktop.scheduler.Settings")
+    def test_schedule_automatic_backup_weekly(
+        self, mock_settings_class, mock_scheduler
+    ):
         """Test scheduling weekly backups."""
         from desktop.scheduler import schedule_automatic_backup
 
         # Mock settings - backups enabled, weekly frequency
         mock_settings = MagicMock()
         mock_settings.get.side_effect = lambda key, default=None: {
-            'data.backups_enabled': True,
-            'data.backup_frequency': 'weekly'
+            "data.backups_enabled": True,
+            "data.backup_frequency": "weekly",
         }.get(key, default)
         mock_settings_class.return_value = mock_settings
-        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+        mock_settings_class._get_user_data_dir.return_value = Path("/tmp/user_data")
 
         # Schedule backups
         schedule_automatic_backup()
@@ -418,24 +407,26 @@ class TestAutomaticBackups:
         # Verify job was added with weekly schedule
         mock_scheduler.add_job.assert_called()
         call_kwargs = mock_scheduler.add_job.call_args[1]
-        assert call_kwargs['id'] == 'automatic_backup'
-        assert call_kwargs['day_of_week'] == 'sun'
-        assert call_kwargs['hour'] == 2
+        assert call_kwargs["id"] == "automatic_backup"
+        assert call_kwargs["day_of_week"] == "sun"
+        assert call_kwargs["hour"] == 2
 
-    @patch('desktop.scheduler.scheduler')
-    @patch('desktop.scheduler.Settings')
-    def test_schedule_automatic_backup_disabled(self, mock_settings_class, mock_scheduler):
+    @patch("desktop.scheduler.scheduler")
+    @patch("desktop.scheduler.Settings")
+    def test_schedule_automatic_backup_disabled(
+        self, mock_settings_class, mock_scheduler
+    ):
         """Test that backups are not scheduled when disabled."""
         from desktop.scheduler import schedule_automatic_backup
 
         # Mock settings - backups disabled
         mock_settings = MagicMock()
         mock_settings.get.side_effect = lambda key, default=None: {
-            'data.backups_enabled': False,
-            'data.backup_frequency': 'daily'
+            "data.backups_enabled": False,
+            "data.backup_frequency": "daily",
         }.get(key, default)
         mock_settings_class.return_value = mock_settings
-        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+        mock_settings_class._get_user_data_dir.return_value = Path("/tmp/user_data")
 
         # Schedule backups
         schedule_automatic_backup()
@@ -443,8 +434,8 @@ class TestAutomaticBackups:
         # Verify job was NOT added
         mock_scheduler.add_job.assert_not_called()
 
-    @patch('desktop.scheduler.scheduler')
-    @patch('desktop.scheduler.Settings')
+    @patch("desktop.scheduler.scheduler")
+    @patch("desktop.scheduler.Settings")
     def test_schedule_automatic_backup_never(self, mock_settings_class, mock_scheduler):
         """Test that backups are not scheduled when frequency is 'never'."""
         from desktop.scheduler import schedule_automatic_backup
@@ -452,11 +443,11 @@ class TestAutomaticBackups:
         # Mock settings - frequency set to never
         mock_settings = MagicMock()
         mock_settings.get.side_effect = lambda key, default=None: {
-            'data.backups_enabled': True,
-            'data.backup_frequency': 'never'
+            "data.backups_enabled": True,
+            "data.backup_frequency": "never",
         }.get(key, default)
         mock_settings_class.return_value = mock_settings
-        mock_settings_class._get_user_data_dir.return_value = Path('/tmp/user_data')
+        mock_settings_class._get_user_data_dir.return_value = Path("/tmp/user_data")
 
         # Schedule backups
         schedule_automatic_backup()
@@ -468,29 +459,23 @@ class TestAutomaticBackups:
 class TestSchedulerIntegration:
     """Integration tests for scheduler module."""
 
-    @patch('desktop.scheduler.BackgroundScheduler')
-    @patch('desktop.scheduler.cleanup_old_files')
-    @patch('desktop.scheduler.cleanup_completed_batches')
-    def test_full_lifecycle(
-        self,
-        mock_cleanup_batches,
-        mock_cleanup_files,
-        mock_scheduler_class
-    ):
+    @patch("desktop.scheduler.cleanup_old_files")
+    @patch("desktop.scheduler.cleanup_completed_batches")
+    def test_full_lifecycle(self, mock_cleanup_batches, mock_cleanup_files):
         """Test full scheduler lifecycle: initialize -> start -> stop."""
-        # Reset module
-        if 'desktop.scheduler' in sys.modules:
-            del sys.modules['desktop.scheduler']
-
-        # Mock scheduler instance
-        mock_scheduler_instance = MagicMock()
-        mock_scheduler_instance.running = False
-        mock_scheduler_class.return_value = mock_scheduler_instance
-
-        # Import module (triggers initialization)
+        import importlib
         import desktop.scheduler as scheduler_module
 
-        # Verify initialization
+        # Reload module to ensure clean state
+        scheduler_module = importlib.reload(scheduler_module)
+
+        # Mock scheduler instance directly on module
+        mock_scheduler_instance = MagicMock()
+        mock_scheduler_instance.running = False
+        scheduler_module.scheduler = mock_scheduler_instance
+
+        # Initialize scheduler
+        scheduler_module.initialize_scheduler()
         assert mock_scheduler_instance.add_job.call_count == 2
 
         # Start scheduler
@@ -503,16 +488,16 @@ class TestSchedulerIntegration:
         scheduler_module.stop()
         mock_scheduler_instance.shutdown.assert_called_once_with(wait=True)
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_module_level_scheduler_access(self, mock_scheduler):
         """Test that scheduler instance is accessible at module level."""
         import desktop.scheduler
 
         # Verify scheduler is accessible
-        assert hasattr(desktop.scheduler, 'scheduler')
+        assert hasattr(desktop.scheduler, "scheduler")
         assert desktop.scheduler.scheduler is not None
 
-    @patch('desktop.scheduler.scheduler')
+    @patch("desktop.scheduler.scheduler")
     def test_job_count(self, mock_scheduler):
         """Test that exactly 2 jobs are registered."""
         from desktop.scheduler import initialize_scheduler

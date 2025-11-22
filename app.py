@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, request, url_for
@@ -6,48 +7,59 @@ from werkzeug.exceptions import RequestEntityTooLarge
 
 try:
     from flask_login import LoginManager
+
     FLASK_LOGIN_AVAILABLE = True
 except ImportError:
     FLASK_LOGIN_AVAILABLE = False
+
     # Create a no-op LoginManager for testing
     class LoginManager:
         def __init__(self):
             self.login_view = None
             self.session_protection = None
+
         def init_app(self, app):
             pass
+
         def user_loader(self, func):
             return func
+
 
 # Optional imports for rate limiting and CSRF protection
 try:
     from flask_limiter import Limiter
     from flask_limiter.util import get_remote_address
+
     FLASK_LIMITER_AVAILABLE = True
 except ImportError:
     FLASK_LIMITER_AVAILABLE = False
 
 try:
     from flask_wtf.csrf import CSRFProtect
+
     CSRF_PROTECT_AVAILABLE = True
 except ImportError:
     CSRF_PROTECT_AVAILABLE = False
 
 try:
     from flask_migrate import Migrate
+
     FLASK_MIGRATE_AVAILABLE = True
 except ImportError:
     FLASK_MIGRATE_AVAILABLE = False
 
 from models import db
+
 # Import blueprints that don't depend on limiter - these go after limiter initialization
 from routes.api import api_bp
 from routes.batches import batches_bp
 from routes.config_routes import config_bp
+
 # Import route blueprints
 from routes.main import main_bp
 from routes.templates import templates_bp
 from routes.upload import upload_bp
+
 # Import grading scheme blueprints
 from routes.schemes import schemes_bp
 from routes.grading import grading_bp
@@ -59,6 +71,7 @@ from routes.scheme_document import scheme_document_bp
 from routes.scheme_sharing import scheme_sharing_bp
 from routes.auth_pages import auth_pages_bp
 from routes.legacy_auth_redirects import legacy_auth_bp
+
 # Import desktop settings blueprint
 from routes.desktop_settings import desktop_settings_bp
 from routes.desktop_data import desktop_data_bp
@@ -69,20 +82,29 @@ load_dotenv()
 app = Flask(__name__, template_folder="templates")
 
 # SECRET_KEY validation - CRITICAL SECURITY
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 FLASK_ENV = os.getenv("FLASK_ENV", "production")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-# In production, SECRET_KEY must be properly set
-if FLASK_ENV == "production":
-    if SECRET_KEY == "your-secret-key-here" or not SECRET_KEY or len(SECRET_KEY) < 32:
+if SECRET_KEY and len(SECRET_KEY) < 32:
+    if FLASK_ENV == "production":
+        raise ValueError(
+            "CRITICAL SECURITY ERROR: SECRET_KEY must be at least 32 characters long in production. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
+    else:
+        print(
+            "WARNING: Provided SECRET_KEY is too short. Using a secure temporary key for development/testing."
+        )
+        SECRET_KEY = None
+
+if not SECRET_KEY:
+    if FLASK_ENV == "production":
         raise ValueError(
             "CRITICAL SECURITY ERROR: SECRET_KEY must be set to a secure random value in production. "
             "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
         )
-
-# In development, warn if using default key
-if FLASK_ENV != "production" and SECRET_KEY == "your-secret-key-here":
-    print("WARNING: Using default SECRET_KEY. Generate a secure key for production.")
+    SECRET_KEY = secrets.token_hex(32)
+    print("INFO: Generated a secure SECRET_KEY for development/testing.")
 
 app.secret_key = SECRET_KEY
 
@@ -98,6 +120,7 @@ if FLASK_ENV == "production":
     # Validate key format
     try:
         from cryptography.fernet import Fernet
+
         Fernet(DB_ENCRYPTION_KEY.encode())
     except Exception as e:
         raise ValueError(
@@ -107,36 +130,40 @@ if FLASK_ENV == "production":
 
 # In development, warn if encryption key is missing
 if FLASK_ENV != "production" and not os.getenv("DB_ENCRYPTION_KEY"):
-    print("WARNING: DB_ENCRYPTION_KEY not set. Encryption features will fail. Generate one for development.")
+    print(
+        "WARNING: DB_ENCRYPTION_KEY not set. Encryption features will fail. Generate one for development."
+    )
 
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # 100MB max file size
 
 # Flask-Login configuration
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'auth.login'
-login_manager.session_protection = 'strong'
+login_manager.login_view = "auth.login"
+login_manager.session_protection = "strong"
 
 
 @login_manager.unauthorized_handler
 def unauthorized():
     """Handle unauthorized access for both API and web requests."""
     # For API requests, return JSON 401
-    if request.path.startswith('/api/'):
+    if request.path.startswith("/api/"):
         return jsonify({"error": "Authentication required"}), 401
     # For web requests, redirect to login
-    return redirect(url_for('auth.login', next=request.url))
+    return redirect(url_for("auth.login", next=request.url))
 
 
 # Session configuration (security & timeouts)
 # Cookie security flags based on environment (HTTPS required in production, optional in dev)
 IS_PRODUCTION = FLASK_ENV == "production"
-app.config['REMEMBER_COOKIE_SECURE'] = IS_PRODUCTION  # HTTPS only in production
-app.config['REMEMBER_COOKIE_HTTPONLY'] = True  # No JS access to cookie (always enforced)
-app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION  # HTTPS only in production
-app.config['SESSION_COOKIE_HTTPONLY'] = True  # No JS access to cookie (always enforced)
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection (always enforced)
-app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutes idle timeout
+app.config["REMEMBER_COOKIE_SECURE"] = IS_PRODUCTION  # HTTPS only in production
+app.config["REMEMBER_COOKIE_HTTPONLY"] = (
+    True  # No JS access to cookie (always enforced)
+)
+app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION  # HTTPS only in production
+app.config["SESSION_COOKIE_HTTPONLY"] = True  # No JS access to cookie (always enforced)
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  # CSRF protection (always enforced)
+app.config["PERMANENT_SESSION_LIFETIME"] = 1800  # 30 minutes idle timeout
 
 # Database configuration (use absolute path for SQLite to avoid CWD-related resets)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -161,16 +188,21 @@ csrf = None
 if CSRF_PROTECT_AVAILABLE:
     csrf = CSRFProtect(app)
     # Disable CSRF for testing
-    app.config['WTF_CSRF_ENABLED'] = FLASK_ENV == "production"
+    app.config["WTF_CSRF_ENABLED"] = FLASK_ENV == "production"
+
 
 # Initialize rate limiter BEFORE importing blueprints to avoid circular imports (optional)
 class NoOpLimiter:
     """No-op limiter for when Flask-Limiter is not available."""
+
     def limit(self, *args, **kwargs):
         """Return a no-op decorator."""
+
         def decorator(func):
             return func
+
         return decorator
+
 
 if FLASK_LIMITER_AVAILABLE:
     limiter = Limiter(
@@ -178,17 +210,20 @@ if FLASK_LIMITER_AVAILABLE:
         key_func=get_remote_address,
         default_limits=["1000 per day", "100 per hour"],
         storage_uri="memory://",
-        strategy="fixed-window"
+        strategy="fixed-window",
     )
 else:
     limiter = NoOpLimiter()
+
 
 # Flask-Login user_loader callback (will be properly configured after User model is available)
 @login_manager.user_loader
 def load_user(user_id):
     """Load user from database for Flask-Login session management."""
     from models import User
+
     return User.query.get(user_id)
+
 
 # NOW import blueprints that depend on limiter (after limiter is initialized)
 from routes.admin_routes import admin_bp
@@ -232,6 +267,7 @@ app.register_blueprint(legacy_auth_bp)
 
 # Initialize authentication middleware
 from middleware.auth_middleware import init_auth_middleware
+
 init_auth_middleware(app)
 
 # Configure upload folder

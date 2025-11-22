@@ -224,7 +224,9 @@ class GradingJob(db.Model):
 
     # Foreign keys
     batch_id = db.Column(db.String(36), db.ForeignKey("job_batches.id"), nullable=True)
-    owner_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True, index=True)
+    owner_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=True, index=True
+    )
 
     # Relationships
     submissions = db.relationship(
@@ -325,8 +327,7 @@ class GradingJob(db.Model):
         """Update job progress based on submissions."""
         # Compute counts via queries to avoid stale relationship caching
         try:
-            from models import \
-                Submission  # local import to avoid circular issues
+            from models import Submission  # local import to avoid circular issues
         except Exception:
             Submission = None
 
@@ -1033,7 +1034,7 @@ class JobBatch(db.Model):
                 from desktop.task_queue import task_queue
                 from tasks import process_job
 
-                task_queue.submit(process_job, job.id)
+                process_job.delay(job.id)
 
         db.session.commit()
         return True
@@ -1245,14 +1246,14 @@ class Config(db.Model):
 
     # API Configuration - Encrypted Storage
     # Use longer VARCHAR to accommodate Fernet ciphertext (longer than plaintext)
-    _openrouter_api_key = db.Column('openrouter_api_key', db.String(500))
-    _claude_api_key = db.Column('claude_api_key', db.String(500))
-    _gemini_api_key = db.Column('gemini_api_key', db.String(500))
-    _openai_api_key = db.Column('openai_api_key', db.String(500))
-    _nanogpt_api_key = db.Column('nanogpt_api_key', db.String(500))
-    _chutes_api_key = db.Column('chutes_api_key', db.String(500))
-    _zai_api_key = db.Column('zai_api_key', db.String(500))
-    zai_pricing_plan = db.Column(db.String(20), default='normal')
+    _openrouter_api_key = db.Column("openrouter_api_key", db.String(500))
+    _claude_api_key = db.Column("claude_api_key", db.String(500))
+    _gemini_api_key = db.Column("gemini_api_key", db.String(500))
+    _openai_api_key = db.Column("openai_api_key", db.String(500))
+    _nanogpt_api_key = db.Column("nanogpt_api_key", db.String(500))
+    _chutes_api_key = db.Column("chutes_api_key", db.String(500))
+    _zai_api_key = db.Column("zai_api_key", db.String(500))
+    zai_pricing_plan = db.Column(db.String(20), default="normal")
     lm_studio_url = db.Column(db.String(500))
     ollama_url = db.Column(db.String(500))
 
@@ -1280,6 +1281,7 @@ class Config(db.Model):
         if not self._openrouter_api_key:
             return None
         from utils.encryption import decrypt_value
+
         try:
             return decrypt_value(self._openrouter_api_key)
         except Exception:
@@ -1292,6 +1294,7 @@ class Config(db.Model):
             self._openrouter_api_key = None
         else:
             from utils.encryption import encrypt_value
+
             self._openrouter_api_key = encrypt_value(value)
 
     @property
@@ -1300,6 +1303,7 @@ class Config(db.Model):
         if not self._claude_api_key:
             return None
         from utils.encryption import decrypt_value
+
         try:
             return decrypt_value(self._claude_api_key)
         except Exception:
@@ -1312,6 +1316,7 @@ class Config(db.Model):
             self._claude_api_key = None
         else:
             from utils.encryption import encrypt_value
+
             self._claude_api_key = encrypt_value(value)
 
     @property
@@ -1320,6 +1325,7 @@ class Config(db.Model):
         if not self._gemini_api_key:
             return None
         from utils.encryption import decrypt_value
+
         try:
             return decrypt_value(self._gemini_api_key)
         except Exception:
@@ -1332,6 +1338,7 @@ class Config(db.Model):
             self._gemini_api_key = None
         else:
             from utils.encryption import encrypt_value
+
             self._gemini_api_key = encrypt_value(value)
 
     @property
@@ -1340,6 +1347,7 @@ class Config(db.Model):
         if not self._openai_api_key:
             return None
         from utils.encryption import decrypt_value
+
         try:
             return decrypt_value(self._openai_api_key)
         except Exception:
@@ -1352,6 +1360,7 @@ class Config(db.Model):
             self._openai_api_key = None
         else:
             from utils.encryption import encrypt_value
+
             self._openai_api_key = encrypt_value(value)
 
     @property
@@ -1360,6 +1369,7 @@ class Config(db.Model):
         if not self._nanogpt_api_key:
             return None
         from utils.encryption import decrypt_value
+
         try:
             return decrypt_value(self._nanogpt_api_key)
         except Exception:
@@ -1372,6 +1382,7 @@ class Config(db.Model):
             self._nanogpt_api_key = None
         else:
             from utils.encryption import encrypt_value
+
             self._nanogpt_api_key = encrypt_value(value)
 
     @property
@@ -1380,6 +1391,7 @@ class Config(db.Model):
         if not self._chutes_api_key:
             return None
         from utils.encryption import decrypt_value
+
         try:
             return decrypt_value(self._chutes_api_key)
         except Exception:
@@ -1392,6 +1404,7 @@ class Config(db.Model):
             self._chutes_api_key = None
         else:
             from utils.encryption import encrypt_value
+
             self._chutes_api_key = encrypt_value(value)
 
     @property
@@ -1400,6 +1413,7 @@ class Config(db.Model):
         if not self._zai_api_key:
             return None
         from utils.encryption import decrypt_value
+
         try:
             return decrypt_value(self._zai_api_key)
         except Exception:
@@ -1412,6 +1426,7 @@ class Config(db.Model):
             self._zai_api_key = None
         else:
             from utils.encryption import encrypt_value
+
             self._zai_api_key = encrypt_value(value)
 
     def to_dict(self):
@@ -1494,12 +1509,16 @@ class ImageSubmission(db.Model):
 
     # Relationship to existing submission
     submission_id = db.Column(
-        db.String(36), db.ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False
+        db.String(36),
+        db.ForeignKey("submissions.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     # File storage (UUID-based two-level hashing)
     storage_path = db.Column(db.String(500), nullable=False)
-    file_uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
+    file_uuid = db.Column(
+        db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4())
+    )
 
     # File metadata
     original_filename = db.Column(db.String(255), nullable=False)
@@ -1526,10 +1545,16 @@ class ImageSubmission(db.Model):
     # Relationships
     submission = db.relationship("Submission", backref="image_submissions", lazy=True)
     extracted_content = db.relationship(
-        "ExtractedContent", backref="image_submission", uselist=False, cascade="all, delete-orphan"
+        "ExtractedContent",
+        backref="image_submission",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
     quality_metrics = db.relationship(
-        "ImageQualityMetrics", backref="image_submission", uselist=False, cascade="all, delete-orphan"
+        "ImageQualityMetrics",
+        backref="image_submission",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     # Indexes
@@ -1558,8 +1583,12 @@ class ImageSubmission(db.Model):
             "aspect_ratio": float(self.aspect_ratio) if self.aspect_ratio else None,
             "file_hash": self.file_hash,
             "processing_status": self.processing_status,
-            "ocr_started_at": self.ocr_started_at.isoformat() if self.ocr_started_at else None,
-            "ocr_completed_at": self.ocr_completed_at.isoformat() if self.ocr_completed_at else None,
+            "ocr_started_at": self.ocr_started_at.isoformat()
+            if self.ocr_started_at
+            else None,
+            "ocr_completed_at": self.ocr_completed_at.isoformat()
+            if self.ocr_completed_at
+            else None,
             "error_message": self.error_message,
             "passes_quality_check": self.passes_quality_check,
             "requires_manual_review": self.requires_manual_review,
@@ -1623,7 +1652,9 @@ class ExtractedContent(db.Model):
             "line_count": self.line_count,
             "ocr_provider": self.ocr_provider,
             "ocr_model": self.ocr_model,
-            "confidence_score": float(self.confidence_score) if self.confidence_score else None,
+            "confidence_score": float(self.confidence_score)
+            if self.confidence_score
+            else None,
             "processing_time_ms": self.processing_time_ms,
             "text_regions": self.text_regions,
             "api_cost_usd": float(self.api_cost_usd) if self.api_cost_usd else None,
@@ -1698,16 +1729,30 @@ class ImageQualityMetrics(db.Model):
             "passes_quality_check": self.passes_quality_check,
             "blur_score": float(self.blur_score) if self.blur_score else None,
             "is_blurry": self.is_blurry,
-            "blur_threshold": float(self.blur_threshold) if self.blur_threshold else None,
+            "blur_threshold": float(self.blur_threshold)
+            if self.blur_threshold
+            else None,
             "meets_min_resolution": self.meets_min_resolution,
             "min_width_required": self.min_width_required,
             "min_height_required": self.min_height_required,
-            "edge_density_top": float(self.edge_density_top) if self.edge_density_top else None,
-            "edge_density_bottom": float(self.edge_density_bottom) if self.edge_density_bottom else None,
-            "edge_density_left": float(self.edge_density_left) if self.edge_density_left else None,
-            "edge_density_right": float(self.edge_density_right) if self.edge_density_right else None,
-            "avg_edge_density": float(self.avg_edge_density) if self.avg_edge_density else None,
-            "max_edge_density": float(self.max_edge_density) if self.max_edge_density else None,
+            "edge_density_top": float(self.edge_density_top)
+            if self.edge_density_top
+            else None,
+            "edge_density_bottom": float(self.edge_density_bottom)
+            if self.edge_density_bottom
+            else None,
+            "edge_density_left": float(self.edge_density_left)
+            if self.edge_density_left
+            else None,
+            "edge_density_right": float(self.edge_density_right)
+            if self.edge_density_right
+            else None,
+            "avg_edge_density": float(self.avg_edge_density)
+            if self.avg_edge_density
+            else None,
+            "max_edge_density": float(self.max_edge_density)
+            if self.max_edge_density
+            else None,
             "likely_cropped": self.likely_cropped,
             "issues": self.issues,
             "assessment_duration_ms": self.assessment_duration_ms,
@@ -1741,7 +1786,9 @@ class GradingScheme(db.Model):
     category = db.Column(db.String(100), index=True)
 
     # Calculated fields (denormalized for performance)
-    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    total_possible_points = db.Column(
+        db.Numeric(10, 2), nullable=False, default=Decimal("0.00")
+    )
     total_questions = db.Column(db.Integer, nullable=False, default=0)
     total_criteria = db.Column(db.Integer, nullable=False, default=0)
 
@@ -1781,12 +1828,16 @@ class GradingScheme(db.Model):
             "name": self.name,
             "description": self.description,
             "category": self.category,
-            "total_possible_points": float(self.total_possible_points) if self.total_possible_points else 0.0,
+            "total_possible_points": float(self.total_possible_points)
+            if self.total_possible_points
+            else 0.0,
             "total_questions": self.total_questions,
             "total_criteria": self.total_criteria,
             "created_by": self.created_by,
             "last_modified_by": self.last_modified_by,
-            "questions": [q.to_dict() for q in self.questions] if self.questions else [],
+            "questions": [q.to_dict() for q in self.questions]
+            if self.questions
+            else [],
         }
 
 
@@ -1815,7 +1866,9 @@ class SchemeQuestion(db.Model):
     display_order = db.Column(db.Integer, nullable=False)
 
     # Calculated field
-    total_possible_points = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    total_possible_points = db.Column(
+        db.Numeric(10, 2), nullable=False, default=Decimal("0.00")
+    )
 
     # Relationships
     criteria = db.relationship(
@@ -1843,7 +1896,9 @@ class SchemeQuestion(db.Model):
             "title": self.title,
             "description": self.description,
             "display_order": self.display_order,
-            "total_possible_points": float(self.total_possible_points) if self.total_possible_points else 0.0,
+            "total_possible_points": float(self.total_possible_points)
+            if self.total_possible_points
+            else 0.0,
             "criteria": [c.to_dict() for c in self.criteria] if self.criteria else [],
         }
 
@@ -1937,7 +1992,9 @@ class GradedSubmission(db.Model):
     evaluation_version = db.Column(db.Integer, default=1)
 
     # Calculated totals (denormalized for performance)
-    total_points_earned = db.Column(db.Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    total_points_earned = db.Column(
+        db.Numeric(10, 2), nullable=False, default=Decimal("0.00")
+    )
     total_points_possible = db.Column(db.Numeric(10, 2), nullable=False)
     percentage_score = db.Column(db.Numeric(5, 2))
 
@@ -1986,10 +2043,18 @@ class GradedSubmission(db.Model):
             "graded_at": self.graded_at.isoformat() if self.graded_at else None,
             "is_complete": self.is_complete if self.is_complete is not None else False,
             "evaluation_version": self.evaluation_version,
-            "total_points_earned": float(self.total_points_earned) if self.total_points_earned else 0.0,
-            "total_points_possible": float(self.total_points_possible) if self.total_points_possible else 0.0,
-            "percentage_score": float(self.percentage_score) if self.percentage_score else None,
-            "evaluations": [e.to_dict() for e in self.evaluations] if self.evaluations else [],
+            "total_points_earned": float(self.total_points_earned)
+            if self.total_points_earned
+            else 0.0,
+            "total_points_possible": float(self.total_points_possible)
+            if self.total_points_possible
+            else 0.0,
+            "percentage_score": float(self.percentage_score)
+            if self.percentage_score
+            else None,
+            "evaluations": [e.to_dict() for e in self.evaluations]
+            if self.evaluations
+            else [],
         }
 
 
@@ -2031,9 +2096,13 @@ class CriterionEvaluation(db.Model):
     __table_args__ = (
         db.Index("idx_evaluation_submission", "submission_id"),
         db.Index("idx_evaluation_criterion", "criterion_id"),
-        db.UniqueConstraint("submission_id", "criterion_id", name="uq_evaluation_unique"),
+        db.UniqueConstraint(
+            "submission_id", "criterion_id", name="uq_evaluation_unique"
+        ),
         db.CheckConstraint("points_awarded >= 0", name="ck_points_awarded_min"),
-        db.CheckConstraint("points_awarded <= max_points", name="ck_points_awarded_max"),
+        db.CheckConstraint(
+            "points_awarded <= max_points", name="ck_points_awarded_max"
+        ),
     )
 
     def to_dict(self):
@@ -2044,7 +2113,9 @@ class CriterionEvaluation(db.Model):
             "criterion_id": self.criterion_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "points_awarded": float(self.points_awarded) if self.points_awarded else 0.0,
+            "points_awarded": float(self.points_awarded)
+            if self.points_awarded
+            else 0.0,
             "feedback": self.feedback,
             "max_points": float(self.max_points) if self.max_points else 0.0,
             "criterion_name": self.criterion_name,
@@ -2085,8 +2156,12 @@ class DeploymentConfig(db.Model):
     __tablename__ = "deployment_config"
 
     id = db.Column(db.String(36), primary_key=True, default="singleton")
-    mode = db.Column(db.String(20), nullable=False, default="single-user")  # single-user | multi-user
-    configured_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    mode = db.Column(
+        db.String(20), nullable=False, default="single-user"
+    )  # single-user | multi-user
+    configured_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
     updated_at = db.Column(
         db.DateTime,
         nullable=False,
@@ -2125,7 +2200,9 @@ class DeploymentConfig(db.Model):
         return {
             "id": self.id,
             "mode": self.mode,
-            "configured_at": self.configured_at.isoformat() if self.configured_at else None,
+            "configured_at": self.configured_at.isoformat()
+            if self.configured_at
+            else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
@@ -2139,7 +2216,9 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True, index=True)
 
@@ -2148,12 +2227,27 @@ class User(db.Model):
     locked_until = db.Column(db.DateTime, nullable=True)
 
     # Relationships
-    ai_quotas = db.relationship("AIProviderQuota", backref="user", lazy=True, cascade="all, delete-orphan")
+    ai_quotas = db.relationship(
+        "AIProviderQuota", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
     usage_records = db.relationship("UsageRecord", backref="user", lazy=True)
-    sessions = db.relationship("AuthSession", backref="user", lazy=True, cascade="all, delete-orphan")
+    sessions = db.relationship(
+        "AuthSession", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
     # ProjectShare has two foreign keys to User (user_id and granted_by), so specify which one to use
-    shared_projects = db.relationship("ProjectShare", foreign_keys="ProjectShare.user_id", backref="recipient_user", lazy=True, cascade="all, delete-orphan")
-    granted_shares = db.relationship("ProjectShare", foreign_keys="ProjectShare.granted_by", backref="granter_user", lazy=True)
+    shared_projects = db.relationship(
+        "ProjectShare",
+        foreign_keys="ProjectShare.user_id",
+        backref="recipient_user",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+    granted_shares = db.relationship(
+        "ProjectShare",
+        foreign_keys="ProjectShare.granted_by",
+        backref="granter_user",
+        lazy=True,
+    )
 
     # Flask-Login required properties
     @property
@@ -2189,11 +2283,17 @@ class AIProviderQuota(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
-    provider = db.Column(db.String(50), nullable=False)  # openrouter, claude, gemini, lmstudio
+    provider = db.Column(
+        db.String(50), nullable=False
+    )  # openrouter, claude, gemini, lmstudio
     limit_type = db.Column(db.String(20), nullable=False)  # tokens | requests
     limit_value = db.Column(db.Integer, nullable=False)  # -1 for unlimited
-    reset_period = db.Column(db.String(20), nullable=False)  # daily | weekly | monthly | unlimited
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    reset_period = db.Column(
+        db.String(20), nullable=False
+    )  # daily | weekly | monthly | unlimited
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
     updated_at = db.Column(
         db.DateTime,
         nullable=False,
@@ -2201,7 +2301,9 @@ class AIProviderQuota(db.Model):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    __table_args__ = (db.UniqueConstraint("user_id", "provider", name="unique_user_provider"),)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "provider", name="unique_user_provider"),
+    )
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -2223,12 +2325,23 @@ class UsageRecord(db.Model):
     __tablename__ = "usage_records"
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False, index=True)
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+    )
     provider = db.Column(db.String(50), nullable=False)
     tokens_consumed = db.Column(db.Integer, nullable=False)
-    timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
-    project_id = db.Column(db.String(36))  # Reference to GradingJob (nullable for backward compat)
-    operation_type = db.Column(db.String(50), nullable=False)  # grading | ocr | analysis
+    timestamp = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+    project_id = db.Column(
+        db.String(36)
+    )  # Reference to GradingJob (nullable for backward compat)
+    operation_type = db.Column(
+        db.String(50), nullable=False
+    )  # grading | ocr | analysis
     model_name = db.Column(db.String(100))
 
     __table_args__ = (
@@ -2259,7 +2372,9 @@ class ProjectShare(db.Model):
     project_id = db.Column(db.String(36), nullable=False)  # Reference to GradingJob
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
     permission_level = db.Column(db.String(10), nullable=False)  # read | write
-    granted_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    granted_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
     granted_by = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
 
     __table_args__ = (
@@ -2287,8 +2402,12 @@ class AuthSession(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     session_id = db.Column(db.String(255), unique=True, nullable=False, index=True)
     user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    last_activity = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+    last_activity = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
     expires_at = db.Column(db.DateTime, nullable=False, index=True)
     ip_address = db.Column(db.String(45))  # IPv4/IPv6
     user_agent = db.Column(db.String(255))
@@ -2302,7 +2421,9 @@ class AuthSession(db.Model):
             "session_id": self.session_id,
             "user_id": self.user_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_activity": self.last_activity.isoformat() if self.last_activity else None,
+            "last_activity": self.last_activity.isoformat()
+            if self.last_activity
+            else None,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
             "ip_address": self.ip_address,
             "user_agent": self.user_agent,
@@ -2317,9 +2438,10 @@ from enum import Enum
 
 class SharePermission(Enum):
     """Permission levels for shared marking schemes."""
-    VIEW_ONLY = "VIEW_ONLY"      # Can view and use; cannot modify
-    EDITABLE = "EDITABLE"        # Can modify (affects shared version)
-    COPY = "COPY"                # Can create independent copy
+
+    VIEW_ONLY = "VIEW_ONLY"  # Can view and use; cannot modify
+    EDITABLE = "EDITABLE"  # Can modify (affects shared version)
+    COPY = "COPY"  # Can create independent copy
 
 
 class SchemeShare(db.Model):
@@ -2333,23 +2455,35 @@ class SchemeShare(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # Scheme being shared
-    scheme_id = db.Column(db.String(36), db.ForeignKey('marking_schemes.id', ondelete='CASCADE'), nullable=False)
+    scheme_id = db.Column(
+        db.String(36),
+        db.ForeignKey("marking_schemes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     # Recipients (one of user_id or group_id, not both)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True)
-    group_id = db.Column(db.String(36), nullable=True)  # Will add FK when UserGroup exists
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    group_id = db.Column(
+        db.String(36), nullable=True
+    )  # Will add FK when UserGroup exists
 
     # Permission level
     permission = db.Column(db.String(20), nullable=False)  # VIEW_ONLY, EDITABLE, COPY
 
     # Audit trail
-    shared_by_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    shared_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    shared_by_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
+    shared_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
     revoked_at = db.Column(db.DateTime, nullable=True)
-    revoked_by_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=True)
+    revoked_by_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=True)
 
     # Metadata
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
     updated_at = db.Column(
         db.DateTime,
         default=lambda: datetime.now(timezone.utc),
@@ -2391,14 +2525,16 @@ class DocumentUploadLog(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # User who uploaded
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
 
     # File information
     file_name = db.Column(db.String(500), nullable=False)
     file_size_bytes = db.Column(db.Integer, nullable=False)
     mime_type = db.Column(db.String(100), nullable=False)
     file_hash = db.Column(db.String(64), nullable=True)  # SHA256 for deduplication
-    upload_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    upload_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
 
     # LLM tracking
     llm_provider = db.Column(db.String(50), nullable=False)
@@ -2407,7 +2543,9 @@ class DocumentUploadLog(db.Model):
     llm_response_tokens = db.Column(db.Integer, nullable=True)
 
     # Conversion status
-    conversion_status = db.Column(db.String(20), nullable=False)  # PENDING, PROCESSING, SUCCESS, FAILED
+    conversion_status = db.Column(
+        db.String(20), nullable=False
+    )  # PENDING, PROCESSING, SUCCESS, FAILED
     conversion_time_ms = db.Column(db.Integer, nullable=True)
 
     # Results and errors
@@ -2416,7 +2554,9 @@ class DocumentUploadLog(db.Model):
     uncertainty_flags = db.Column(db.JSON, nullable=True)
 
     # Metadata
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
     updated_at = db.Column(
         db.DateTime,
         default=lambda: datetime.now(timezone.utc),
@@ -2425,7 +2565,9 @@ class DocumentUploadLog(db.Model):
 
     # Relationships
     user = db.relationship("User", backref="document_uploads", lazy=True)
-    conversion_result = db.relationship("DocumentConversionResult", backref="upload_log", uselist=False, lazy=True)
+    conversion_result = db.relationship(
+        "DocumentConversionResult", backref="upload_log", uselist=False, lazy=True
+    )
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -2459,10 +2601,17 @@ class DocumentConversionResult(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # Link to upload log (1:1)
-    upload_log_id = db.Column(db.String(36), db.ForeignKey('document_upload_log.id', ondelete='CASCADE'), nullable=False, unique=True)
+    upload_log_id = db.Column(
+        db.String(36),
+        db.ForeignKey("document_upload_log.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
 
     # Status
-    status = db.Column(db.String(20), nullable=False)  # PENDING, QUEUED, PROCESSING, SUCCESS, FAILED
+    status = db.Column(
+        db.String(20), nullable=False
+    )  # PENDING, QUEUED, PROCESSING, SUCCESS, FAILED
 
     # Results
     llm_response = db.Column(db.Text, nullable=True)  # Raw LLM output
@@ -2474,7 +2623,9 @@ class DocumentConversionResult(db.Model):
     error_message = db.Column(db.Text, nullable=True)
 
     # Timestamps
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = db.Column(
+        db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
+    )
     updated_at = db.Column(
         db.DateTime,
         default=lambda: datetime.now(timezone.utc),
@@ -2495,9 +2646,11 @@ class DocumentConversionResult(db.Model):
             "error_message": self.error_message,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_at": self.completed_at.isoformat()
+            if self.completed_at
+            else None,
         }
 
     def is_complete(self):
         """Check if conversion has completed."""
-        return self.status in ('SUCCESS', 'FAILED')
+        return self.status in ("SUCCESS", "FAILED")

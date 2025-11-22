@@ -8,7 +8,6 @@ import os
 from dotenv import load_dotenv
 from flask import Flask
 
-from desktop.task_queue import task_queue
 from models import GradingJob, db
 from tasks import process_job
 
@@ -44,8 +43,8 @@ def trigger_job():
         print(f"   Submissions: {len(job.submissions)}")
 
         # Trigger the job
-        task_id = task_queue.submit(process_job, job.id)
-        print(f"✅ Job queued with task ID: {task_id}")
+        task_result = process_job.delay(job.id)
+        print(f"✅ Job queued with task ID: {task_result.id}")
 
         # Wait a moment and check status
         import time
