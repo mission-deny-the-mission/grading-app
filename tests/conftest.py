@@ -159,17 +159,21 @@ def initialize_db_for_tests():
 @pytest.fixture
 def app():
     """Create a Flask app for testing."""
-    # Use in-memory database for tests to avoid concurrency issues
-    # Each test gets its own isolated in-memory database
+    # Use a per-test temporary SQLite DB file to avoid cross-connection issues
 
     # Create a temporary upload folder for this test
     upload_folder = tempfile.mkdtemp()
+    # Use a temporary SQLite file instead of pure in-memory DB so that
+    # background tasks running in separate app contexts share the same
+    # database connection.
+    db_fd, db_path = tempfile.mkstemp(prefix="test_db_", suffix=".sqlite")
+    os.close(db_fd)
 
     # Configure the app for testing
     flask_app.config.update(
         {
             "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{db_path}",
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "WTF_CSRF_ENABLED": False,
             "UPLOAD_FOLDER": upload_folder,
@@ -242,6 +246,11 @@ def app():
     try:
         import shutil
         shutil.rmtree(upload_folder, ignore_errors=True)
+    except Exception:
+        pass
+    # Remove the temporary database file
+    try:
+        os.remove(db_path)
     except Exception:
         pass
 

@@ -12,11 +12,18 @@ from unittest.mock import Mock, MagicMock, patch, call
 from pathlib import Path
 import sys
 
-# Mock webview and pystray modules if not installed
-sys.modules['webview'] = MagicMock()
-sys.modules['pystray'] = MagicMock()
-sys.modules['PIL'] = MagicMock()
-sys.modules['PIL.Image'] = MagicMock()
+
+@pytest.fixture(autouse=True)
+def mock_desktop_dependencies(monkeypatch):
+    """Mock desktop-specific dependencies for these tests only."""
+    monkeypatch.setitem(sys.modules, 'webview', MagicMock())
+    monkeypatch.setitem(sys.modules, 'pystray', MagicMock())
+    pil_mock = MagicMock()
+    pil_image_mock = MagicMock()
+    pil_mock.Image = pil_image_mock
+    monkeypatch.setitem(sys.modules, 'PIL', pil_mock)
+    monkeypatch.setitem(sys.modules, 'PIL.Image', pil_image_mock)
+    yield
 
 
 class TestCreateMainWindow:
