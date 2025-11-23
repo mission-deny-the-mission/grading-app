@@ -23,8 +23,12 @@ with patch.dict(
 @pytest.fixture
 def test_app():
     """Create a test Flask app."""
+    original_secret = app.secret_key
     app.config.update({"TESTING": True, "SECRET_KEY": "test-secret-key"})
-    return app
+    app.secret_key = "test-secret-key"
+    yield app
+    app.config["SECRET_KEY"] = original_secret
+    app.secret_key = original_secret
 
 
 @pytest.fixture
