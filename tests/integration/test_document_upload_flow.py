@@ -530,10 +530,13 @@ class TestAcceptConversion:
             db.session.flush()
 
             extracted_scheme = {
-                "name": "New Rubric from PDF",
-                "metadata": {"name": "New Rubric from PDF"},
+                "metadata": {
+                    "name": "New Rubric from PDF",
+                    "exported_at": "2024-01-01T00:00:00Z"
+                },
                 "criteria": [
                     {
+                        "id": "criterion-1",
                         "name": "Quality",
                         "descriptors": [
                             {"level": "excellent", "description": "Excellent"}
@@ -603,9 +606,17 @@ class TestAcceptConversion:
                 upload_log_id=upload_log.id,
                 status="SUCCESS",
                 extracted_scheme={
-                    "name": "Test",
-                    "metadata": {"name": "Test"},
-                    "criteria": [{"name": "C1", "descriptors": [{"level": "excellent", "description": "Good"}]}],
+                    "metadata": {
+                        "name": "Test",
+                        "exported_at": "2024-01-01T00:00:00Z"
+                    },
+                    "criteria": [
+                        {
+                            "id": "criterion-1",
+                            "name": "C1",
+                            "descriptors": [{"level": "excellent", "description": "Good"}]
+                        }
+                    ],
                     "version": "1.0.0"
                 }
             )

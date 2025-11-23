@@ -305,14 +305,13 @@ class TestSessionDataIntegrity:
         # This is handled by Flask's session management automatically
         # Invalid sessions result in empty session object
 
-    def test_session_requires_valid_secret_key(self):
+    def test_session_requires_valid_secret_key(self, client):
         """Test that sessions require valid SECRET_KEY."""
         # SECRET_KEY validation happens at startup
         # Verify it's properly configured
-        from app import app
-        assert app.secret_key is not None
+        assert client.application.secret_key is not None
 
         # In production, must be secure (checked at startup)
         import os
         if os.getenv('FLASK_ENV') == 'production':
-            assert len(app.secret_key) >= 32
+            assert len(client.application.secret_key) >= 32

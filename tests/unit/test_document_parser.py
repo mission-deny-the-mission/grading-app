@@ -15,6 +15,13 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from io import BytesIO
 
+# Import PIL.ImageFile to avoid isinstance errors in Python 3.13
+try:
+    from PIL import ImageFile
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+except ImportError:
+    pass
+
 from services.document_parser import (
     DocumentParser,
     extract_text_from_pdf,

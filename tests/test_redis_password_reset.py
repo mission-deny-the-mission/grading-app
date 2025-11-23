@@ -14,11 +14,12 @@ from services.auth_service import AuthService
 class TestRedisPasswordResetTokens:
     """Test password reset tokens are stored in Redis, not in-memory."""
 
-    def test_password_reset_token_stored_in_redis(self, test_user, mocker):
+    @patch('services.auth_service.get_redis_client')
+    def test_password_reset_token_stored_in_redis(self, mock_get_redis, test_user):
         """Test that password reset tokens are stored in Redis."""
         # Mock Redis client
         mock_redis = MagicMock()
-        mocker.patch('services.auth_service.get_redis_client', return_value=mock_redis)
+        mock_get_redis.return_value = mock_redis
 
         # Generate token
         result = AuthService.generate_password_reset_token(test_user.email)
@@ -37,12 +38,13 @@ class TestRedisPasswordResetTokens:
         assert test_user.id in call_args[0][2]
         assert test_user.email in call_args[0][2]
 
-    def test_password_reset_token_validation_from_redis(self, test_user, mocker):
+    @patch('services.auth_service.get_redis_client')
+    def test_password_reset_token_validation_from_redis(self, mock_get_redis, test_user):
         """Test that token validation reads from Redis."""
         # Mock Redis client
         mock_redis = MagicMock()
         mock_redis.get.return_value = f'{{"user_id": "{test_user.id}", "email": "{test_user.email}", "expires_at": "2099-12-31T23:59:59+00:00"}}'
-        mocker.patch('services.auth_service.get_redis_client', return_value=mock_redis)
+        mock_get_redis.return_value = mock_redis
 
         # Validate token
         token_data = AuthService.validate_reset_token('test_token_12345')
@@ -55,12 +57,13 @@ class TestRedisPasswordResetTokens:
         assert token_data['user_id'] == test_user.id
         assert token_data['email'] == test_user.email
 
-    def test_password_reset_token_invalidation_after_use(self, test_user, mocker):
+    @patch('services.auth_service.get_redis_client')
+    def test_password_reset_token_invalidation_after_use(self, mock_get_redis, test_user):
         """Test that tokens are deleted from Redis after password reset."""
         # Mock Redis client
         mock_redis = MagicMock()
         mock_redis.get.return_value = f'{{"user_id": "{test_user.id}", "email": "{test_user.email}", "expires_at": "2099-12-31T23:59:59+00:00"}}'
-        mocker.patch('services.auth_service.get_redis_client', return_value=mock_redis)
+        mock_get_redis.return_value = mock_redis
 
         # Reset password with token
         AuthService.reset_password_with_token('test_token_12345', 'NewPass123!')
@@ -68,23 +71,25 @@ class TestRedisPasswordResetTokens:
         # Verify Redis delete was called
         mock_redis.delete.assert_called_once_with('password_reset:test_token_12345')
 
-    def test_password_reset_handles_redis_connection_failure(self, test_user, mocker):
+    @patch('services.auth_service.get_redis_client')
+    def test_password_reset_handles_redis_connection_failure(self, mock_get_redis, test_user):
         """Test graceful handling of Redis connection failures."""
         # Mock Redis to raise connection error
         import redis
         mock_redis = MagicMock()
         mock_redis.setex.side_effect = redis.RedisError("Connection failed")
-        mocker.patch('services.auth_service.get_redis_client', return_value=mock_redis)
+        mock_get_redis.return_value = mock_redis
 
         # Should raise ValueError with helpful message
         with pytest.raises(ValueError, match="Failed to generate password reset token"):
             AuthService.generate_password_reset_token(test_user.email)
 
-    def test_password_reset_multi_worker_compatibility(self, test_user, mocker):
+    @patch('services.auth_service.get_redis_client')
+    def test_password_reset_multi_worker_compatibility(self, mock_get_redis, test_user):
         """Test that tokens work across multiple workers (via Redis)."""
         # Mock Redis client
         mock_redis = MagicMock()
-        mocker.patch('services.auth_service.get_redis_client', return_value=mock_redis)
+        mock_get_redis.return_value = mock_redis
 
         # Generate token in "worker 1"
         AuthService.generate_password_reset_token(test_user.email)
@@ -96,12 +101,13 @@ class TestRedisPasswordResetTokens:
         token_data = AuthService.validate_reset_token('test_token_12345')
         assert token_data['valid'] is True
 
-    def test_redis_ttl_automatic_expiration(self, test_user, mocker):
+    @patch('services.auth_service.get_redis_client')
+    def test_redis_ttl_automatic_expiration(self, mock_get_redis, test_user):
         """Test that Redis TTL automatically expires old tokens."""
         # Mock Redis client returning None (expired token)
         mock_redis = MagicMock()
         mock_redis.get.return_value = None
-        mocker.patch('services.auth_service.get_redis_client', return_value=mock_redis)
+        mock_get_redis.return_value = mock_redis
 
         # Should raise ValueError for expired/missing token
         with pytest.raises(ValueError, match="Invalid or expired reset token"):

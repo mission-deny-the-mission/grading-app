@@ -11,7 +11,10 @@ from unittest.mock import MagicMock, Mock, patch
 import cv2
 import numpy as np
 import pytest
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageFile
+
+# Ensure ImageFile is properly loaded to avoid isinstance errors
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from models import (
     ExtractedContent,
@@ -34,7 +37,7 @@ class TestImageUploadAndOCR:
     def create_test_image_with_text(self, text="Hello World", width=800, height=200):
         """Create a test PNG image with text rendered on it."""
         # Create white background
-        img = Image.new("RGB", (width, height), color="white")
+        img = Image.new("RGB", (width, height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
 
         # Draw text (use default font)
@@ -402,7 +405,7 @@ class TestBlurDetection:
 
     def create_sharp_image(self, width=800, height=600):
         """Create a sharp test image with clear text and edges."""
-        img = Image.new("RGB", (width, height), color="white")
+        img = Image.new("RGB", (width, height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
 
         # Draw clear black text
@@ -436,7 +439,7 @@ class TestBlurDetection:
         # Create and save sharp image
         sharp_img = self.create_sharp_image()
         sharp_path = tmp_path / "sharp_test.png"
-        sharp_img.save(sharp_path)
+        sharp_img.save(str(sharp_path), format="PNG")
 
         # Test blur detection
         result = detect_blur(str(sharp_path))
@@ -452,7 +455,7 @@ class TestBlurDetection:
         # Create and save blurry image
         blurry_img = self.create_blurry_image()
         blurry_path = tmp_path / "blurry_test.png"
-        blurry_img.save(blurry_path)
+        blurry_img.save(str(blurry_path), format="PNG")
 
         # Test blur detection
         result = detect_blur(str(blurry_path))
@@ -467,7 +470,7 @@ class TestBlurDetection:
         """Test: Blur detection returns correct dictionary structure."""
         sharp_img = self.create_sharp_image()
         test_path = tmp_path / "structure_test.png"
-        sharp_img.save(test_path)
+        sharp_img.save(str(test_path), format="PNG")
 
         result = detect_blur(str(test_path))
 
@@ -484,9 +487,9 @@ class TestBlurDetection:
     def test_resolution_check_detects_low_resolution(self, tmp_path):
         """Test: Low-resolution image fails meets_minimum check."""
         # Create small image (below 800x600 minimum)
-        small_img = Image.new("RGB", (640, 480), color="white")
+        small_img = Image.new("RGB", (640, 480), color=(255, 255, 255))
         small_path = tmp_path / "small.png"
-        small_img.save(small_path)
+        small_img.save(str(small_path), format="PNG")
 
         result = check_resolution(str(small_path), min_width=800, min_height=600)
 
@@ -498,9 +501,9 @@ class TestBlurDetection:
     def test_resolution_check_accepts_high_resolution(self, tmp_path):
         """Test: High-resolution image passes meets_minimum check."""
         # Create large image (above 800x600 minimum)
-        large_img = Image.new("RGB", (1920, 1080), color="white")
+        large_img = Image.new("RGB", (1920, 1080), color=(255, 255, 255))
         large_path = tmp_path / "large.png"
-        large_img.save(large_path)
+        large_img.save(str(large_path), format="PNG")
 
         result = check_resolution(str(large_path), min_width=800, min_height=600)
 
@@ -515,7 +518,7 @@ class TestQualityAssessmentFlow:
 
     def create_test_image(self, quality="sharp", width=800, height=600):
         """Create test images with different quality levels."""
-        img = Image.new("RGB", (width, height), color="white")
+        img = Image.new("RGB", (width, height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
 
         try:

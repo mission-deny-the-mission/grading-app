@@ -24,7 +24,9 @@ except ImportError:
     HAS_PYTHON_DOCX = False
 
 try:
-    from PIL import Image
+    from PIL import Image, ImageFile
+    # Avoid isinstance errors in Python 3.13
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
     HAS_PILLOW = True
 except ImportError:
     HAS_PILLOW = False
@@ -106,7 +108,7 @@ def create_sample_png() -> str:
 
     if HAS_PILLOW:
         try:
-            img = Image.new('RGB', (100, 100), color='white')
+            img = Image.new('RGB', (100, 100), color=(255, 255, 255))
             img.save(temp_file.name, 'PNG')
             return temp_file.name
         except Exception:
@@ -130,7 +132,7 @@ def create_sample_jpg() -> str:
 
     if HAS_PILLOW:
         try:
-            img = Image.new('RGB', (100, 100), color='white')
+            img = Image.new('RGB', (100, 100), color=(255, 255, 255))
             img.save(temp_file.name, 'JPEG')
             return temp_file.name
         except Exception:

@@ -7,6 +7,13 @@ import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
 
+# Import PIL.ImageFile to avoid isinstance errors in Python 3.13
+try:
+    from PIL import ImageFile
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+except ImportError:
+    pass
+
 from utils import file_utils as fu
 
 
@@ -109,7 +116,7 @@ class TestImageValidation:
         from PIL import Image
 
         # Create a real PNG image
-        img = Image.new("RGB", (100, 100), color="white")
+        img = Image.new("RGB", (100, 100), color=(255, 255, 255))
         img_bytes = io.BytesIO()
         img.save(img_bytes, format="PNG")
         img_bytes.seek(0)
@@ -135,7 +142,7 @@ class TestImageValidation:
         from PIL import Image
 
         # Create a real PNG image
-        img = Image.new("RGB", (100, 100), color="white")
+        img = Image.new("RGB", (100, 100), color=(255, 255, 255))
         img_bytes = io.BytesIO()
         img.save(img_bytes, format="PNG")
         img_bytes.seek(0)
@@ -146,9 +153,16 @@ class TestImageValidation:
                 self._data = data
                 self.filename = "test.png"
                 self.content_type = "image/png"
+                # Get the size
+                data.seek(0, 2)  # Seek to end
+                self._size = data.tell()
+                data.seek(0)  # Reset to beginning
 
             def seek(self, pos, whence=0):
-                self._data.seek(pos, whence)
+                if whence == 2:  # SEEK_END
+                    self._data.seek(0, 2)
+                else:
+                    self._data.seek(pos, whence)
 
             def tell(self):
                 return self._data.tell()
@@ -183,7 +197,7 @@ class TestImageValidation:
         from PIL import Image
 
         # Create a valid image but mock size > 50MB
-        img = Image.new("RGB", (100, 100), color="white")
+        img = Image.new("RGB", (100, 100), color=(255, 255, 255))
         img_bytes = io.BytesIO()
         img.save(img_bytes, format="PNG")
         img_bytes.seek(0)

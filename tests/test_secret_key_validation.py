@@ -105,13 +105,15 @@ class TestSecretKeyValidation:
             assert "WARNING" in captured.out or "WARNING" in captured.err
 
     def test_development_accepts_any_secret_key(self):
-        """Test that development environment accepts any SECRET_KEY."""
+        """Test that development environment generates secure key even if short key provided."""
         with patch.dict(os.environ, {"FLASK_ENV": "development", "SECRET_KEY": "test"}):
             import importlib
             import app as app_module
 
             importlib.reload(app_module)
-            assert app_module.app.secret_key == "test"
+            # Short keys should be rejected and a secure key generated
+            assert app_module.app.secret_key != "test"
+            assert len(app_module.app.secret_key) >= 32
 
     def test_error_message_includes_generation_command(self):
         """Test that error message includes SECRET_KEY generation command."""
