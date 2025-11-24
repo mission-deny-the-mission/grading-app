@@ -6,7 +6,30 @@ import os
 import sys
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
+
+
+def _configure_worker_database():
+    """Set a per-xdist-worker SQLite database URL to avoid shared in-memory DBs."""
+
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+    base_dir = Path(tempfile.gettempdir()) / "grading_app_test_dbs"
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    worker_label = worker_id if worker_id != "master" else "master"
+    db_path = base_dir / f"pytest_{worker_label}.sqlite"
+
+    if db_path.exists():
+        try:
+            db_path.unlink()
+        except OSError:
+            pass
+
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+    return db_path
 
 
 def pytest_configure(config):
@@ -15,14 +38,12 @@ def pytest_configure(config):
     Ensures sys.path is set before any test modules are imported
     across all pytest-xdist workers.
     """
-    from pathlib import Path
-    # Add project root to Python path dynamically
     project_root = Path(__file__).parent.parent
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
 
-import pytest
+TEST_DB_PATH = _configure_worker_database()
 
 from services.deployment_service import DeploymentService
 
@@ -130,9 +151,6 @@ def mock_tasks_module():
 # Set TESTING environment variable and override DATABASE_URL before importing app
 # This ensures tests use SQLite instead of PostgreSQL
 os.environ["TESTING"] = "True"
-os.environ["DATABASE_URL"] = (
-    "sqlite:///:memory:"  # Override to use in-memory SQLite for tests
-)
 
 # Import the app and models
 from app import app as flask_app
@@ -154,6 +172,17 @@ def initialize_db_for_tests():
     if "sqlalchemy" not in flask_app.extensions:
         db.init_app(flask_app)
     yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_worker_database():
+    """Remove the worker-specific database file after the session."""
+    yield
+    if TEST_DB_PATH and TEST_DB_PATH.exists():
+        try:
+            TEST_DB_PATH.unlink()
+        except OSError:
+            pass
 
 
 @pytest.fixture
