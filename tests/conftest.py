@@ -6,7 +6,30 @@ import os
 import sys
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
+
+
+def _configure_worker_database():
+    """Set a per-xdist-worker SQLite database URL to avoid shared in-memory DBs."""
+
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+    base_dir = Path(tempfile.gettempdir()) / "grading_app_test_dbs"
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    worker_label = worker_id if worker_id != "master" else "master"
+    db_path = base_dir / f"pytest_{worker_label}.sqlite"
+
+    if db_path.exists():
+        try:
+            db_path.unlink()
+        except OSError:
+            pass
+
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+    return db_path
 
 
 def pytest_configure(config):
@@ -15,14 +38,12 @@ def pytest_configure(config):
     Ensures sys.path is set before any test modules are imported
     across all pytest-xdist workers.
     """
-    from pathlib import Path
-    # Add project root to Python path dynamically
     project_root = Path(__file__).parent.parent
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
 
 
-import pytest
+TEST_DB_PATH = _configure_worker_database()
 
 from services.deployment_service import DeploymentService
 
@@ -130,9 +151,6 @@ def mock_tasks_module():
 # Set TESTING environment variable and override DATABASE_URL before importing app
 # This ensures tests use SQLite instead of PostgreSQL
 os.environ["TESTING"] = "True"
-os.environ["DATABASE_URL"] = (
-    "sqlite:///:memory:"  # Override to use in-memory SQLite for tests
-)
 
 # Import the app and models
 from app import app as flask_app
@@ -156,20 +174,35 @@ def initialize_db_for_tests():
     yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_worker_database():
+    """Remove the worker-specific database file after the session."""
+    yield
+    if TEST_DB_PATH and TEST_DB_PATH.exists():
+        try:
+            TEST_DB_PATH.unlink()
+        except OSError:
+            pass
+
+
 @pytest.fixture
 def app():
     """Create a Flask app for testing."""
-    # Use in-memory database for tests to avoid concurrency issues
-    # Each test gets its own isolated in-memory database
+    # Use a per-test temporary SQLite DB file to avoid cross-connection issues
 
     # Create a temporary upload folder for this test
     upload_folder = tempfile.mkdtemp()
+    # Use a temporary SQLite file instead of pure in-memory DB so that
+    # background tasks running in separate app contexts share the same
+    # database connection.
+    db_fd, db_path = tempfile.mkstemp(prefix="test_db_", suffix=".sqlite")
+    os.close(db_fd)
 
     # Configure the app for testing
     flask_app.config.update(
         {
             "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{db_path}",
             "SQLALCHEMY_TRACK_MODIFICATIONS": False,
             "WTF_CSRF_ENABLED": False,
             "UPLOAD_FOLDER": upload_folder,
@@ -242,6 +275,11 @@ def app():
     try:
         import shutil
         shutil.rmtree(upload_folder, ignore_errors=True)
+    except Exception:
+        pass
+    # Remove the temporary database file
+    try:
+        os.remove(db_path)
     except Exception:
         pass
 

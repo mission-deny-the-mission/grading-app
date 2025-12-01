@@ -16,6 +16,15 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageFile
 # Ensure ImageFile is properly loaded to avoid isinstance errors
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+
+@pytest.fixture(autouse=True)
+def disable_process_image_ocr_delay(monkeypatch):
+    """Prevent the auto-queued OCR task from running before the test triggers it manually."""
+    mock_delay = MagicMock()
+    mock_delay.return_value = MagicMock(id="mock-task-id")
+    monkeypatch.setattr("tasks.process_image_ocr.delay", mock_delay)
+    yield
+
 from models import (
     ExtractedContent,
     ImageQualityMetrics,
@@ -182,7 +191,6 @@ class TestImageUploadAndOCR:
 
         # Run the task synchronously (task creates its own app context)
         result = process_image_ocr(image_id)
-        print(f"OCR task result: {result}")
 
         # Verify ExtractedContent was created
         with app.app_context():
@@ -254,7 +262,7 @@ class TestImageUploadAndOCR:
         # Run OCR task (outside of app context to avoid session conflicts)
         from tasks import process_image_ocr
 
-        process_image_ocr(image_id)
+        process_result = process_image_ocr(image_id)
 
         # Get OCR results via API
         ocr_response = client.get(f"/api/images/{image_id}/ocr")
