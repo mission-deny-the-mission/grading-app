@@ -20,7 +20,12 @@
       "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
       "Bash(tree:*)",
       "Bash(.specify/scripts/bash/check-prerequisites.sh --json)",
-      "Bash(make test:*)"
+      "Bash(make test:*)",
+      "mcp__serena__list_dir",
+      "mcp__serena__activate_project",
+      "mcp__serena__write_memory",
+      "mcp__serena__list_memories",
+      "mcp__serena__get_current_config"
     ],
     "deny": [],
     "ask": []
