@@ -31,7 +31,7 @@ class MarkingSchemeDecoder:
         Load JSON schema for validation.
 
         Returns:
-            dict: JSON schema or None if not found
+            dict: JSON schema or empty dict if not found
         """
         try:
             # Try to load from specs directory
@@ -43,7 +43,7 @@ class MarkingSchemeDecoder:
             pass
 
         # Return a minimal schema if file not found
-        return None
+        return {}
 
     def deserialize(self, json_string: str):
         """

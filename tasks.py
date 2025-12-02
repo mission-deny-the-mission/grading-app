@@ -29,7 +29,6 @@ from utils.llm_providers import (
 )
 from utils.text_extraction import extract_text_by_file_type
 
-anthropic = None  # Keep for compatibility, though not directly used now
 
 # Load environment variables from .env file
 load_dotenv()

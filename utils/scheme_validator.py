@@ -2,7 +2,6 @@
 
 from decimal import Decimal, InvalidOperation
 
-
 def validate_point_range(points, max_points):
     """
     Validate that points are within the allowed range (0 to max_points).
@@ -30,7 +29,6 @@ def validate_point_range(points, max_points):
         raise ValueError(f"Points ({pts}) cannot exceed maximum ({max_pts})")
 
     return (True, None)
-
 
 def validate_hierarchy(scheme):
     """
@@ -107,7 +105,6 @@ def validate_hierarchy(scheme):
 
     return (True, None)
 
-
 def validate_scheme_name(name):
     """
     Validate grading scheme name.
@@ -128,7 +125,6 @@ def validate_scheme_name(name):
         raise ValueError("Scheme name cannot exceed 255 characters")
 
     return (True, None)
-
 
 def validate_submission_points(submission):
     """
