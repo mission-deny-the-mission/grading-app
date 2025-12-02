@@ -1155,15 +1155,8 @@ def process_document_rubric(upload_id, file_path, document_type):
             upload_log.conversion_status = "SUCCESS"
 
             # Update LLM provider info from the provider used
-            try:
-                from services.llm_provider import get_provider
-
-                provider_type = app.config.get("LLM_PROVIDER", "unknown")
-                upload_log.llm_provider = provider_type
-                upload_log.llm_model = app.config.get("LLM_MODEL", "unknown")
-            except:
-                upload_log.llm_provider = "unknown"
-                upload_log.llm_model = "unknown"
+            upload_log.llm_provider = app.config.get("LLM_PROVIDER", "unknown")
+            upload_log.llm_model = app.config.get("LLM_MODEL", "unknown")
 
             db.session.commit()
             print(f"Completed processing document {upload_id}")

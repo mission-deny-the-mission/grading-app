@@ -406,60 +406,6 @@ def parse_llm_response(llm_response: str) -> Dict[str, Any]:
         }
 
 
-def create_marking_scheme_from_extracted(
-    extracted_data: Dict[str, Any],
-    uncertainty_flags: Optional[List[Dict[str, Any]]] = None
-) -> Dict[str, Any]:
-    """
-    Create a validated MarkingScheme from extracted data.
-
-    Args:
-        extracted_data: Dictionary with extracted scheme data
-        uncertainty_flags: Optional list of uncertainty flags
-
-    Returns:
-        dict: Validated MarkingScheme data ready for database
-
-    Raises:
-        ValueError: If data doesn't validate against JSON schema
-    """
-    from services.scheme_deserializer import MarkingSchemeDecoder
-
-    if uncertainty_flags is None:
-        uncertainty_flags = []
-
-    # Ensure extracted_data has the required structure
-    if not extracted_data or not isinstance(extracted_data, dict):
-        raise ValueError("Extracted data must be a non-empty dictionary")
-
-    # Add default values if missing
-    if "version" not in extracted_data:
-        extracted_data["version"] = "1.0.0"
-
-    if "metadata" not in extracted_data:
-        extracted_data["metadata"] = {}
-
-    if "name" not in extracted_data.get("metadata", {}):
-        if "name" in extracted_data:
-            extracted_data["metadata"]["name"] = extracted_data["name"]
-        else:
-            extracted_data["metadata"]["name"] = "Imported Scheme"
-
-    if "criteria" not in extracted_data:
-        extracted_data["criteria"] = []
-
-    # Validate against JSON schema
-    decoder = MarkingSchemeDecoder()
-    try:
-        # Convert to JSON string for validation
-        json_str = json.dumps(extracted_data)
-        validated_data = decoder.deserialize(json_str)
-        return validated_data
-    except ValueError as e:
-        logger.error(f"Scheme validation failed: {e}")
-        raise ValueError(f"Extracted scheme doesn't match expected format: {e}")
-
-
 class DocumentParser:
     """Service for parsing documents and converting to marking schemes."""
 

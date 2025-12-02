@@ -45,7 +45,7 @@ def show_data_management():
         uploads_path = current_app.config.get("UPLOAD_FOLDER", "uploads")
         uploads_size = 0
         if os.path.exists(uploads_path):
-            for root, dirs, files in os.walk(uploads_path):
+            for root, _dirs, files in os.walk(uploads_path):
                 uploads_size += sum(os.path.getsize(os.path.join(root, f)) for f in files)
 
         statistics = {

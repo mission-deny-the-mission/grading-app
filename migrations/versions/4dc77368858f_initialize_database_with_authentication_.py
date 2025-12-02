@@ -135,23 +135,6 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('user_id', 'provider', name='unique_user_provider')
     )
-    op.create_table('auth_sessions',
-    sa.Column('id', sa.String(length=36), nullable=False),
-    sa.Column('session_id', sa.String(length=255), nullable=False),
-    sa.Column('user_id', sa.String(length=36), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=False),
-    sa.Column('last_activity', sa.DateTime(), nullable=False),
-    sa.Column('expires_at', sa.DateTime(), nullable=False),
-    sa.Column('ip_address', sa.String(length=45), nullable=True),
-    sa.Column('user_agent', sa.String(length=255), nullable=True),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    with op.batch_alter_table('auth_sessions', schema=None) as batch_op:
-        batch_op.create_index('idx_session_user', ['user_id'], unique=False)
-        batch_op.create_index(batch_op.f('ix_auth_sessions_expires_at'), ['expires_at'], unique=False)
-        batch_op.create_index(batch_op.f('ix_auth_sessions_session_id'), ['session_id'], unique=True)
-
     op.create_table('job_batches',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),

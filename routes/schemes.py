@@ -8,11 +8,7 @@ from flask import Blueprint, jsonify, request
 
 from models import GradingScheme, SchemeQuestion, SchemeCriterion, db
 from utils.scheme_calculator import calculate_scheme_total, calculate_question_total
-from utils.scheme_validator import (
-    validate_point_range,
-    validate_scheme_name,
-    validate_hierarchy,
-)
+from utils.scheme_validator import validate_scheme_name, validate_hierarchy
 from middleware.permission_enforcement import require_scheme_permission, require_scheme_owner
 
 schemes_bp = Blueprint("schemes", __name__, url_prefix="/api/schemes")
@@ -593,7 +589,6 @@ def update_criterion(criterion_id):
             except (ValueError, TypeError):
                 return jsonify({"error": "max_points must be numeric"}), 400
 
-            old_max = criterion.max_points
             criterion.max_points = new_max
 
             # Recalculate question and scheme totals

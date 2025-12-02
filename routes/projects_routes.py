@@ -121,7 +121,7 @@ def get_project(project_id):
         }
     """
     try:
-        has_access, project, reason = check_project_access(project_id, current_user.id, "read")
+        has_access, project, _reason = check_project_access(project_id, current_user.id, "read")
 
         if not project:
             return jsonify({"error": "Project not found"}), 404
@@ -160,7 +160,7 @@ def update_project(project_id):
         }
     """
     try:
-        has_access, project, reason = check_project_access(project_id, current_user.id, "write")
+        has_access, project, _reason = check_project_access(project_id, current_user.id, "write")
 
         if not project:
             return jsonify({"error": "Project not found"}), 404

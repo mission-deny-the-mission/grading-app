@@ -2231,9 +2231,6 @@ class User(db.Model):
         "AIProviderQuota", backref="user", lazy=True, cascade="all, delete-orphan"
     )
     usage_records = db.relationship("UsageRecord", backref="user", lazy=True)
-    sessions = db.relationship(
-        "AuthSession", backref="user", lazy=True, cascade="all, delete-orphan"
-    )
     # ProjectShare has two foreign keys to User (user_id and granted_by), so specify which one to use
     shared_projects = db.relationship(
         "ProjectShare",
@@ -2391,42 +2388,6 @@ class ProjectShare(db.Model):
             "permission_level": self.permission_level,
             "granted_at": self.granted_at.isoformat() if self.granted_at else None,
             "granted_by": self.granted_by,
-        }
-
-
-class AuthSession(db.Model):
-    """Active user sessions for authentication."""
-
-    __tablename__ = "auth_sessions"
-
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    session_id = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    user_id = db.Column(db.String(36), db.ForeignKey("users.id"), nullable=False)
-    created_at = db.Column(
-        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-    last_activity = db.Column(
-        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-    expires_at = db.Column(db.DateTime, nullable=False, index=True)
-    ip_address = db.Column(db.String(45))  # IPv4/IPv6
-    user_agent = db.Column(db.String(255))
-
-    __table_args__ = (db.Index("idx_session_user", "user_id"),)
-
-    def to_dict(self):
-        """Convert to dictionary."""
-        return {
-            "id": self.id,
-            "session_id": self.session_id,
-            "user_id": self.user_id,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_activity": self.last_activity.isoformat()
-            if self.last_activity
-            else None,
-            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
-            "ip_address": self.ip_address,
-            "user_agent": self.user_agent,
         }
 
 
