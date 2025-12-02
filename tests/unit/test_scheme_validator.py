@@ -6,50 +6,8 @@ import pytest
 
 from utils.scheme_validator import (
     validate_hierarchy,
-    validate_point_range,
     validate_scheme_name,
-    validate_submission_points,
 )
-
-
-class TestValidatePointRange:
-    """Test point range validation (T031, US1)."""
-
-    def test_valid_point_range(self):
-        """Valid points within range."""
-        is_valid, error = validate_point_range(Decimal("5.00"), Decimal("10.00"))
-        assert is_valid is True
-        assert error is None
-
-    def test_zero_points_valid(self):
-        """Zero points is valid."""
-        is_valid, error = validate_point_range(Decimal("0"), Decimal("10.00"))
-        assert is_valid is True
-
-    def test_equal_to_max(self):
-        """Points equal to max is valid."""
-        is_valid, error = validate_point_range(Decimal("10.00"), Decimal("10.00"))
-        assert is_valid is True
-
-    def test_negative_points_invalid(self):
-        """Negative points should raise ValueError."""
-        with pytest.raises(ValueError, match="cannot be negative"):
-            validate_point_range(Decimal("-1.00"), Decimal("10.00"))
-
-    def test_points_exceed_max_invalid(self):
-        """Points exceeding max should raise ValueError."""
-        with pytest.raises(ValueError, match="cannot exceed maximum"):
-            validate_point_range(Decimal("15.00"), Decimal("10.00"))
-
-    def test_non_numeric_points_invalid(self):
-        """Non-numeric points should raise ValueError."""
-        with pytest.raises(ValueError, match="must be numeric values"):
-            validate_point_range("abc", Decimal("10.00"))
-
-    def test_none_points_treated_as_zero(self):
-        """None points should be treated as 0."""
-        is_valid, error = validate_point_range(None, Decimal("10.00"))
-        assert is_valid is True
 
 
 class TestValidateHierarchy:
@@ -240,77 +198,3 @@ class TestValidateSchemeName:
         long_name = "A" * 256
         with pytest.raises(ValueError, match="cannot exceed 255"):
             validate_scheme_name(long_name)
-
-
-class TestValidateSubmissionPoints:
-    """Test submission points validation."""
-
-    def test_valid_submission(self):
-        """Valid submission points."""
-
-        class MockSubmission:
-            def __init__(self):
-                self.total_points_earned = Decimal("85.00")
-                self.total_points_possible = Decimal("100.00")
-                self.percentage_score = Decimal("85.00")
-                self.is_complete = True
-
-        is_valid, error = validate_submission_points(MockSubmission())
-        assert is_valid is True
-
-    def test_none_submission_invalid(self):
-        """None submission should raise ValueError."""
-        with pytest.raises(ValueError, match="Submission cannot be None"):
-            validate_submission_points(None)
-
-    def test_negative_earned_points_invalid(self):
-        """Negative earned points."""
-
-        class MockSubmission:
-            def __init__(self):
-                self.total_points_earned = Decimal("-10.00")
-                self.total_points_possible = Decimal("100.00")
-                self.percentage_score = None
-                self.is_complete = False
-
-        with pytest.raises(ValueError, match="cannot be negative"):
-            validate_submission_points(MockSubmission())
-
-    def test_earned_exceeds_possible_invalid(self):
-        """Earned points exceeding possible."""
-
-        class MockSubmission:
-            def __init__(self):
-                self.total_points_earned = Decimal("150.00")
-                self.total_points_possible = Decimal("100.00")
-                self.percentage_score = None
-                self.is_complete = False
-
-        with pytest.raises(ValueError, match="cannot exceed possible"):
-            validate_submission_points(MockSubmission())
-
-    def test_complete_without_percentage_invalid(self):
-        """Complete submission without percentage score."""
-
-        class MockSubmission:
-            def __init__(self):
-                self.total_points_earned = Decimal("50.00")
-                self.total_points_possible = Decimal("100.00")
-                self.percentage_score = None
-                self.is_complete = True
-
-        with pytest.raises(ValueError, match="must have percentage_score"):
-            validate_submission_points(MockSubmission())
-
-    def test_invalid_percentage_range(self):
-        """Percentage score outside 0-100 range."""
-
-        class MockSubmission:
-            def __init__(self):
-                self.total_points_earned = Decimal("50.00")
-                self.total_points_possible = Decimal("100.00")
-                self.percentage_score = Decimal("150.00")
-                self.is_complete = True
-
-        with pytest.raises(ValueError, match="between 0 and 100"):
-            validate_submission_points(MockSubmission())

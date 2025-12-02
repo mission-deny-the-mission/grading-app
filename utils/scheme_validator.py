@@ -1,34 +1,6 @@
 """Validation utilities for grading schemes and criteria."""
 
-from decimal import Decimal, InvalidOperation
-
-def validate_point_range(points, max_points):
-    """
-    Validate that points are within the allowed range (0 to max_points).
-
-    Args:
-        points: Numeric value to validate
-        max_points: Maximum allowed points
-
-    Returns:
-        tuple: (is_valid, error_message)
-
-    Raises:
-        ValueError: If validation fails with descriptive error message
-    """
-    try:
-        pts = Decimal(str(points)) if points is not None else Decimal("0")
-        max_pts = Decimal(str(max_points))
-    except (ValueError, TypeError, InvalidOperation):
-        raise ValueError("Points and max_points must be numeric values")
-
-    if pts < 0:
-        raise ValueError(f"Points ({pts}) cannot be negative")
-
-    if pts > max_pts:
-        raise ValueError(f"Points ({pts}) cannot exceed maximum ({max_pts})")
-
-    return (True, None)
+from decimal import Decimal
 
 def validate_hierarchy(scheme):
     """
@@ -123,41 +95,5 @@ def validate_scheme_name(name):
 
     if len(name) > 255:
         raise ValueError("Scheme name cannot exceed 255 characters")
-
-    return (True, None)
-
-def validate_submission_points(submission):
-    """
-    Validate that submission totals are within valid ranges.
-
-    Args:
-        submission: GradedSubmission model instance
-
-    Returns:
-        tuple: (is_valid, error_message)
-
-    Raises:
-        ValueError: If validation fails
-    """
-    if not submission:
-        raise ValueError("Submission cannot be None")
-
-    earned = Decimal(str(submission.total_points_earned)) if submission.total_points_earned else Decimal("0")
-    possible = Decimal(str(submission.total_points_possible)) if submission.total_points_possible else Decimal("0")
-
-    if earned < 0:
-        raise ValueError("Total points earned cannot be negative")
-
-    if earned > possible:
-        raise ValueError(f"Points earned ({earned}) cannot exceed possible ({possible})")
-
-    # If complete, percentage must be calculated
-    if submission.is_complete and possible > 0:
-        if submission.percentage_score is None:
-            raise ValueError("Complete submission must have percentage_score calculated")
-
-        percentage = Decimal(str(submission.percentage_score))
-        if percentage < 0 or percentage > 100:
-            raise ValueError(f"Percentage score must be between 0 and 100 (got {percentage})")
 
     return (True, None)

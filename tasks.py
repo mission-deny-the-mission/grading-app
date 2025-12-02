@@ -1247,7 +1247,7 @@ assess_image_quality = MockCeleryTask(assess_image_quality)
 class MockCelery:
     """Mock Celery object for test compatibility."""
 
-    def send_task(self, task_name, args=None, kwargs=None):
+    def send_task(self, _task_name, args=None, kwargs=None):
         """Mock send_task method."""
         mock_result = Mock()
         mock_result.id = str(uuid.uuid4())

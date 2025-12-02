@@ -265,15 +265,6 @@ class AuthService:
         return user
 
     @staticmethod
-    def get_user_by_email(email):
-        """Get user by email address."""
-        try:
-            email = AuthService.validate_email(email)
-            return User.query.filter_by(email=email).first()
-        except ValueError:
-            return None
-
-    @staticmethod
     def get_user_by_id(user_id):
         """Get user by ID."""
         return User.query.get(user_id)

@@ -57,7 +57,7 @@ class TestBasicSerialization:
         simple_scheme = get_simple_scheme()
 
         # Act
-        result = serializer.serialize(simple_scheme)
+        result = serializer.to_dict(simple_scheme)
 
         # Assert
         assert isinstance(result, dict)
@@ -76,7 +76,7 @@ class TestBasicSerialization:
         simple_scheme = get_simple_scheme()
 
         # Act
-        result = serializer.serialize(simple_scheme)
+        result = serializer.to_dict(simple_scheme)
 
         # Assert
         assert "version" in result
@@ -102,7 +102,7 @@ class TestMetadataSerialization:
         medium_scheme = get_medium_scheme()
 
         # Act
-        result = serializer.serialize(medium_scheme)
+        result = serializer.to_dict(medium_scheme)
 
         # Assert
         assert "metadata" in result
@@ -124,7 +124,7 @@ class TestMetadataSerialization:
         simple_scheme = get_simple_scheme()
 
         # Act
-        result = serializer.serialize(simple_scheme)
+        result = serializer.to_dict(simple_scheme)
 
         # Assert
         exported_at = result["metadata"]["exported_at"]
@@ -148,7 +148,7 @@ class TestCriteriaSerialization:
         complex_scheme = get_complex_scheme()
 
         # Act
-        result = serializer.serialize(complex_scheme)
+        result = serializer.to_dict(complex_scheme)
 
         # Assert
         assert "criteria" in result
@@ -174,7 +174,7 @@ class TestCriteriaSerialization:
         medium_scheme = get_medium_scheme()
 
         # Act
-        result = serializer.serialize(medium_scheme)
+        result = serializer.to_dict(medium_scheme)
 
         # Assert
         for criterion in result["criteria"]:
@@ -194,7 +194,7 @@ class TestCriteriaSerialization:
         simple_scheme = get_simple_scheme()
 
         # Act
-        result = serializer.serialize(simple_scheme)
+        result = serializer.to_dict(simple_scheme)
 
         # Assert
         for criterion in result["criteria"]:
@@ -218,7 +218,7 @@ class TestDescriptorSerialization:
         simple_scheme = get_simple_scheme()
 
         # Act
-        result = serializer.serialize(simple_scheme)
+        result = serializer.to_dict(simple_scheme)
 
         # Assert
         first_criterion = result["criteria"][0]
@@ -244,7 +244,7 @@ class TestDescriptorSerialization:
         valid_levels = {"excellent", "good", "satisfactory", "poor", "fail"}
 
         # Act
-        result = serializer.serialize(medium_scheme)
+        result = serializer.to_dict(medium_scheme)
 
         # Assert
         for criterion in result["criteria"]:
@@ -269,7 +269,7 @@ class TestNullAndEmptyHandling:
             scheme["metadata"]["description"] = None
 
         # Act
-        result = serializer.serialize(scheme)
+        result = serializer.to_dict(scheme)
 
         # Assert
         assert "metadata" in result
@@ -290,7 +290,7 @@ class TestNullAndEmptyHandling:
                 break
 
         # Act
-        result = serializer.serialize(scheme)
+        result = serializer.to_dict(scheme)
 
         # Assert
         assert "criteria" in result
@@ -311,7 +311,7 @@ class TestUUIDConversion:
         simple_scheme = get_simple_scheme()
 
         # Act
-        result = serializer.serialize(simple_scheme)
+        result = serializer.to_dict(simple_scheme)
 
         # Assert
         for criterion in result["criteria"]:
@@ -386,7 +386,7 @@ class TestSchemaValidation:
         simple_scheme = get_simple_scheme()
 
         # Act
-        result = serializer.serialize(simple_scheme)
+        result = serializer.to_dict(simple_scheme)
 
         # Assert
         # Should not raise validation error
@@ -400,7 +400,7 @@ class TestSchemaValidation:
         medium_scheme = get_medium_scheme()
 
         # Act
-        result = serializer.serialize(medium_scheme)
+        result = serializer.to_dict(medium_scheme)
 
         # Assert
         jsonschema.validate(instance=result, schema=json_schema)
@@ -413,7 +413,7 @@ class TestSchemaValidation:
         complex_scheme = get_complex_scheme()
 
         # Act
-        result = serializer.serialize(complex_scheme)
+        result = serializer.to_dict(complex_scheme)
 
         # Assert
         jsonschema.validate(instance=result, schema=json_schema)
@@ -496,7 +496,7 @@ class TestEdgeCases:
         }
 
         # Act
-        result = serializer.serialize(minimal_scheme)
+        result = serializer.to_dict(minimal_scheme)
 
         # Assert
         assert "version" in result
@@ -517,7 +517,7 @@ class TestEdgeCases:
         scheme["criteria"][0]["point_value"] = 0
 
         # Act
-        result = serializer.serialize(scheme)
+        result = serializer.to_dict(scheme)
 
         # Assert
         assert result["criteria"][0]["point_value"] == 0
@@ -534,7 +534,7 @@ class TestEdgeCases:
         original_names = [c["name"] for c in complex_scheme["criteria"]]
 
         # Act
-        result = serializer.serialize(complex_scheme)
+        result = serializer.to_dict(complex_scheme)
 
         # Assert
         serialized_names = [c["name"] for c in result["criteria"]]

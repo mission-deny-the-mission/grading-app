@@ -8,7 +8,6 @@ import uuid
 from pathlib import Path
 
 from PIL import Image
-from werkzeug.utils import secure_filename
 
 
 class ValidationError(Exception):
@@ -29,11 +28,6 @@ def determine_file_type(filename):
         return None
 
 
-def is_allowed_file(filename):
-    """Check if file has an allowed extension."""
-    return determine_file_type(filename) is not None
-
-
 def cleanup_file(file_path):
     """Safely remove a file."""
     try:
@@ -41,57 +35,6 @@ def cleanup_file(file_path):
             os.remove(file_path)
     except Exception:
         pass  # Don't fail if file cleanup fails
-
-
-def get_secure_filename(filename):
-    """Get a secure version of the filename."""
-    return secure_filename(filename)
-
-
-def validate_file_upload(file):
-    """Validate an uploaded file.
-
-    This validates both the filename extension and, where available, the MIME type
-    reported by the client or detected via the python-magic library. It falls back
-    to extension checking for simple test mocks that don't provide a content_type.
-    """
-    if not file or getattr(file, "filename", "") == "":
-        return False, "No file selected"
-
-    file_type = determine_file_type(file.filename)
-    if not file_type:
-        return False, "Unsupported file type. Please upload .docx, .pdf, or .txt files."
-
-    # If the file object reports a content_type, verify it matches expected MIME type
-    # If there is no content_type (e.g. SimpleNamespace in unit tests), we allow based on extension
-    content_type = getattr(file, "content_type", None)
-    if content_type:
-        expected_map = {
-            "pdf": ["application/pdf"],
-            # Docx may be reported as the official vendor mime or as a zip/octet depending on client
-            "docx": [
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                "application/zip",
-                "application/octet-stream",
-            ],
-            "txt": ["text/plain"],
-        }
-
-        valid_mimes = expected_map.get(file_type, [])
-        if content_type not in valid_mimes:
-            # Try to detect via python-magic if available to be more robust
-            try:
-                import magic
-
-                file.seek(0)
-                detected = magic.from_buffer(file.read(2048), mime=True)
-                file.seek(0)
-                if detected not in valid_mimes:
-                    return False, f"Invalid MIME type '{content_type}'. Expected one of: {', '.join(valid_mimes)}"
-            except Exception:
-                return False, f"Invalid MIME type '{content_type}'. Expected one of: {', '.join(valid_mimes)}"
-
-    return True, None
 
 
 # Image-specific validation and storage functions

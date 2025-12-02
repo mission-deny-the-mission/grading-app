@@ -33,38 +33,11 @@ class MarkingSchemeEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def json_default(obj):
-    """
-    Helper function for custom JSON encoding.
-
-    Handles non-standard types for json.dumps() default parameter.
-    """
-    if isinstance(obj, Decimal):
-        return float(obj)
-    elif isinstance(obj, datetime):
-        return obj.isoformat()
-    elif isinstance(obj, UUID):
-        return str(obj)
-    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
-
-
 class MarkingSchemeSerializer:
     """Serializes MarkingScheme objects to JSON format."""
 
     # Schema version for backward compatibility
     SCHEMA_VERSION = "1.0.0"
-
-    def serialize(self, scheme) -> Dict[str, Any]:
-        """
-        Serialize a MarkingScheme to dictionary/JSON.
-
-        Args:
-            scheme: MarkingScheme ORM object
-
-        Returns:
-            dict: JSON-serializable MarkingScheme representation
-        """
-        return self.to_dict(scheme)
 
     def to_dict(self, scheme) -> Dict[str, Any]:
         """

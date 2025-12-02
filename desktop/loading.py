@@ -63,7 +63,7 @@ class LoadingScreen:
         self.show()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, _exc_val, _exc_tb):
         """Context manager exit."""
         self.hide()
 
@@ -227,19 +227,3 @@ class PyWebViewLoadingScreen(LoadingScreen):
                 pass
         except Exception:
             pass
-
-
-def show_loading_screen():
-    """
-    Show a loading screen during app startup.
-
-    Usage:
-        with show_loading_screen() as loader:
-            loader.update_message("Starting database...")
-            # ... perform startup operations ...
-    """
-    try:
-        import webview
-        return PyWebViewLoadingScreen()
-    except ImportError:
-        return LoadingScreen()

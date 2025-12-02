@@ -67,7 +67,7 @@ def get_free_port() -> int:
     return port
 
 
-def _set_sqlite_pragmas(dbapi_conn, connection_record):
+def _set_sqlite_pragmas(dbapi_conn, _connection_record):
     """
     Set SQLite pragmas for optimal desktop performance.
 

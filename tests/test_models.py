@@ -109,44 +109,6 @@ class TestGradingJob:
             assert sample_job.failed_submissions == 1
             assert sample_job.get_progress() == 66.67  # 2/3 * 100
 
-    def test_job_status_updates(self, app, sample_job):
-        """Test job status updates based on submissions."""
-        with app.app_context():
-            # Ensure job is attached to the current session
-            sample_job = db.session.merge(sample_job)
-
-            # Test with no submissions
-            sample_job.update_status()
-            assert sample_job.status == "pending"
-
-            # Add a completed submission
-            submission = Submission(
-                job_id=sample_job.id,
-                original_filename="test.txt",
-                filename="test.txt",
-                file_type="txt",
-                status="completed",
-            )
-            db.session.add(submission)
-            db.session.commit()
-
-            sample_job.update_status()
-            assert sample_job.status == "completed"
-
-            # Add a failed submission
-            submission2 = Submission(
-                job_id=sample_job.id,
-                original_filename="test2.txt",
-                filename="test2.txt",
-                file_type="txt",
-                status="failed",
-            )
-            db.session.add(submission2)
-            db.session.commit()
-
-            sample_job.update_status()
-            assert sample_job.status == "completed_with_errors"
-
     def test_job_retry_functionality(self, app, sample_job):
         """Test job retry functionality."""
         with app.app_context():
@@ -254,26 +216,6 @@ class TestSubmission:
             assert sample_submission.status == "pending"
             assert sample_submission.retry_count == 2
             assert sample_submission.error_message is None
-
-    def test_submission_status_transitions(self, app, sample_submission):
-        """Test submission status transitions."""
-        with app.app_context():
-            # Test mark as processing
-            sample_submission.mark_as_processing()
-            assert sample_submission.status == "processing"
-            assert sample_submission.started_at is not None
-
-            # Test mark as completed
-            sample_submission.mark_as_completed("Test grade")
-            assert sample_submission.status == "completed"
-            assert sample_submission.grade == "Test grade"
-            assert sample_submission.completed_at is not None
-
-            # Test mark as failed
-            sample_submission.mark_as_failed("Test error")
-            assert sample_submission.status == "failed"
-            assert sample_submission.error_message == "Test error"
-
 
 class TestJobBatch:
     """Test cases for JobBatch model."""

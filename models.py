@@ -397,23 +397,6 @@ class GradingJob(db.Model):
 
         return retried_count
 
-    def update_status(self):
-        """Update job status based on submission states."""
-        self.update_progress()
-        # Ensure status reflects completed submissions
-        if (
-            self.total_submissions > 0
-            and self.processed_submissions + self.failed_submissions
-            >= self.total_submissions
-        ):
-            if self.failed_submissions == 0:
-                self.status = "completed"
-            elif self.processed_submissions == 0:
-                self.status = "failed"
-            else:
-                self.status = "completed_with_errors"
-            db.session.commit()
-
 
 class GradeResult(db.Model):
     """Model for storing individual grade results from different models."""
@@ -578,27 +561,6 @@ class Submission(db.Model):
             db.session.commit()
 
         return True
-
-    def mark_as_processing(self):
-        """Mark submission as processing."""
-        self.status = "processing"
-        self.started_at = datetime.now(timezone.utc)
-        db.session.commit()
-
-    def mark_as_completed(self, grade):
-        """Mark submission as completed with grade."""
-        self.status = "completed"
-        self.grade = grade
-        self.completed_at = datetime.now(timezone.utc)
-        self.error_message = None
-        db.session.commit()
-
-    def mark_as_failed(self, error_message):
-        """Mark submission as failed with error message."""
-        self.status = "failed"
-        self.error_message = error_message
-        self.completed_at = datetime.now(timezone.utc)
-        db.session.commit()
 
     def add_grade_result(
         self,

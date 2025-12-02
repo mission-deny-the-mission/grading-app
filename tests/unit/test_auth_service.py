@@ -111,16 +111,6 @@ class TestAuthServiceAuthenticate:
 class TestAuthServiceGetUser:
     """Test user retrieval."""
 
-    def test_get_user_by_email(self, app):
-        """Test getting user by email."""
-        with app.app_context():
-            created_user = AuthService.create_user("test@example.com", "Password123!")
-
-            user = AuthService.get_user_by_email("test@example.com")
-
-            assert user is not None
-            assert user.id == created_user.id
-
     def test_get_user_by_id(self, app):
         """Test getting user by ID."""
         with app.app_context():
@@ -130,13 +120,6 @@ class TestAuthServiceGetUser:
 
             assert user is not None
             assert user.email == "test@example.com"
-
-    def test_get_nonexistent_user(self, app):
-        """Test getting nonexistent user returns None."""
-        with app.app_context():
-            user = AuthService.get_user_by_email("nonexistent@example.com")
-
-            assert user is None
 
 
 class TestAuthServiceUpdateUser:
