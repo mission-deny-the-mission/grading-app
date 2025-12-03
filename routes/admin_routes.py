@@ -5,8 +5,8 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
-from app import limiter
 from services.auth_service import AuthService
+from utils.limiter import limiter
 
 logger = logging.getLogger(__name__)
 

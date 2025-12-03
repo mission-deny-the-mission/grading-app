@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
-# Import limiter from app (will be set after app initialization)
-from app import limiter
+# Import limiter from utils to avoid circular imports
+from utils.limiter import limiter
 
 
 @auth_bp.route("/login", methods=["POST"])

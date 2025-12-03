@@ -26,13 +26,7 @@ except ImportError:
 
 
 # Optional imports for rate limiting and CSRF protection
-try:
-    from flask_limiter import Limiter
-    from flask_limiter.util import get_remote_address
-
-    FLASK_LIMITER_AVAILABLE = True
-except ImportError:
-    FLASK_LIMITER_AVAILABLE = False
+# Flask-Limiter is now imported from utils.limiter
 
 try:
     from flask_wtf.csrf import CSRFProtect
@@ -192,28 +186,10 @@ if CSRF_PROTECT_AVAILABLE:
 
 
 # Initialize rate limiter BEFORE importing blueprints to avoid circular imports (optional)
-class NoOpLimiter:
-    """No-op limiter for when Flask-Limiter is not available."""
+from utils.limiter import limiter, init_limiter
 
-    def limit(self, *args, **kwargs):
-        """Return a no-op decorator."""
-
-        def decorator(func):
-            return func
-
-        return decorator
-
-
-if FLASK_LIMITER_AVAILABLE:
-    limiter = Limiter(
-        app=app,
-        key_func=get_remote_address,
-        default_limits=["1000 per day", "100 per hour"],
-        storage_uri="memory://",
-        strategy="fixed-window",
-    )
-else:
-    limiter = NoOpLimiter()
+# Initialize the limiter with the app
+init_limiter(app)
 
 
 # Flask-Login user_loader callback (will be properly configured after User model is available)
@@ -226,12 +202,13 @@ def load_user(user_id):
 
 
 # NOW import blueprints that depend on limiter (after limiter is initialized)
-from routes.admin_routes import admin_bp
-from routes.admin_pages import admin_pages_bp
-from routes.auth_routes import auth_bp
-from routes.projects_routes import projects_bp
-from routes.sharing_routes import sharing_bp
-from routes.usage_routes import usage_bp
+# We'll import these after the app is fully initialized to avoid circular imports
+# from routes.admin_routes import admin_bp
+# from routes.admin_pages import admin_pages_bp
+# from routes.auth_routes import auth_bp
+# from routes.projects_routes import projects_bp
+# from routes.sharing_routes import sharing_bp
+# from routes.usage_routes import usage_bp
 
 # Register blueprints
 app.register_blueprint(main_bp)
@@ -255,13 +232,13 @@ app.register_blueprint(desktop_settings_bp)
 app.register_blueprint(desktop_data_bp)
 
 # Register authentication and configuration blueprints
-app.register_blueprint(auth_bp)
-app.register_blueprint(admin_bp)
-app.register_blueprint(admin_pages_bp)
+# app.register_blueprint(auth_bp)      # Commented out due to circular import
+# app.register_blueprint(admin_bp)     # Commented out due to circular import
+# app.register_blueprint(admin_pages_bp) # Commented out due to circular import
 app.register_blueprint(config_bp)
-app.register_blueprint(usage_bp)
-app.register_blueprint(sharing_bp)
-app.register_blueprint(projects_bp)
+# app.register_blueprint(usage_bp)     # Commented out due to circular import
+# app.register_blueprint(sharing_bp)   # Commented out due to circular import
+# app.register_blueprint(projects_bp)  # Commented out due to circular import
 app.register_blueprint(auth_pages_bp)
 app.register_blueprint(legacy_auth_bp)
 
@@ -269,6 +246,28 @@ app.register_blueprint(legacy_auth_bp)
 from middleware.auth_middleware import init_auth_middleware
 
 init_auth_middleware(app)
+
+# NOW import and register blueprints that had circular import issues
+try:
+    from routes.admin_routes import admin_bp
+    from routes.admin_pages import admin_pages_bp
+    from routes.auth_routes import auth_bp
+    from routes.projects_routes import projects_bp
+    from routes.sharing_routes import sharing_bp
+    from routes.usage_routes import usage_bp
+    
+    # Register these blueprints now that the app is fully initialized
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(admin_pages_bp)
+    app.register_blueprint(usage_bp)
+    app.register_blueprint(sharing_bp)
+    app.register_blueprint(projects_bp)
+    
+    print("INFO: Successfully registered blueprints with circular import dependencies")
+except ImportError as e:
+    print(f"WARNING: Could not import some blueprints due to dependencies: {e}")
+    print("INFO: Some features may not be available")
 
 # Configure upload folder
 UPLOAD_FOLDER = "uploads"
