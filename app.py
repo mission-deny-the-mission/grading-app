@@ -186,7 +186,7 @@ if CSRF_PROTECT_AVAILABLE:
 
 
 # Initialize rate limiter BEFORE importing blueprints to avoid circular imports (optional)
-from utils.limiter import limiter, init_limiter
+from utils.limiter import init_limiter
 
 # Initialize the limiter with the app
 init_limiter(app)

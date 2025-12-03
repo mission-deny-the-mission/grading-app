@@ -5,7 +5,7 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
-from models import DeploymentConfig, db
+from models import db
 from services.deployment_service import DeploymentService
 
 logger = logging.getLogger(__name__)
