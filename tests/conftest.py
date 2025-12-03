@@ -112,22 +112,23 @@ class MockCeleryTask:
 
     def __call__(self, func):
         """Decorate function to add Celery task methods."""
+
         # Create a wrapper function that preserves the original function's attributes
         def wrapped_func(*args, **kwargs):
             return func(*args, **kwargs)
-        
+
         # Copy all attributes from the original function to the wrapper
         wrapped_func.__name__ = func.__name__
         wrapped_func.__doc__ = func.__doc__
         wrapped_func.__module__ = func.__module__
-        wrapped_func.__qualname__ = getattr(func, '__qualname__', func.__name__)
-        
+        wrapped_func.__qualname__ = getattr(func, "__qualname__", func.__name__)
+
         # Add Celery task methods to the wrapper
         mock_delay = MagicMock(return_value=MagicMock(id="mock-task-id"))
         mock_apply_async = MagicMock(return_value=MagicMock(id="mock-task-id"))
         wrapped_func.delay = mock_delay
         wrapped_func.apply_async = mock_apply_async
-        
+
         return wrapped_func
 
 
@@ -148,9 +149,14 @@ def mock_tasks_module():
     except ImportError:
         pass
 
+
 # Set TESTING environment variable and override DATABASE_URL before importing app
 # This ensures tests use SQLite instead of PostgreSQL
 os.environ["TESTING"] = "True"
+
+# Disable rate limiting before importing app
+# This must be set before app.py imports and initializes the limiter
+os.environ["RATELIMIT_ENABLED"] = "False"
 
 # Import the app and models
 from app import app as flask_app
@@ -218,14 +224,13 @@ def app():
         }
     )
 
-    # Disable rate limiting for tests by monkey-patching the limiter
+    # Re-initialize the limiter with the new config to ensure rate limiting is disabled
+    # This is needed because the limiter is initialized when app.py is imported,
+    # before the test config sets RATELIMIT_ENABLED: False
     try:
-        from app import limiter
+        from utils.limiter import init_limiter
 
-        if hasattr(limiter, "_enabled"):
-            limiter._enabled = False
-        elif hasattr(limiter, "enabled"):
-            limiter.enabled = False
+        init_limiter(flask_app)
     except (ImportError, AttributeError):
         pass
 
@@ -238,6 +243,7 @@ def app():
 
     # Register this app instance with tasks module so worker threads use it
     import tasks
+
     tasks.set_test_app(flask_app)
 
     # Create the database tables
@@ -274,6 +280,7 @@ def app():
     # Clean up the temporary upload folder
     try:
         import shutil
+
         shutil.rmtree(upload_folder, ignore_errors=True)
     except Exception:
         pass
@@ -354,15 +361,15 @@ def cleanup_scheduler():
         import desktop.scheduler
 
         # Shutdown the global scheduler if it's running
-        if hasattr(desktop.scheduler, 'scheduler'):
+        if hasattr(desktop.scheduler, "scheduler"):
             scheduler = desktop.scheduler.scheduler
-            if hasattr(scheduler, 'running') and scheduler.running:
+            if hasattr(scheduler, "running") and scheduler.running:
                 scheduler.shutdown(wait=True)
                 # Give it a moment to fully stop and release all resources
                 time.sleep(0.3)
 
             # Remove all jobs to ensure clean state
-            if hasattr(scheduler, 'remove_all_jobs'):
+            if hasattr(scheduler, "remove_all_jobs"):
                 try:
                     scheduler.remove_all_jobs()
                 except Exception:
@@ -370,6 +377,7 @@ def cleanup_scheduler():
 
             # Create a fresh scheduler instance for the next test
             from apscheduler.schedulers.background import BackgroundScheduler
+
             desktop.scheduler.scheduler = BackgroundScheduler()
     except Exception:
         pass
@@ -381,15 +389,15 @@ def cleanup_scheduler():
         import desktop.scheduler
 
         # Shutdown the global scheduler if it's running
-        if hasattr(desktop.scheduler, 'scheduler'):
+        if hasattr(desktop.scheduler, "scheduler"):
             scheduler = desktop.scheduler.scheduler
-            if hasattr(scheduler, 'running') and scheduler.running:
+            if hasattr(scheduler, "running") and scheduler.running:
                 scheduler.shutdown(wait=True)
                 # Give it a moment to fully stop and release all resources
                 time.sleep(0.3)
 
             # Remove all jobs to ensure clean state
-            if hasattr(scheduler, 'remove_all_jobs'):
+            if hasattr(scheduler, "remove_all_jobs"):
                 try:
                     scheduler.remove_all_jobs()
                 except Exception:
@@ -397,6 +405,7 @@ def cleanup_scheduler():
 
             # Create a fresh scheduler instance for the next test
             from apscheduler.schedulers.background import BackgroundScheduler
+
             desktop.scheduler.scheduler = BackgroundScheduler()
     except Exception:
         pass

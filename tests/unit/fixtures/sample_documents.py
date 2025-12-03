@@ -10,8 +10,9 @@ from pathlib import Path
 
 # Try to import optional libraries for creating real test files
 try:
-    from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
     HAS_REPORTLAB = True
 except ImportError:
     HAS_REPORTLAB = False
@@ -25,6 +26,7 @@ except ImportError:
 
 try:
     from PIL import Image, ImageFile
+
     # Avoid isinstance errors in Python 3.13
     ImageFile.LOAD_TRUNCATED_IMAGES = True
     HAS_PILLOW = True
@@ -42,7 +44,7 @@ def create_sample_pdf(content: str = None) -> str:
     Returns:
         str: Path to temporary PDF file
     """
-    temp_file = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     temp_file.close()
 
     if HAS_REPORTLAB:
@@ -50,7 +52,7 @@ def create_sample_pdf(content: str = None) -> str:
             c = canvas.Canvas(temp_file.name, pagesize=letter)
             text = content or "Sample PDF Document\n\nThis is a test document."
             y_position = 750
-            for line in text.split('\n'):
+            for line in text.split("\n"):
                 c.drawString(50, y_position, line)
                 y_position -= 20
             c.save()
@@ -59,7 +61,7 @@ def create_sample_pdf(content: str = None) -> str:
             pass
 
     # Fallback: create a text file with PDF-like content
-    with open(temp_file.name, 'w') as f:
+    with open(temp_file.name, "w") as f:
         f.write(content or "Sample PDF Document\n\nThis is a test document.")
     return temp_file.name
 
@@ -74,14 +76,14 @@ def create_sample_docx(content: str = None) -> str:
     Returns:
         str: Path to temporary DOCX file
     """
-    temp_file = tempfile.NamedTemporaryFile(suffix='.docx', delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
     temp_file.close()
 
     if HAS_PYTHON_DOCX:
         try:
             doc = DocxDocument()
             text = content or "Sample DOCX Document\n\nThis is a test document."
-            for line in text.split('\n'):
+            for line in text.split("\n"):
                 doc.add_paragraph(line)
             doc.save(temp_file.name)
             return temp_file.name
@@ -89,10 +91,10 @@ def create_sample_docx(content: str = None) -> str:
             pass
 
     # Fallback: write minimal DOCX XML structure
-    with open(temp_file.name, 'wb') as f:
+    with open(temp_file.name, "wb") as f:
         # Minimal DOCX is a ZIP file, but for testing we just need something that
         # looks like a DOCX file
-        f.write(b'PK\x03\x04')  # ZIP file header
+        f.write(b"PK\x03\x04")  # ZIP file header
     return temp_file.name
 
 
@@ -103,20 +105,20 @@ def create_sample_png() -> str:
     Returns:
         str: Path to temporary PNG file
     """
-    temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
     temp_file.close()
 
     if HAS_PILLOW:
         try:
-            img = Image.new('RGB', (100, 100), color=(255, 255, 255))
-            img.save(temp_file.name, 'PNG')
+            img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+            img.save(temp_file.name, "PNG")
             return temp_file.name
         except Exception:
             pass
 
     # Fallback: write minimal PNG header
-    with open(temp_file.name, 'wb') as f:
-        f.write(b'\x89PNG\r\n\x1a\n')
+    with open(temp_file.name, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n")
     return temp_file.name
 
 
@@ -127,20 +129,20 @@ def create_sample_jpg() -> str:
     Returns:
         str: Path to temporary JPG file
     """
-    temp_file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
     temp_file.close()
 
     if HAS_PILLOW:
         try:
-            img = Image.new('RGB', (100, 100), color=(255, 255, 255))
-            img.save(temp_file.name, 'JPEG')
+            img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+            img.save(temp_file.name, "JPEG")
             return temp_file.name
         except Exception:
             pass
 
     # Fallback: write minimal JPG header
-    with open(temp_file.name, 'wb') as f:
-        f.write(b'\xff\xd8\xff\xe0')
+    with open(temp_file.name, "wb") as f:
+        f.write(b"\xff\xd8\xff\xe0")
     return temp_file.name
 
 
@@ -167,14 +169,14 @@ Criterion 2: Grammar and Mechanics (20 points)
 - Poor (5): Many errors that sometimes interfere
 - Fail (0): Numerous errors preventing understanding"""
 
-    temp_file = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
     temp_file.close()
 
     if HAS_REPORTLAB:
         try:
             c = canvas.Canvas(temp_file.name, pagesize=letter)
             y_position = 750
-            for line in rubric_content.split('\n'):
+            for line in rubric_content.split("\n"):
                 c.drawString(50, y_position, line)
                 y_position -= 15
             c.save()
@@ -183,7 +185,7 @@ Criterion 2: Grammar and Mechanics (20 points)
             pass
 
     # Fallback: write as text file
-    with open(temp_file.name, 'w') as f:
+    with open(temp_file.name, "w") as f:
         f.write(rubric_content)
     return temp_file.name
 
@@ -209,13 +211,13 @@ Good design with minor improvements needed - Good
 Adequate design but lacks optimization - Satisfactory
 Poor design with significant issues - Poor"""
 
-    temp_file = tempfile.NamedTemporaryFile(suffix='.docx', delete=False)
+    temp_file = tempfile.NamedTemporaryFile(suffix=".docx", delete=False)
     temp_file.close()
 
     if HAS_PYTHON_DOCX:
         try:
             doc = DocxDocument()
-            for line in rubric_content.split('\n'):
+            for line in rubric_content.split("\n"):
                 if line.strip():
                     doc.add_paragraph(line)
             doc.save(temp_file.name)
@@ -224,8 +226,8 @@ Poor design with significant issues - Poor"""
             pass
 
     # Fallback: write minimal DOCX structure
-    with open(temp_file.name, 'wb') as f:
-        f.write(b'PK\x03\x04')  # ZIP file header
+    with open(temp_file.name, "wb") as f:
+        f.write(b"PK\x03\x04")  # ZIP file header
     return temp_file.name
 
 
