@@ -25,7 +25,12 @@
       "mcp__serena__activate_project",
       "mcp__serena__write_memory",
       "mcp__serena__list_memories",
-      "mcp__serena__get_current_config"
+      "mcp__serena__get_current_config",
+      "Bash(nix develop:*)",
+      "Bash(pip install:*)",
+      "Bash(SECRET_KEY=test-secret-key-for-testing FLASK_ENV=testing TESTING=true DATABASE_URL=sqlite:///test.db python -m pytest tests/test_desktop/test_crash_reporter.py -v --tb=short)",
+      "Bash(SECRET_KEY=test-secret-key-for-testing FLASK_ENV=testing TESTING=true DATABASE_URL=sqlite:///test.db python -m pytest tests/test_limiter.py::TestLimiterModule::test_init_limiter_enabled -v --tb=short)",
+      "Bash(SECRET_KEY=test-secret-key-for-testing FLASK_ENV=testing TESTING=true DATABASE_URL=sqlite:///test.db python -m pytest:*)"
     ],
     "deny": [],
     "ask": []
