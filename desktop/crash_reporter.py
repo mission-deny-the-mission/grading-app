@@ -70,7 +70,7 @@ def obfuscate_sensitive_data(text: str) -> str:
     text = text.replace(home, '<HOME>')
 
     # Replace username patterns (common in Windows paths)
-    text = re.sub(r'C:\\Users\\[^\\]+\\', 'C:\\Users\\<USER>\\', text)
+    text = re.sub(r'C:\\Users\\[^\\]+\\', 'C:\\\\Users\\\\<USER>\\\\', text)
     text = re.sub(r'/home/[^/]+/', '/home/<USER>/', text)
     text = re.sub(r'/Users/[^/]+/', '/Users/<USER>/', text)
 
